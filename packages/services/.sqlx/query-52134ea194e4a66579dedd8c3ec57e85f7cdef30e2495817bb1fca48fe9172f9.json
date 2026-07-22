@@ -1,0 +1,110 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT rp.source_id, rp.manga_id, m.title, m.cover_url,\n                  rp.last_chapter_id, rp.last_page, rp.last_chapter_done,\n                  rp.updated_at AS \"updated_at: DateTime<Utc>\"\n           FROM read_progress rp\n           JOIN manga m ON m.source_id = rp.source_id AND m.manga_id = rp.manga_id\n           ORDER BY rp.updated_at DESC\n           LIMIT ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "source_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "source_id"
+          }
+        }
+      },
+      {
+        "name": "manga_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "manga_id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "cover_url",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "cover_url"
+          }
+        }
+      },
+      {
+        "name": "last_chapter_id",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "last_chapter_id"
+          }
+        }
+      },
+      {
+        "name": "last_page",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "last_page"
+          }
+        }
+      },
+      {
+        "name": "last_chapter_done",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "last_chapter_done"
+          }
+        }
+      },
+      {
+        "name": "updated_at: DateTime<Utc>",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "52134ea194e4a66579dedd8c3ec57e85f7cdef30e2495817bb1fca48fe9172f9"
+}

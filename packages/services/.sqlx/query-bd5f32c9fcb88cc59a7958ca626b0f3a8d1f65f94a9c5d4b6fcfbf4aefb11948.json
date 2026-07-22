@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "select manga_id from manga where source_id = ? and manga_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "manga_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "manga_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "bd5f32c9fcb88cc59a7958ca626b0f3a8d1f65f94a9c5d4b6fcfbf4aefb11948"
+}

@@ -1,0 +1,10 @@
+[package]
+name = "nomanga-host"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nomanga-core = { path = "../core" }
+extism = "1.30"
+serde = { workspace = true }
+thiserror = "2"

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO read_chapter (source_id, manga_id, chapter_id, read_at)\n         VALUES (?, ?, ?, ?)\n         ON CONFLICT (source_id, manga_id, chapter_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "6a1b9ccad547c81bfa0a466f5105bde638872b6fe1060b3f6487d814c4f2af48"
+}

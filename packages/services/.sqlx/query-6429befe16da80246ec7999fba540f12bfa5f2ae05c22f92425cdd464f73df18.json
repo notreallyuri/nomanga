@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT source_id, manga_id, last_chapter_id, last_page,\n              last_chapter_done, updated_at AS \"updated_at: DateTime<Utc>\"\n       FROM read_progress\n       WHERE source_id = ? AND manga_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "source_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "source_id"
+          }
+        }
+      },
+      {
+        "name": "manga_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "manga_id"
+          }
+        }
+      },
+      {
+        "name": "last_chapter_id",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "last_chapter_id"
+          }
+        }
+      },
+      {
+        "name": "last_page",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "last_page"
+          }
+        }
+      },
+      {
+        "name": "last_chapter_done",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "last_chapter_done"
+          }
+        }
+      },
+      {
+        "name": "updated_at: DateTime<Utc>",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6429befe16da80246ec7999fba540f12bfa5f2ae05c22f92425cdd464f73df18"
+}

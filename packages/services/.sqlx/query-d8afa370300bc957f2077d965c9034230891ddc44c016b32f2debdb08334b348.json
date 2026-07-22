@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT le.source_id, le.manga_id, m.title, m.cover_url,\n                  le.added_at AS \"added_at: DateTime<Utc>\",\n                  le.cached_total_chapters AS \"cached_total_chapters: i32\"\n           FROM library_entry le\n           JOIN manga m ON m.source_id = le.source_id AND m.manga_id = le.manga_id\n           JOIN library_entry_category lec\n                ON lec.source_id = le.source_id AND lec.manga_id = le.manga_id\n           WHERE lec.category_id = ?\n           ORDER BY le.added_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "source_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "source_id"
+          }
+        }
+      },
+      {
+        "name": "manga_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "manga_id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "cover_url",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "cover_url"
+          }
+        }
+      },
+      {
+        "name": "added_at: DateTime<Utc>",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "added_at"
+          }
+        }
+      },
+      {
+        "name": "cached_total_chapters: i32",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "cached_total_chapters"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d8afa370300bc957f2077d965c9034230891ddc44c016b32f2debdb08334b348"
+}

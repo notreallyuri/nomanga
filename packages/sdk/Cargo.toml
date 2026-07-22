@@ -1,0 +1,10 @@
+[package]
+name = "nomanga-sdk"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nomanga-core = { path = "../core"}
+extism-pdk = "1.4"
+scraper = "0.27"
+percent-encoding = "2"
