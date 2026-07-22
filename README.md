@@ -8,8 +8,7 @@ explicit allow-list of hosts they may reach. The desktop app is built with
 Tauri + React; everything below the UI is Rust.
 
 > **Status:** early development. The engine, extension ABI, host, and SQLite
-> persistence layer are in place; the React UI is still being built out (the
-> current `App.tsx` is the Tauri starter template).
+> persistence layer are in place; the React UI is still being built out.
 
 ## How it works
 
