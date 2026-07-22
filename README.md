@@ -15,15 +15,15 @@ Tauri + React; everything below the UI is Rust.
 
 ```
 ┌─────────────────────────────────────────────┐
-│  client (Tauri v2 + React 19 + Vite)         │  UI
-│  └─ src-tauri  ── #[tauri::command]s ────────┼──► TypeScript bindings
-│                                              │    auto-exported via specta
+│  client (Tauri v2 + React 19 + Vite)        │  UI
+│  └─ src-tauri  ── #[tauri::command]s ───────┼──► TypeScript bindings
+│                                             │    auto-exported via specta
 ├─────────────────────────────────────────────┤
-│  nomanga-services   SQLite (sqlx)            │  library · history · settings
-│  nomanga-host       Extism host + registry   │  loads & calls .wasm sources
-│  nomanga-core       shared data model + ABI  │  the contract both sides share
+│  nomanga-services   SQLite (sqlx)           │  library · history · settings
+│  nomanga-host       Extism host + registry  │  loads & calls .wasm sources
+│  nomanga-core       shared data model + ABI │  the contract both sides share
 ├─────────────────────────────────────────────┤
-│  *.wasm sources  (sandboxed, host-allowlist) │  built with nomanga-sdk
+│  *.wasm sources  (sandboxed, host-allowlist)│  built with nomanga-sdk
 └─────────────────────────────────────────────┘
 ```
 
