@@ -1,3 +1,4 @@
+use crate::error::{HostError, HostResult};
 use extism::{Manifest, Plugin, Wasm, convert::Json};
 use nomanga_core::{
     data::{
@@ -16,9 +17,8 @@ use nomanga_core::{
 };
 use std::collections::HashMap;
 
-use crate::error::{HostError, HostResult};
-
 pub mod error;
+pub mod registry;
 
 pub struct ExtensionMetadata {
     pub extension: ExtensionInfo,
