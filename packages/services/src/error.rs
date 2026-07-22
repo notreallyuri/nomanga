@@ -8,6 +8,8 @@ pub enum ServiceError {
     Migrate(#[from] sqlx::migrate::MigrateError),
     #[error("serialization error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("io error: {0}")]
+    Io(#[from] std::io::Error),
     #[error("manga not cached: {source_id}/{manga_id}")]
     MangaNotCached { source_id: String, manga_id: String },
 }

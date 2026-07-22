@@ -101,3 +101,11 @@ CREATE TABLE read_progress (
     PRIMARY KEY (source_id, manga_id)
 );
 CREATE INDEX idx_read_progress_updated ON read_progress (updated_at);
+
+CREATE TABLE source_preference (
+    source_id      TEXT NOT NULL PRIMARY KEY,
+    enabled        INTEGER NOT NULL DEFAULT 1,  -- show in source list at all
+    private        INTEGER NOT NULL DEFAULT 0,  -- record progress, hide from history
+    blur_covers    INTEGER NOT NULL DEFAULT 0,
+    skip_updates   INTEGER NOT NULL DEFAULT 0   -- exclude from library update runs
+);

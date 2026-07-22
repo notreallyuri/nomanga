@@ -1,14 +1,20 @@
-use std::sync::{Arc, RwLock};
-
+use crate::commands::*;
+use nomanga_services::StartupWarning;
+use specta_typescript::Typescript;
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 use tauri::Manager;
 
 pub mod commands;
-use crate::commands::*;
-use specta_typescript::Typescript;
 
 pub struct AppState {
     pub pool: sqlx::SqlitePool,
     pub registry: Arc<RwLock<nomanga_host::registry::Registry>>,
+    pub settings: Arc<RwLock<nomanga_services::settings::Settings>>,
+    pub settings_path: PathBuf,
+    pub startup_warnings: Arc<RwLock<Vec<nomanga_services::StartupWarning>>>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -42,6 +48,11 @@ pub fn run() {
             source::source_chapters,
             source::source_pages,
             source::install_extension,
+            // settings
+            settings::get_settings,
+            settings::save_settings,
+            //startup
+            startup::take_startup_warnings
         ]);
 
     #[cfg(debug_assertions)]
@@ -65,12 +76,46 @@ pub fn run() {
                     .expect("failed to open database")
             });
 
-            let registry = nomanga_host::registry::Registry::scan(dir.join("extensions"))
-                .expect("failed to scan extensions");
+            let mut warnings = Vec::new();
+
+            let registry = match nomanga_host::registry::Registry::scan(dir.join("extensions")) {
+                Ok(r) => r,
+                Err(e) => {
+                    warnings.push(StartupWarning {
+                        kind: nomanga_services::WarningKind::ExtensionFailed,
+                        message: format!("Could not load extensions: {e}"),
+                    });
+                    nomanga_host::registry::Registry::scan(
+                        std::env::temp_dir().join("nomanga-empty"),
+                    )
+                    .unwrap_or_else(|_| panic!("cannot create empty registry"))
+                }
+            };
+
+            let settings_path = dir.join("settings.json");
+
+            let settings = match nomanga_services::settings::load(&settings_path) {
+                Ok(s) => s,
+                Err(e) => {
+                    warnings.push(StartupWarning {
+                        kind: nomanga_services::WarningKind::SettingsCorrupt,
+                        message: format!(
+                            "Settings file could not be read ({e}); using defaults. \
+                              Your old file was kept at settings.json.bak."
+                        ),
+                    });
+                    let _ =
+                        std::fs::rename(&settings_path, settings_path.with_extension("json.bak"));
+                    nomanga_services::settings::Settings::default()
+                }
+            };
 
             app.manage(AppState {
                 pool,
                 registry: Arc::new(RwLock::new(registry)),
+                settings: Arc::new(RwLock::new(settings)),
+                settings_path,
+                startup_warnings: Arc::new(RwLock::new(warnings)),
             });
 
             Ok(())
