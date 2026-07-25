@@ -12,13 +12,13 @@ function RouteComponent() {
 	const [settingsOpen, setSettingsOpen] = useState(false);
 
 	return (
-		<SidebarProvider>
+		<SidebarProvider className="h-svh overflow-hidden">
 			<Sidebar
 				onSettingsOpenChange={setSettingsOpen}
 				settingsOpen={settingsOpen}
 			/>
-			<SidebarInset>
-				<main className="flex-1 overflow-y-auto">
+			<SidebarInset className="min-w-0 overflow-hidden">
+				<main className="min-h-0 min-w-0 flex-1 overflow-hidden">
 					<Outlet />
 				</main>
 			</SidebarInset>

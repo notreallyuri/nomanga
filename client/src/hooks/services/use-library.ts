@@ -1,0 +1,202 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type NomangaError, unwrap } from "@/lib/unwrap";
+import {
+	type CategoryFilter,
+	type CategoryOptions,
+	commands,
+	type EntryRef,
+	type Manga,
+	type MangaSimple,
+} from "@/types/bindings";
+
+export const ALL_CATEGORIES: CategoryFilter = { type: "All" };
+
+export const libraryKeys = {
+	all: ["library"] as const,
+	list: (filter: CategoryFilter) =>
+		[...libraryKeys.all, "list", filter] as const,
+	membership: (sourceId: string, mangaId: string) =>
+		[...libraryKeys.all, "member", sourceId, mangaId] as const,
+	categories: () => [...libraryKeys.all, "categories"] as const,
+	entryCategories: (sourceId: string, mangaId: string) =>
+		[...libraryKeys.all, "entry-categories", sourceId, mangaId] as const,
+};
+
+export function useLibrary(filter: CategoryFilter = ALL_CATEGORIES) {
+	return useQuery({
+		queryKey: libraryKeys.list(filter),
+		queryFn: () => unwrap(commands.listLibrary(filter)),
+	});
+}
+
+export function useCategories() {
+	return useQuery({
+		queryKey: libraryKeys.categories(),
+		queryFn: () => unwrap(commands.listCategories()),
+	});
+}
+
+export function useEntryCategories(sourceId: string, mangaId: string) {
+	return useQuery({
+		queryKey: libraryKeys.entryCategories(sourceId, mangaId),
+		queryFn: () => unwrap(commands.categoriesForEntry(sourceId, mangaId)),
+	});
+}
+
+export function useIsInLibrary(
+	sourceId: string | undefined,
+	mangaId: string | undefined,
+) {
+	return useQuery({
+		queryKey: libraryKeys.membership(sourceId ?? "", mangaId ?? ""),
+		queryFn: () =>
+			unwrap(commands.isInLibrary(sourceId as string, mangaId as string)),
+		enabled: Boolean(sourceId && mangaId),
+	});
+}
+
+/**
+ * `entry` is the metadata the caller already holds. Passing it lets the add
+ * cache and save in one transaction, which is what makes the button work on a
+ * browse or search card whose details page was never opened.
+ */
+export function useToggleLibrary(
+	sourceId: string,
+	mangaId: string,
+	entry?: Manga | MangaSimple,
+) {
+	const queryClient = useQueryClient();
+	const membershipKey = libraryKeys.membership(sourceId, mangaId);
+
+	const settle = () => {
+		queryClient.invalidateQueries({
+			queryKey: [...libraryKeys.all, "list"],
+		});
+		queryClient.invalidateQueries({ queryKey: membershipKey });
+	};
+
+	const optimistic = (next: boolean) => async () => {
+		await queryClient.cancelQueries({ queryKey: membershipKey });
+		const previous = queryClient.getQueryData<boolean>(membershipKey);
+		queryClient.setQueryData(membershipKey, next);
+		return { previous };
+	};
+
+	const rollback = (
+		_err: NomangaError,
+		_vars: unknown,
+		context: { previous?: boolean } | undefined,
+	) => {
+		if (context?.previous !== undefined) {
+			queryClient.setQueryData(membershipKey, context.previous);
+		}
+	};
+
+	const add = useMutation({
+		mutationFn: () => {
+			if (!entry) return unwrap(commands.addToLibrary(sourceId, mangaId));
+
+			return "tags" in entry
+				? unwrap(commands.addMangaToLibrary(sourceId, entry))
+				: unwrap(commands.addListingToLibrary(sourceId, entry));
+		},
+		onMutate: optimistic(true),
+		onError: rollback,
+		onSettled: settle,
+	});
+
+	const remove = useMutation({
+		mutationFn: () => unwrap(commands.removeFromLibrary(sourceId, mangaId)),
+		onMutate: optimistic(false),
+		onError: rollback,
+		onSettled: settle,
+	});
+
+	return { add, remove };
+}
+
+function useCategoryMutation<TVariables>(
+	mutationFn: (variables: TVariables) => Promise<unknown>,
+) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+		},
+	});
+}
+
+export function useCreateCategory() {
+	return useCategoryMutation((name: string) =>
+		unwrap(commands.createCategory(name)),
+	);
+}
+
+export function useRenameCategory() {
+	return useCategoryMutation(
+		({ categoryId, name }: { categoryId: string; name: string }) =>
+			unwrap(commands.renameCategory(categoryId, name)),
+	);
+}
+
+export function useUpdateCategoryOptions() {
+	return useCategoryMutation(
+		({
+			categoryId,
+			options,
+		}: {
+			categoryId: string;
+			options: CategoryOptions;
+		}) => unwrap(commands.updateCategoryOptions(categoryId, options)),
+	);
+}
+
+export function useDeleteCategory() {
+	return useCategoryMutation((categoryId: string) =>
+		unwrap(commands.deleteCategory(categoryId)),
+	);
+}
+
+export function useReorderCategories() {
+	return useCategoryMutation((categoryIds: string[]) =>
+		unwrap(commands.reorderCategories(categoryIds)),
+	);
+}
+
+export function useSetEntryCategories(sourceId: string, mangaId: string) {
+	return useCategoryMutation((categoryIds: string[]) =>
+		unwrap(commands.setEntryCategories(sourceId, mangaId, categoryIds)),
+	);
+}
+
+export function useBulkCategoryCounts(entries: EntryRef[], enabled = true) {
+	return useQuery({
+		queryKey: [...libraryKeys.all, "bulk-counts", entries],
+		queryFn: () => unwrap(commands.bulkCategoryCounts(entries)),
+		enabled: enabled && entries.length > 0,
+	});
+}
+
+export function useBulkRemove() {
+	return useCategoryMutation(async (entries: EntryRef[]) => {
+		for (const entry of entries) {
+			await unwrap(commands.removeFromLibrary(entry.source_id, entry.manga_id));
+		}
+	});
+}
+
+export function useBulkUpdateCategories() {
+	return useCategoryMutation(
+		({
+			entries,
+			add,
+			remove,
+		}: {
+			entries: EntryRef[];
+			add: string[];
+			remove: string[];
+		}) => unwrap(commands.bulkUpdateCategories(entries, add, remove)),
+	);
+}

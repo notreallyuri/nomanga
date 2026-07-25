@@ -28,18 +28,19 @@ export function AppearanceSection() {
 				/>
 			</Group>
 
-			<Group title="Library grid">
+			<Group title="Covers & grids">
 				<Switch
 					description="Display manga titles under their covers"
 					field="show_titles"
 					label="Show titles"
 				/>
 				<Switch
-					description="Fit more entries on screen"
+					description="Smaller covers and tighter spacing across the library, browse and search"
 					field="compact_mode"
 					label="Compact mode"
 				/>
 				<Select
+					description="How covers are framed"
 					field="cover_style"
 					label="Cover style"
 					options={[
