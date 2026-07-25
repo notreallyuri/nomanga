@@ -85,6 +85,25 @@ export function StripReader({
 		return () => observer.disconnect();
 	}, [onIndexChange]);
 
+	// The observer only marks a page "current" while it's in the middle third of
+	// the viewport, but a short final page can never get there — at max scroll it
+	// sits in the bottom third, so the last index is never reported and the
+	// chapter never registers as finished. Reaching the bottom forces it.
+	useEffect(() => {
+		const container = containerRef.current;
+		if (!container || pages.length === 0) return;
+
+		const onScroll = () => {
+			const atBottom =
+				container.scrollTop + container.clientHeight >=
+				container.scrollHeight - 48;
+			if (atBottom) handleIndexChange(pages.length - 1);
+		};
+
+		container.addEventListener("scroll", onScroll, { passive: true });
+		return () => container.removeEventListener("scroll", onScroll);
+	}, [handleIndexChange, pages.length]);
+
 	useEffect(() => {
 		pageRefs.current = pageRefs.current.slice(0, pages.length);
 	}, [pages]);

@@ -92,7 +92,13 @@ function Reader() {
 		if (resumeIndex > 0) setIndex(resumeIndex);
 	}, [chapterId, total, progress.isPending, resumeIndex]);
 
-	useReportProgress({ sourceId, mangaId, chapterId, index, total });
+	const markChapterFinished = useReportProgress({
+		sourceId,
+		mangaId,
+		chapterId,
+		index,
+		total,
+	});
 
 	const goToChapter = useCallback(
 		(id: string) => {
@@ -106,6 +112,14 @@ function Reader() {
 		},
 		[navigate, sourceId, mangaId],
 	);
+
+	// Moving on to the next chapter counts the current one as read, even if its
+	// exact last page was never the active index (common in vertical scroll).
+	const goToNextChapter = useCallback(() => {
+		if (!nextChapter) return;
+		markChapterFinished(chapterId, Math.max(index, total - 1));
+		goToChapter(nextChapter.id);
+	}, [nextChapter, chapterId, index, total, markChapterFinished, goToChapter]);
 
 	const exit = useCallback(() => {
 		// Hierarchical return to the manga page (not history.back), replacing the
@@ -121,9 +135,9 @@ function Reader() {
 		if (index < total - 1) {
 			setIndex((i) => i + 1);
 		} else if (nextChapter) {
-			goToChapter(nextChapter.id);
+			goToNextChapter();
 		}
-	}, [index, total, nextChapter, goToChapter]);
+	}, [index, total, nextChapter, goToNextChapter]);
 
 	const retreat = useCallback(() => {
 		if (index > 0) {
@@ -199,6 +213,7 @@ function Reader() {
 				nextChapter={nextChapter?.id}
 				onExit={exit}
 				onGoToChapter={goToChapter}
+				onGoToNextChapter={goToNextChapter}
 				onOpenSettings={() => setSettingsOpen(true)}
 				prevChapter={prevChapter?.id}
 				total={total}
@@ -223,6 +238,7 @@ function Chrome({
 	total,
 	onExit,
 	onGoToChapter,
+	onGoToNextChapter,
 	onOpenSettings,
 	nextChapter,
 	prevChapter,
@@ -234,6 +250,7 @@ function Chrome({
 	total: number;
 	onExit: () => void;
 	onGoToChapter: (id: string) => void;
+	onGoToNextChapter: () => void;
 	onOpenSettings: () => void;
 	nextChapter?: string;
 	prevChapter?: string;
@@ -281,7 +298,7 @@ function Chrome({
 
 				<Button
 					disabled={!nextChapter}
-					onClick={() => nextChapter && onGoToChapter(nextChapter)}
+					onClick={onGoToNextChapter}
 					size="icon"
 					variant="ghost"
 				>
@@ -327,6 +344,17 @@ function useReportProgress({
 
 		return () => clearTimeout(timer);
 	}, [sourceId, mangaId, chapterId, index, total]);
+
+	// Marks a chapter finished explicitly — used when the reader jumps forward to
+	// the next chapter, which may happen (footer button, strip mode) before the
+	// last page is ever the current index. Idempotent with the auto-finish above.
+	return useCallback(
+		(id: string, lastPage: number) => {
+			finished.current = id;
+			finishChapter({ chapterId: id, lastPage });
+		},
+		[finishChapter],
+	);
 }
 
 function useReaderKeys({
