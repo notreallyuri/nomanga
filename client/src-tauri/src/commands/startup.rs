@@ -1,4 +1,4 @@
-use crate::AppState;
+use crate::{error::CommandResult, AppState};
 use nomanga_services::StartupWarning;
 use tauri::State;
 
@@ -6,7 +6,8 @@ use tauri::State;
 #[specta::specta]
 pub async fn take_startup_warnings(
     state: State<'_, AppState>,
-) -> Result<Vec<StartupWarning>, String> {
-    let mut guard = state.startup_warnings.write().map_err(|_| "poisoned")?;
+) -> CommandResult<Vec<StartupWarning>> {
+    let mut guard = state.startup_warnings.write()?;
+
     Ok(std::mem::take(&mut *guard))
 }

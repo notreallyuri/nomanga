@@ -1,5 +1,5 @@
 use crate::commands::*;
-use nomanga_services::StartupWarning;
+use nomanga_services::{StartupWarning, WarningKind};
 use specta_typescript::Typescript;
 use std::{
     path::PathBuf,
@@ -8,6 +8,7 @@ use std::{
 use tauri::Manager;
 
 pub mod commands;
+pub mod error;
 
 pub struct AppState {
     pub pool: sqlx::SqlitePool,
@@ -17,43 +18,71 @@ pub struct AppState {
     pub startup_warnings: Arc<RwLock<Vec<nomanga_services::StartupWarning>>>,
 }
 
+pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
+    tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
+        // library
+        library::list_library,
+        library::add_to_library,
+        library::add_listing_to_library,
+        library::add_manga_to_library,
+        library::remove_from_library,
+        library::is_in_library,
+        library::list_categories,
+        library::create_category,
+        library::rename_category,
+        library::update_category_options,
+        library::delete_category,
+        library::reorder_categories,
+        library::categories_for_entry,
+        library::set_entry_categories,
+        library::bulk_category_counts,
+        library::bulk_update_categories,
+        // history
+        history::continue_reading,
+        history::remove_history_entries,
+        history::mark_chapter_read,
+        history::mark_chapter_unread,
+        history::mark_chapters_read,
+        history::mark_chapters_unread,
+        history::is_chapter_read,
+        history::read_chapters_for_manga,
+        history::read_count,
+        history::update_progress,
+        history::get_progress,
+        history::finish_chapter,
+        // sources
+        source::list_sources,
+        source::source_filters,
+        source::source_homepage,
+        source::source_search,
+        source::source_section,
+        source::source_manga,
+        source::source_chapters,
+        source::source_pages,
+        source::install_extension,
+        // settings
+        settings::get_settings,
+        settings::save_settings,
+        settings::effective_reader_settings,
+        settings::get_source_reader_override,
+        settings::set_source_reader_override,
+        settings::get_manga_reader_override,
+        settings::set_manga_reader_override,
+        // extension
+        extension::list_extensions,
+        extension::uninstall_extension,
+        extension::list_sources_with_preferences,
+        extension::set_source_preference,
+        extension::get_source_settings,
+        extension::save_source_settings,
+        //startup
+        startup::take_startup_warnings
+    ])
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder =
-        tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
-            // library
-            library::list_library,
-            library::add_to_library,
-            library::remove_from_library,
-            library::is_in_library,
-            library::list_categories,
-            // history
-            history::continue_reading,
-            history::mark_chapter_read,
-            history::mark_chapter_unread,
-            history::mark_chapters_read,
-            history::is_chapter_read,
-            history::read_chapters_for_manga,
-            history::read_count,
-            history::update_progress,
-            history::get_progress,
-            history::finish_chapter,
-            // sources
-            source::list_sources,
-            source::source_filters,
-            source::source_homepage,
-            source::source_search,
-            source::source_section,
-            source::source_manga,
-            source::source_chapters,
-            source::source_pages,
-            source::install_extension,
-            // settings
-            settings::get_settings,
-            settings::save_settings,
-            //startup
-            startup::take_startup_warnings
-        ]);
+    let builder = specta_builder();
 
     #[cfg(debug_assertions)]
     builder
@@ -61,6 +90,7 @@ pub fn run() {
         .expect("failed to export typescript bindings");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
@@ -70,27 +100,29 @@ pub fn run() {
             std::fs::create_dir_all(&dir).ok();
 
             let db_path = dir.join("library.db");
-            let pool = tauri::async_runtime::block_on(async {
-                nomanga_services::db::open(db_path.to_str().expect("non-utf8 db path"))
+            let (pool, configs) = tauri::async_runtime::block_on(async {
+                let pool = nomanga_services::db::open(db_path.to_str().expect("non-utf8 db path"))
                     .await
-                    .expect("failed to open database")
+                    .expect("failed to open database");
+                let configs = nomanga_services::source::config::all_configs(&pool)
+                    .await
+                    .unwrap_or_default();
+                (pool, configs)
             });
 
             let mut warnings = Vec::new();
 
-            let registry = match nomanga_host::registry::Registry::scan(dir.join("extensions")) {
-                Ok(r) => r,
-                Err(e) => {
-                    warnings.push(StartupWarning {
-                        kind: nomanga_services::WarningKind::ExtensionFailed,
-                        message: format!("Could not load extensions: {e}"),
-                    });
-                    nomanga_host::registry::Registry::scan(
-                        std::env::temp_dir().join("nomanga-empty"),
-                    )
-                    .unwrap_or_else(|_| panic!("cannot create empty registry"))
-                }
-            };
+            let registry =
+                match nomanga_host::registry::Registry::scan(dir.join("extensions"), &configs) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        warnings.push(StartupWarning {
+                            kind: WarningKind::ExtensionFailed,
+                            message: format!("Could not load extensions: {e}"),
+                        });
+                        nomanga_host::registry::Registry::empty(dir.join("extensions"))
+                    }
+                };
 
             let settings_path = dir.join("settings.json");
 

@@ -1,16 +1,39 @@
-use crate::AppState;
+use crate::{error::CommandResult, AppState};
 use nomanga_services::history::{self, ContinueReadingItem, ReadProgress};
+use serde::{Deserialize, Serialize};
 use tauri::State;
+
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+pub struct HistoryEntryRef {
+    pub source_id: String,
+    pub manga_id: String,
+}
 
 #[tauri::command]
 #[specta::specta]
 pub async fn continue_reading(
     state: State<'_, AppState>,
     limit: i32,
-) -> Result<Vec<ContinueReadingItem>, String> {
-    history::continue_reading(&state.pool, limit as i64)
-        .await
-        .map_err(|e| e.to_string())
+) -> CommandResult<Vec<ContinueReadingItem>> {
+    let res = history::continue_reading(&state.pool, limit as i64).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn remove_history_entries(
+    state: State<'_, AppState>,
+    entries: Vec<HistoryEntryRef>,
+) -> CommandResult<()> {
+    let refs: Vec<(&str, &str)> = entries
+        .iter()
+        .map(|e| (e.source_id.as_str(), e.manga_id.as_str()))
+        .collect();
+
+    history::remove_progress_many(&state.pool, &refs).await?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -20,10 +43,10 @@ pub async fn mark_chapter_read(
     source_id: String,
     manga_id: String,
     chapter_id: String,
-) -> Result<(), String> {
-    history::mark_chapter_read(&state.pool, &source_id, &manga_id, &chapter_id)
-        .await
-        .map_err(|e| e.to_string())
+) -> CommandResult<()> {
+    history::mark_chapter_read(&state.pool, &source_id, &manga_id, &chapter_id).await?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -33,10 +56,10 @@ pub async fn mark_chapter_unread(
     source_id: String,
     manga_id: String,
     chapter_id: String,
-) -> Result<(), String> {
-    history::mark_chapter_unread(&state.pool, &source_id, &manga_id, &chapter_id)
-        .await
-        .map_err(|e| e.to_string())
+) -> CommandResult<()> {
+    history::mark_chapter_unread(&state.pool, &source_id, &manga_id, &chapter_id).await?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -46,12 +69,27 @@ pub async fn mark_chapters_read(
     source_id: String,
     manga_id: String,
     chapter_ids: Vec<String>,
-) -> Result<(), String> {
+) -> CommandResult<()> {
     let refs: Vec<&str> = chapter_ids.iter().map(String::as_str).collect();
 
-    history::mark_chapters_read(&state.pool, &source_id, &manga_id, &refs)
-        .await
-        .map_err(|e| e.to_string())
+    history::mark_chapters_read(&state.pool, &source_id, &manga_id, &refs).await?;
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn mark_chapters_unread(
+    state: State<'_, AppState>,
+    source_id: String,
+    manga_id: String,
+    chapter_ids: Vec<String>,
+) -> CommandResult<()> {
+    let refs: Vec<&str> = chapter_ids.iter().map(String::as_str).collect();
+
+    history::mark_chapters_unread(&state.pool, &source_id, &manga_id, &refs).await?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -61,10 +99,10 @@ pub async fn is_chapter_read(
     source_id: String,
     manga_id: String,
     chapter_id: String,
-) -> Result<bool, String> {
-    history::is_chapter_read(&state.pool, &source_id, &manga_id, &chapter_id)
-        .await
-        .map_err(|e| e.to_string())
+) -> CommandResult<bool> {
+    let res = history::is_chapter_read(&state.pool, &source_id, &manga_id, &chapter_id).await?;
+
+    Ok(res)
 }
 
 #[tauri::command]
@@ -73,10 +111,10 @@ pub async fn read_chapters_for_manga(
     state: State<'_, AppState>,
     source_id: String,
     manga_id: String,
-) -> Result<Vec<String>, String> {
-    history::read_chapters_for_manga(&state.pool, &source_id, &manga_id)
-        .await
-        .map_err(|e| e.to_string())
+) -> CommandResult<Vec<String>> {
+    let res = history::read_chapters_for_manga(&state.pool, &source_id, &manga_id).await?;
+
+    Ok(res)
 }
 
 #[tauri::command]
@@ -85,11 +123,12 @@ pub async fn read_count(
     state: State<'_, AppState>,
     source_id: String,
     manga_id: String,
-) -> Result<i32, String> {
-    history::read_count(&state.pool, &source_id, &manga_id)
+) -> CommandResult<i32> {
+    let res = history::read_count(&state.pool, &source_id, &manga_id)
         .await
-        .map(|n| n as i32)
-        .map_err(|e| e.to_string())
+        .map(|n| n as i32)?;
+
+    Ok(res)
 }
 
 #[tauri::command]
@@ -101,7 +140,7 @@ pub async fn update_progress(
     chapter_id: String,
     page: i32,
     chapter_done: bool,
-) -> Result<(), String> {
+) -> CommandResult<()> {
     history::update_progress(
         &state.pool,
         &source_id,
@@ -110,8 +149,9 @@ pub async fn update_progress(
         page as i64,
         chapter_done,
     )
-    .await
-    .map_err(|e| e.to_string())
+    .await?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -120,10 +160,10 @@ pub async fn get_progress(
     state: State<'_, AppState>,
     source_id: String,
     manga_id: String,
-) -> Result<Option<ReadProgress>, String> {
-    history::get_progress(&state.pool, &source_id, &manga_id)
-        .await
-        .map_err(|e| e.to_string())
+) -> CommandResult<Option<ReadProgress>> {
+    let res = history::get_progress(&state.pool, &source_id, &manga_id).await?;
+
+    Ok(res)
 }
 
 #[tauri::command]
@@ -134,7 +174,7 @@ pub async fn finish_chapter(
     manga_id: String,
     chapter_id: String,
     last_page: i32,
-) -> Result<(), String> {
+) -> CommandResult<()> {
     history::finish_chapter(
         &state.pool,
         &source_id,
@@ -142,6 +182,7 @@ pub async fn finish_chapter(
         &chapter_id,
         last_page as i64,
     )
-    .await
-    .map_err(|e| e.to_string())
+    .await?;
+
+    Ok(())
 }

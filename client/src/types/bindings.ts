@@ -4,19 +4,32 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
-	listLibrary: () => typedError<LibraryItem[], string>(__TAURI_INVOKE("list_library")),
-	addToLibrary: (sourceId: string, mangaId: string) => typedError<null, string>(__TAURI_INVOKE("add_to_library", { sourceId, mangaId })),
-	removeFromLibrary: (sourceId: string, mangaId: string) => typedError<null, string>(__TAURI_INVOKE("remove_from_library", { sourceId, mangaId })),
-	isInLibrary: (sourceId: string, mangaId: string) => typedError<boolean, string>(__TAURI_INVOKE("is_in_library", { sourceId, mangaId })),
-	listCategories: () => typedError<Category[], string>(__TAURI_INVOKE("list_categories")),
-	continueReading: (limit: number) => typedError<ContinueReadingItem[], string>(__TAURI_INVOKE("continue_reading", { limit })),
-	markChapterRead: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, string>(__TAURI_INVOKE("mark_chapter_read", { sourceId, mangaId, chapterId })),
-	markChapterUnread: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, string>(__TAURI_INVOKE("mark_chapter_unread", { sourceId, mangaId, chapterId })),
-	markChaptersRead: (sourceId: string, mangaId: string, chapterIds: string[]) => typedError<null, string>(__TAURI_INVOKE("mark_chapters_read", { sourceId, mangaId, chapterIds })),
-	isChapterRead: (sourceId: string, mangaId: string, chapterId: string) => typedError<boolean, string>(__TAURI_INVOKE("is_chapter_read", { sourceId, mangaId, chapterId })),
-	readChaptersForManga: (sourceId: string, mangaId: string) => typedError<string[], string>(__TAURI_INVOKE("read_chapters_for_manga", { sourceId, mangaId })),
-	readCount: (sourceId: string, mangaId: string) => typedError<number, string>(__TAURI_INVOKE("read_count", { sourceId, mangaId })),
-	updateProgress: (sourceId: string, mangaId: string, chapterId: string, page: number, chapterDone: boolean) => typedError<null, string>(__TAURI_INVOKE("update_progress", { sourceId, mangaId, chapterId, page, chapterDone })),
+	listLibrary: (filter: CategoryFilter) => typedError<LibraryItem[], CommandError>(__TAURI_INVOKE("list_library", { filter })),
+	addToLibrary: (sourceId: string, mangaId: string) => typedError<null, CommandError>(__TAURI_INVOKE("add_to_library", { sourceId, mangaId })),
+	addListingToLibrary: (sourceId: string, item: MangaSimple) => typedError<null, CommandError>(__TAURI_INVOKE("add_listing_to_library", { sourceId, item })),
+	addMangaToLibrary: (sourceId: string, manga: Manga) => typedError<null, CommandError>(__TAURI_INVOKE("add_manga_to_library", { sourceId, manga })),
+	removeFromLibrary: (sourceId: string, mangaId: string) => typedError<null, CommandError>(__TAURI_INVOKE("remove_from_library", { sourceId, mangaId })),
+	isInLibrary: (sourceId: string, mangaId: string) => typedError<boolean, CommandError>(__TAURI_INVOKE("is_in_library", { sourceId, mangaId })),
+	listCategories: () => typedError<Category[], CommandError>(__TAURI_INVOKE("list_categories")),
+	createCategory: (name: string) => typedError<Category, CommandError>(__TAURI_INVOKE("create_category", { name })),
+	renameCategory: (categoryId: string, name: string) => typedError<null, CommandError>(__TAURI_INVOKE("rename_category", { categoryId, name })),
+	updateCategoryOptions: (categoryId: string, options: CategoryOptions) => typedError<null, CommandError>(__TAURI_INVOKE("update_category_options", { categoryId, options })),
+	deleteCategory: (categoryId: string) => typedError<null, CommandError>(__TAURI_INVOKE("delete_category", { categoryId })),
+	reorderCategories: (categoryIds: string[]) => typedError<null, CommandError>(__TAURI_INVOKE("reorder_categories", { categoryIds })),
+	categoriesForEntry: (sourceId: string, mangaId: string) => typedError<string[], CommandError>(__TAURI_INVOKE("categories_for_entry", { sourceId, mangaId })),
+	setEntryCategories: (sourceId: string, mangaId: string, categoryIds: string[]) => typedError<null, CommandError>(__TAURI_INVOKE("set_entry_categories", { sourceId, mangaId, categoryIds })),
+	bulkCategoryCounts: (entries: EntryRef[]) => typedError<CategoryCount[], CommandError>(__TAURI_INVOKE("bulk_category_counts", { entries })),
+	bulkUpdateCategories: (entries: EntryRef[], add: string[], remove: string[]) => typedError<null, CommandError>(__TAURI_INVOKE("bulk_update_categories", { entries, add, remove })),
+	continueReading: (limit: number) => typedError<ContinueReadingItem[], CommandError>(__TAURI_INVOKE("continue_reading", { limit })),
+	removeHistoryEntries: (entries: HistoryEntryRef[]) => typedError<null, CommandError>(__TAURI_INVOKE("remove_history_entries", { entries })),
+	markChapterRead: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("mark_chapter_read", { sourceId, mangaId, chapterId })),
+	markChapterUnread: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("mark_chapter_unread", { sourceId, mangaId, chapterId })),
+	markChaptersRead: (sourceId: string, mangaId: string, chapterIds: string[]) => typedError<null, CommandError>(__TAURI_INVOKE("mark_chapters_read", { sourceId, mangaId, chapterIds })),
+	markChaptersUnread: (sourceId: string, mangaId: string, chapterIds: string[]) => typedError<null, CommandError>(__TAURI_INVOKE("mark_chapters_unread", { sourceId, mangaId, chapterIds })),
+	isChapterRead: (sourceId: string, mangaId: string, chapterId: string) => typedError<boolean, CommandError>(__TAURI_INVOKE("is_chapter_read", { sourceId, mangaId, chapterId })),
+	readChaptersForManga: (sourceId: string, mangaId: string) => typedError<string[], CommandError>(__TAURI_INVOKE("read_chapters_for_manga", { sourceId, mangaId })),
+	readCount: (sourceId: string, mangaId: string) => typedError<number, CommandError>(__TAURI_INVOKE("read_count", { sourceId, mangaId })),
+	updateProgress: (sourceId: string, mangaId: string, chapterId: string, page: number, chapterDone: boolean) => typedError<null, CommandError>(__TAURI_INVOKE("update_progress", { sourceId, mangaId, chapterId, page, chapterDone })),
 	getProgress: (sourceId: string, mangaId: string) => typedError<{
 	source_id: string,
 	manga_id: string,
@@ -24,20 +37,31 @@ export const commands = {
 	last_page: number,
 	last_chapter_done: boolean,
 	updated_at: string,
-} | null, string>(__TAURI_INVOKE("get_progress", { sourceId, mangaId })),
-	finishChapter: (sourceId: string, mangaId: string, chapterId: string, lastPage: number) => typedError<null, string>(__TAURI_INVOKE("finish_chapter", { sourceId, mangaId, chapterId, lastPage })),
-	listSources: () => typedError<SourceInfo[], string>(__TAURI_INVOKE("list_sources")),
-	sourceFilters: (sourceId: string) => typedError<Filter[], string>(__TAURI_INVOKE("source_filters", { sourceId })),
-	sourceHomepage: (sourceId: string) => typedError<Homepage, string>(__TAURI_INVOKE("source_homepage", { sourceId })),
-	sourceSearch: (sourceId: string, query: SearchQuery) => typedError<MangaPage, string>(__TAURI_INVOKE("source_search", { sourceId, query })),
-	sourceSection: (sourceId: string, section: SectionRef) => typedError<MangaPage, string>(__TAURI_INVOKE("source_section", { sourceId, section })),
-	sourceManga: (sourceId: string, mangaId: string) => typedError<Manga, string>(__TAURI_INVOKE("source_manga", { sourceId, mangaId })),
-	sourceChapters: (sourceId: string, mangaId: string) => typedError<Chapter[], string>(__TAURI_INVOKE("source_chapters", { sourceId, mangaId })),
-	sourcePages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], string>(__TAURI_INVOKE("source_pages", { sourceId, mangaId, chapterId })),
-	installExtension: (wasmPath: string) => typedError<string, string>(__TAURI_INVOKE("install_extension", { wasmPath })),
-	getSettings: () => typedError<Settings, string>(__TAURI_INVOKE("get_settings")),
-	saveSettings: (newSettings: Settings) => typedError<null, string>(__TAURI_INVOKE("save_settings", { newSettings })),
-	takeStartupWarnings: () => typedError<StartupWarning[], string>(__TAURI_INVOKE("take_startup_warnings")),
+} | null, CommandError>(__TAURI_INVOKE("get_progress", { sourceId, mangaId })),
+	finishChapter: (sourceId: string, mangaId: string, chapterId: string, lastPage: number) => typedError<null, CommandError>(__TAURI_INVOKE("finish_chapter", { sourceId, mangaId, chapterId, lastPage })),
+	listSources: () => typedError<SourceInfo[], CommandError>(__TAURI_INVOKE("list_sources")),
+	sourceFilters: (sourceId: string) => typedError<Filter[], CommandError>(__TAURI_INVOKE("source_filters", { sourceId })),
+	sourceHomepage: (sourceId: string) => typedError<Homepage, CommandError>(__TAURI_INVOKE("source_homepage", { sourceId })),
+	sourceSearch: (sourceId: string, query: SearchQuery) => typedError<MangaPage, CommandError>(__TAURI_INVOKE("source_search", { sourceId, query })),
+	sourceSection: (sourceId: string, section: SectionRef) => typedError<MangaPage, CommandError>(__TAURI_INVOKE("source_section", { sourceId, section })),
+	sourceManga: (sourceId: string, mangaId: string) => typedError<Manga, CommandError>(__TAURI_INVOKE("source_manga", { sourceId, mangaId })),
+	sourceChapters: (sourceId: string, mangaId: string) => typedError<Chapter[], CommandError>(__TAURI_INVOKE("source_chapters", { sourceId, mangaId })),
+	sourcePages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("source_pages", { sourceId, mangaId, chapterId })),
+	installExtension: (wasmPath: string) => typedError<string, CommandError>(__TAURI_INVOKE("install_extension", { wasmPath })),
+	getSettings: () => typedError<Settings, CommandError>(__TAURI_INVOKE("get_settings")),
+	saveSettings: (newSettings: Settings) => typedError<null, CommandError>(__TAURI_INVOKE("save_settings", { newSettings })),
+	effectiveReaderSettings: (sourceId: string, mangaId: string) => typedError<ReaderSettings, CommandError>(__TAURI_INVOKE("effective_reader_settings", { sourceId, mangaId })),
+	getSourceReaderOverride: (sourceId: string) => typedError<ReaderOverride, CommandError>(__TAURI_INVOKE("get_source_reader_override", { sourceId })),
+	setSourceReaderOverride: (sourceId: string, over: ReaderOverride) => typedError<null, CommandError>(__TAURI_INVOKE("set_source_reader_override", { sourceId, over })),
+	getMangaReaderOverride: (sourceId: string, mangaId: string) => typedError<ReaderOverride, CommandError>(__TAURI_INVOKE("get_manga_reader_override", { sourceId, mangaId })),
+	setMangaReaderOverride: (sourceId: string, mangaId: string, over: ReaderOverride) => typedError<null, CommandError>(__TAURI_INVOKE("set_manga_reader_override", { sourceId, mangaId, over })),
+	listExtensions: () => typedError<InstalledExtension[], CommandError>(__TAURI_INVOKE("list_extensions")),
+	uninstallExtension: (extensionId: string) => typedError<null, CommandError>(__TAURI_INVOKE("uninstall_extension", { extensionId })),
+	listSourcesWithPreferences: () => typedError<SourceWithPreference[], CommandError>(__TAURI_INVOKE("list_sources_with_preferences")),
+	setSourcePreference: (preference: SourcePreference) => typedError<null, CommandError>(__TAURI_INVOKE("set_source_preference", { preference })),
+	getSourceSettings: (sourceId: string) => typedError<SourceSettings, CommandError>(__TAURI_INVOKE("get_source_settings", { sourceId })),
+	saveSourceSettings: (sourceId: string, values: { [key in string]: string }) => typedError<null, CommandError>(__TAURI_INVOKE("save_source_settings", { sourceId, values })),
+	takeStartupWarnings: () => typedError<StartupWarning[], CommandError>(__TAURI_INVOKE("take_startup_warnings")),
 };
 
 /* Types */
@@ -53,7 +77,29 @@ export type Category = {
 	id: string,
 	name: string,
 	sort_order: number,
+	hidden: boolean,
+	is_default: boolean,
+	sort_mode: CategorySort,
+	color: string | null,
+	icon: string | null,
 };
+
+export type CategoryCount = {
+	category_id: string,
+	count: number,
+};
+
+export type CategoryFilter = { type: "All" } | { type: "Uncategorized" } | { type: "Category"; id: string };
+
+export type CategoryOptions = {
+	hidden: boolean,
+	is_default: boolean,
+	sort_mode: CategorySort,
+	color: string | null,
+	icon: string | null,
+};
+
+export type CategorySort = "added" | "title" | "unread";
 
 export type Chapter = {
 	id: string,
@@ -69,6 +115,22 @@ export type Chapter = {
 	is_locked: boolean,
 };
 
+export type CommandError = { kind: "Source"; detail: {
+	source_id: string | null,
+	message: string,
+} } | { kind: "Extension"; detail: {
+	message: string,
+} } | { kind: "Database"; detail: {
+	message: string,
+} } | { kind: "MangaNotCached"; detail: {
+	source_id: string,
+	manga_id: string,
+} } | { kind: "Io"; detail: {
+	message: string,
+} } | { kind: "Internal"; detail: {
+	message: string,
+} };
+
 export type ContinueReadingItem = {
 	source_id: string,
 	manga_id: string,
@@ -82,9 +144,53 @@ export type ContinueReadingItem = {
 
 export type CoverStyle = "Default" | "Rounded" | "Border" | "Shadow";
 
-export type Filter = { type: "Text"; id: string; label: string } | { type: "Toggle"; id: string; label: string; default: boolean } | { type: "Select"; id: string; label: string; options: SelectOption[]; default: string | null } | { type: "MultiSelect"; id: string; label: string; options: SelectOption[]; supports_exclusion: boolean } | { type: "Sort"; id: string; label: string; options: SelectOption[]; default: string | null; can_reverse: boolean };
+export type EntryRef = {
+	source_id: string,
+	manga_id: string,
+};
 
+export type ExtensionInfo = {
+	id: string,
+	name: string,
+	version: string,
+	abi_version: number,
+	author: string,
+	website: string | null,
+};
+
+/**
+ *  A filter a source exposes on its search screen. Every variant is keyed by an
+ *  `id` that ties it to the [`FilterValue`] the user sends back.
+ * 
+ *  Prefer the constructors ([`Filter::select`], [`Filter::sort`], …) over the
+ *  struct literal form; they fill in the optional fields and read more clearly
+ *  when a source declares many filters at once.
+ */
+export type Filter = 
+/**  A free-text field. */
+{ type: "Text"; id: string; label: string; placeholder: string | null } | 
+/**  An on/off switch. */
+{ type: "Toggle"; id: string; label: string; default: boolean } | 
+/**  Pick exactly one option. */
+{ type: "Select"; id: string; label: string; options: SelectOption[]; default: string | null } | 
+/**
+ *  Pick any number of options; may also allow excluding them when
+ *  `supports_exclusion` is set (e.g. include/exclude tags).
+ */
+{ type: "MultiSelect"; id: string; label: string; options: SelectOption[]; supports_exclusion: boolean } | 
+/**  A sort key, optionally reversible when `can_reverse` is set. */
+{ type: "Sort"; id: string; label: string; options: SelectOption[]; default: string | null; can_reverse: boolean };
+
+/**
+ *  A user's selection for one [`Filter`], carrying the same `id`. Read these off
+ *  a search with the [`FilterValues`] trait rather than matching by hand.
+ */
 export type FilterValue = { type: "Text"; id: string; value: string } | { type: "Toggle"; id: string; value: boolean } | { type: "Select"; id: string; value: string } | { type: "MultiSelect"; id: string; included: string[]; excluded: string[] } | { type: "Sort"; id: string; value: string; reversed: boolean };
+
+export type HistoryEntryRef = {
+	source_id: string,
+	manga_id: string,
+};
 
 export type Homepage = {
 	sections: HomepageSection[],
@@ -98,6 +204,11 @@ export type HomepageSection = {
 	paginable: boolean,
 };
 
+export type InstalledExtension = {
+	info: ExtensionInfo,
+	sources: SourceInfo[],
+};
+
 export type LibraryItem = {
 	source_id: string,
 	manga_id: string,
@@ -105,6 +216,7 @@ export type LibraryItem = {
 	cover_url: string,
 	added_at: string,
 	cached_total_chapters: number,
+	read_chapters: number,
 };
 
 export type Manga = {
@@ -149,6 +261,12 @@ export type ReadProgress = {
 	updated_at: string,
 };
 
+export type ReaderOverride = {
+	page_layout?: PageLayout | null,
+	zoom_behavior?: ZoomBehavior | null,
+	reading_direction?: ReadingDirection | null,
+};
+
 export type ReaderSettings = {
 	page_layout?: PageLayout,
 	zoom_behavior?: ZoomBehavior,
@@ -172,10 +290,26 @@ export type SectionRef = {
 	page: number,
 };
 
+/**
+ *  One choice in a `Select`, `MultiSelect`, or `Sort` filter (and in the
+ *  equivalent [`crate::extension::config::Setting`] kinds).
+ * 
+ *  `id` is the stable value sent back on selection; `label` is what the user
+ *  sees. Build several at once with [`SelectOption::list`].
+ */
 export type SelectOption = {
 	id: string,
 	label: string,
 };
+
+export type Setting = {
+	id: string,
+	label: string,
+	description: string | null,
+	kind: SettingKind,
+};
+
+export type SettingKind = { type: "Text"; secret: boolean; placeholder: string | null; default: string | null } | { type: "Toggle"; default: boolean } | { type: "Select"; options: SelectOption[]; default: string | null } | { type: "MultiSelect"; options: SelectOption[]; default: string[] } | { type: "TextList"; placeholder: string | null; default: string[] } | { type: "Number"; min: number | null; max: number | null; default: number | null };
 
 export type Settings = {
 	appearance?: AppearanceSettings,
@@ -192,6 +326,24 @@ export type SourceInfo = {
 	icon_url: string | null,
 	hosts: string[],
 	nsfw: boolean,
+};
+
+export type SourcePreference = {
+	source_id: string,
+	enabled: boolean,
+	private: boolean,
+	blur_covers: boolean,
+	skip_updates: boolean,
+};
+
+export type SourceSettings = {
+	schema: Setting[],
+	values: { [key in string]: string },
+};
+
+export type SourceWithPreference = {
+	info: SourceInfo,
+	preference: SourcePreference,
 };
 
 export type StartupWarning = {

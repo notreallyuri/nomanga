@@ -30,3 +30,4 @@ specta = { version = "2.0.0-rc.25", features = ["derive", "collect"] }
 specta-typescript = "0.0.12"
 sqlx = { version = "0.9", features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
 tokio = { version = "1", features = ["full"] }
+tauri-plugin-dialog = "2"
