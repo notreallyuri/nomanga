@@ -8,15 +8,19 @@
   - (No rate-limit is applied by default, but the developer may set one for the
     source.)
 - Updates:
-  - Move Update visualization to the bottom of the sidebar.
-  - Add a better updates visualization on the bottom of the sidebar,
+  - [x] Move Update visualization to the bottom of the sidebar.
+  - [x] Add a better updates visualization on the bottom of the sidebar,
     allowing users to see anywhere in the app the current state.
-  - Add support for background updates + tray menu implementation.
+    (Persistent sidebar indicator + detailed progress dialog with a per-series
+    live log; plus a "Clear" action that dismisses the current updates without
+    marking them read.)
+  - [ ] Add support for background updates + tray menu implementation.
 - Library:
-  - Listing layout (Allow user to toggle the layout in the library)
-  - Badge Toggle
-  - Quick filters
-  - Update Behavior customization
-  - Downloads
+  - [x] Listing layout (Allow user to toggle the layout in the library)
+  - [x] Badge Toggle
+  - [x] Quick filters
+  - [ ] Update Behavior customization
+  - [ ] Downloads
 - Browse:
-  - Allow name-searching in all sources (does not include source-specific filters)
+  - [ ] Allow name-searching in all sources (does not include source-specific
+    filters)
