@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE library_entry SET cached_total_chapters = ?\n          WHERE source_id = ? AND manga_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "590af261a4b1ceb9bd19111fe3a45e8fe12e0e982a9a1736e20d3e47ec6084be"
+}

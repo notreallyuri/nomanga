@@ -184,6 +184,17 @@ export function useLibraryUpdates(limit = 30) {
 	});
 }
 
+export function useClearLibraryUpdates() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: () => unwrap(commands.clearLibraryUpdates()),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: libraryKeys.updates() });
+		},
+	});
+}
+
 /**
  * Drives a scoped library refresh and exposes live progress from the backend's
  * `library-refresh-progress` events, so callers can render a determinate bar.

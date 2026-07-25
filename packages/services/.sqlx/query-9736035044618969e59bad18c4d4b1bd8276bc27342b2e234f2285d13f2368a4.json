@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT sort_mode FROM category WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "sort_mode",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "category",
+            "name": "sort_mode"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9736035044618969e59bad18c4d4b1bd8276bc27342b2e234f2285d13f2368a4"
+}

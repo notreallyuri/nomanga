@@ -167,6 +167,18 @@ pub async fn mark_checked(pool: &SqlitePool, source_id: &str, manga_id: &str) ->
     Ok(())
 }
 
+/// Dismisses every currently-surfaced update by stamping each library entry's
+/// `updates_cleared_at`. Chapters seen up to now stop counting as updates; newly
+/// discovered ones (a later `first_seen_at`) surface again on the next check.
+pub async fn clear_updates(pool: &SqlitePool) -> ServiceResult<()> {
+    let now = now();
+    sqlx::query!("UPDATE library_entry SET updates_cleared_at = ?", now)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
 pub async fn entries_to_refresh(
     pool: &SqlitePool,
     scope: &RefreshScope,
@@ -262,6 +274,8 @@ pub async fn library_updates(pool: &SqlitePool, limit: i64) -> ServiceResult<Vec
              JOIN manga m
                ON m.source_id = cc.source_id AND m.manga_id = cc.manga_id
             WHERE cc.first_seen_at > le.added_at
+              AND (le.updates_cleared_at IS NULL
+                   OR cc.first_seen_at > le.updates_cleared_at)
               AND NOT EXISTS (
                   SELECT 1 FROM read_chapter rc
                    WHERE rc.source_id = cc.source_id

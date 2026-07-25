@@ -43,6 +43,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             library::bulk_update_categories,
             library::refresh_library,
             library::library_updates,
+            library::clear_library_updates,
             // history
             history::continue_reading,
             history::remove_history_entries,

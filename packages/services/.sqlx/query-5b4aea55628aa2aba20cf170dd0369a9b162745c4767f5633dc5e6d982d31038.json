@@ -1,0 +1,52 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT m.title,\n                      le.last_checked_at AS \"last_checked_at: DateTime<Utc>\",\n                      COALESCE(sp.enabled, 1) AS \"enabled!: i64\",\n                      COALESCE(sp.skip_updates, 0) AS \"skip_updates!: i64\"\n                 FROM library_entry le\n                 JOIN manga m ON m.source_id = le.source_id AND m.manga_id = le.manga_id\n                 LEFT JOIN source_preference sp ON sp.source_id = le.source_id\n                WHERE le.source_id = ? AND le.manga_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "title",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "last_checked_at: DateTime<Utc>",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "last_checked_at"
+          }
+        }
+      },
+      {
+        "name": "enabled!: i64",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": "Expression"
+      },
+      {
+        "name": "skip_updates!: i64",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "5b4aea55628aa2aba20cf170dd0369a9b162745c4767f5633dc5e6d982d31038"
+}

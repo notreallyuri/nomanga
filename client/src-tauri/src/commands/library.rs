@@ -93,6 +93,14 @@ pub async fn library_updates(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn clear_library_updates(state: State<'_, AppState>) -> CommandResult<()> {
+    library::clear_updates(&state.pool).await?;
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn list_library(
     state: State<'_, AppState>,
     filter: CategoryFilter,

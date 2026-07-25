@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT added_at AS \"added_at: DateTime<Utc>\"\n             FROM library_entry WHERE source_id = ? AND manga_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "added_at: DateTime<Utc>",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "added_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c3f4ba7f1044e5a99ce0ecb844d1907d347fb3481dd0c33ea5d11f758ec32d51"
+}

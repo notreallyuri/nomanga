@@ -1,9 +1,11 @@
 import {
 	Sidebar as ShadSidebar,
 	SidebarContent,
+	SidebarFooter,
 	SidebarRail,
 } from "../ui/sidebar";
 import { NavMain } from "./main";
+import { NavUpdates } from "./updates";
 
 interface SidebarProps {
 	onSettingsOpenChange: (value: boolean) => void;
@@ -23,6 +25,9 @@ export function Sidebar({
 					settingsOpen={settingsOpen}
 				/>
 			</SidebarContent>
+			<SidebarFooter>
+				<NavUpdates />
+			</SidebarFooter>
 			<SidebarRail />
 		</ShadSidebar>
 	);

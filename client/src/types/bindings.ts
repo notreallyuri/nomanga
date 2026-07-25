@@ -23,6 +23,7 @@ export const commands = {
 	bulkUpdateCategories: (entries: EntryRef[], add: string[], remove: string[]) => typedError<null, CommandError>(__TAURI_INVOKE("bulk_update_categories", { entries, add, remove })),
 	refreshLibrary: (scope: RefreshScope, force: boolean) => typedError<RefreshSummary, CommandError>(__TAURI_INVOKE("refresh_library", { scope, force })),
 	libraryUpdates: (limit: number) => typedError<LibraryUpdate[], CommandError>(__TAURI_INVOKE("library_updates", { limit })),
+	clearLibraryUpdates: () => typedError<null, CommandError>(__TAURI_INVOKE("clear_library_updates")),
 	continueReading: (limit: number) => typedError<ContinueReadingItem[], CommandError>(__TAURI_INVOKE("continue_reading", { limit })),
 	removeHistoryEntries: (entries: HistoryEntryRef[]) => typedError<null, CommandError>(__TAURI_INVOKE("remove_history_entries", { entries })),
 	markChapterRead: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("mark_chapter_read", { sourceId, mangaId, chapterId })),
