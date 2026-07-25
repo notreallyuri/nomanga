@@ -196,16 +196,6 @@ pub fn parse_latest_updates(html: &str) -> SourceResult<HomepageSection> {
     })
 }
 
-pub fn parse_chapter_details(html: &str) -> SourceResult<(String, f32)> {
-    let doc = document(html);
-    let root = doc.root_element();
-
-    let title = text_opt(root, "section#nav-top > div > div button span").unwrap_or_default();
-
-    let number = parse_leading_number(&title);
-    Ok((title, number))
-}
-
 pub fn parse_tags(html: &str) -> SourceResult<Vec<SelectOption>> {
     let doc = document(html);
     let title_sel = selector("div.collapse-title")?;
@@ -250,6 +240,9 @@ pub fn parse_search(html: &str) -> SourceResult<MangaPage> {
     let series_link = selector(r#"a[href*="/series/"]"#)?;
     let img_sel = selector("picture > source")?;
 
+    let more_sel = selector(r#"button[hx-get*="/search/data"]"#)?;
+    let has_next = doc.select(&more_sel).next().is_some();
+
     let mut items = Vec::new();
     for article in doc.select(&article_sel) {
         let Some(link) = article.select(&series_link).next() else {
@@ -282,8 +275,24 @@ pub fn parse_search(html: &str) -> SourceResult<MangaPage> {
         });
     }
 
-    Ok(MangaPage {
-        items,
-        has_next: false,
-    })
+    Ok(MangaPage { has_next, items })
+}
+
+pub fn parse_chapter_pages(html: &str) -> SourceResult<Vec<Page>> {
+    let doc = document(html);
+
+    let image = selector("img.max-w-full")?;
+
+    let mut pages = Vec::new();
+
+    for image in doc.select(&image) {
+        let src = image.value().attr("src").unwrap_or_default();
+
+        pages.push(Page {
+            number: pages.len() as u32,
+            image_url: src.to_string(),
+        });
+    }
+
+    Ok(pages)
 }

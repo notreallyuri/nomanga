@@ -12,5 +12,5 @@ nomanga_sdk::register_sources! {
         author: "Yuri".into(),
         website: None,
     },
-    sources: [sources::weebcentral::WeebCentralSource],
+    sources: [sources::weebcentral::WeebCentralSource, sources::mangadex::MangaDexSource],
 }

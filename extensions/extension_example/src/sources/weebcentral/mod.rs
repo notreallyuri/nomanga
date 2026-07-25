@@ -14,11 +14,12 @@ use nomanga_sdk::{
         source::{Source, SourceInfo},
     },
     guest,
-    parse::{encode_path, encode_query},
-    prelude::{FilterValue, SectionRef, SelectOption, SourceError},
+    parse::encode_query,
+    prelude::{FilterValues, SectionRef, SelectOption, SourceError},
 };
 
-const BASE: &str = "https://weebcentral.com";
+const DOMAIN: &str = "https://weebcentral.com";
+const PAGE_SIZE: u32 = 32;
 
 pub struct WeebCentralSource;
 
@@ -31,7 +32,7 @@ impl Source for WeebCentralSource {
             language: "en".into(),
             base_url: "https://weebcentral.com".into(),
             nsfw: false,
-            icon_url: Some(format!("{BASE}/favicon.ico")),
+            icon_url: Some(format!("{DOMAIN}/favicon.ico")),
             hosts: vec![
                 "weebcentral.com".into(),
                 "*.weebcentral.com".into(),
@@ -41,11 +42,13 @@ impl Source for WeebCentralSource {
     }
 
     fn filters(&self) -> Vec<Filter> {
+        let toggle3 = || SelectOption::list(["Any", "True", "False"]);
+
         let mut filters = vec![
-            Filter::Sort {
-                id: "sort".into(),
-                label: "Sort".into(),
-                options: opts(&[
+            Filter::sort(
+                "sort",
+                "Sort",
+                SelectOption::list([
                     "Best Match",
                     "Alphabet",
                     "Popularity",
@@ -53,64 +56,41 @@ impl Source for WeebCentralSource {
                     "Recently Added",
                     "Latest Updates",
                 ]),
-                can_reverse: false,
-                default: Some("Best Match".into()),
-            },
-            Filter::Select {
-                id: "order".into(),
-                label: "Order".into(),
-                options: opts(&["Ascending", "Descending"]),
-                default: Some("Descending".into()),
-            },
-            Filter::Select {
-                id: "official".into(),
-                label: "Official Translation".into(),
-                options: opts(&["Any", "True", "False"]),
-                default: Some("Any".into()),
-            },
-            Filter::Select {
-                id: "anime".into(),
-                label: "Anime Adaptation".into(),
-                options: opts(&["Any", "True", "False"]),
-                default: Some("Any".into()),
-            },
-            Filter::Select {
-                id: "adult".into(),
-                label: "Adult Content".into(),
-                options: opts(&["Any", "True", "False"]),
-                default: Some("Any".into()),
-            },
-            Filter::MultiSelect {
-                id: "included_status".into(),
-                label: "Series Status".into(),
-                options: opts(&["Ongoing", "Complete", "Hiatus", "Canceled"]),
-                supports_exclusion: false,
-            },
-            Filter::MultiSelect {
-                id: "included_type".into(),
-                label: "Series Type".into(),
-                options: opts(&["Manga", "Manhwa", "Manhua", "OEL"]),
-                supports_exclusion: false,
-            },
+            )
+            .with_default("Best Match"),
+            Filter::select(
+                "order",
+                "Order",
+                SelectOption::list(["Ascending", "Descending"]),
+            )
+            .with_default("Descending"),
+            Filter::select("official", "Official Translation", toggle3()).with_default("Any"),
+            Filter::select("anime", "Anime Adaptation", toggle3()).with_default("Any"),
+            Filter::select("adult", "Adult Content", toggle3()).with_default("Any"),
+            Filter::multi_select(
+                "included_status",
+                "Series Status",
+                SelectOption::list(["Ongoing", "Complete", "Hiatus", "Canceled"]),
+            ),
+            Filter::multi_select(
+                "included_type",
+                "Series Type",
+                SelectOption::list(["Manga", "Manhwa", "Manhua", "OEL"]),
+            ),
         ];
 
-        if let Ok(html) = guest::get_text(&format!("{BASE}/search"))
+        if let Ok(html) = guest::get_text(&format!("{DOMAIN}/search"))
             && let Ok(tags) = parser::parse_tags(&html)
         {
-            filters.push(Filter::MultiSelect {
-                id: "tags".into(),
-                label: "Tags".into(),
-                options: tags,
-                supports_exclusion: true,
-            })
+            filters.push(Filter::multi_select("tags", "Tags", tags).with_exclusion());
         }
 
         filters
     }
 
     fn homepage(&self) -> SourceResult<Homepage> {
-        let hot_html = guest::get_text(BASE)?;
-        let latest_html = guest::get_text(&format!("{BASE}/latest-updates/1"))?;
+        let hot_html = guest::get_text(DOMAIN)?;
+        let latest_html = guest::get_text(&format!("{DOMAIN}/latest-updates/1"))?;
 
         Ok(Homepage {
             sections: vec![
@@ -123,7 +103,7 @@ impl Source for WeebCentralSource {
     fn section(&self, section: SectionRef) -> SourceResult<MangaPage> {
         match section.section_id.as_str() {
             "latest-updates" => {
-                let html = guest::get_text(&format!("{BASE}/latest-updates/{}", section.page))?;
+                let html = guest::get_text(&format!("{DOMAIN}/latest-updates/{}", section.page))?;
                 let parsed = parser::parse_latest_updates(&html)?;
                 Ok(MangaPage {
                     items: parsed.items,
@@ -137,43 +117,36 @@ impl Source for WeebCentralSource {
     }
 
     fn search(&self, query: SearchQuery) -> SourceResult<MangaPage> {
+        let offset = query.page.saturating_sub(1) * PAGE_SIZE;
+
         let mut url = format!(
-            "{BASE}/search/data?text={}&page={}&display_mode=Full+Display",
+            "{DOMAIN}/search/data?limit={PAGE_SIZE}&offset={offset}&text={}&display_mode=Full+Display",
             encode_query(&query.query),
-            query.page
         );
 
-        for f in &query.filters {
-            match f {
-                FilterValue::Sort { id, value, .. } if id == "sort" => {
-                    url.push_str(&format!("&sort={}", encode_query(value)));
-                }
-                FilterValue::Select { id, value }
-                    if matches!(id.as_str(), "order" | "official" | "anime" | "adult") =>
-                {
-                    url.push_str(&format!("&{id}={}", encode_query(value)));
-                }
-                FilterValue::MultiSelect {
-                    id,
-                    included,
-                    excluded,
-                } if id == "tags" => {
-                    for t in included {
-                        url.push_str(&format!("&included_tag={}", encode_query(t)));
-                    }
-                    for t in excluded {
-                        url.push_str(&format!("&excluded_tag={}", encode_query(t)));
-                    }
-                }
-                FilterValue::MultiSelect { id, included, .. }
-                    if id == "included_status" || id == "included_type" =>
-                {
-                    for v in included {
-                        url.push_str(&format!("&{id}={}", encode_query(v)));
-                    }
-                }
-                _ => {}
+        let filters = query.filters.as_slice();
+
+        if let Some((value, _)) = filters.sort("sort") {
+            url.push_str(&format!("&sort={}", encode_query(value)));
+        }
+
+        for id in ["order", "official", "anime", "adult"] {
+            if let Some(value) = filters.select(id) {
+                url.push_str(&format!("&{id}={}", encode_query(value)));
             }
+        }
+
+        for id in ["included_status", "included_type"] {
+            for value in filters.included(id) {
+                url.push_str(&format!("&{id}={}", encode_query(value)));
+            }
+        }
+
+        for tag in filters.included("tags") {
+            url.push_str(&format!("&included_tag={}", encode_query(tag)));
+        }
+        for tag in filters.excluded("tags") {
+            url.push_str(&format!("&excluded_tag={}", encode_query(tag)));
         }
 
         let html = guest::get_text(&url)?;
@@ -181,29 +154,20 @@ impl Source for WeebCentralSource {
     }
 
     fn manga(&self, manga: MangaRef) -> SourceResult<Manga> {
-        let html = guest::get_text(&format!("{BASE}/series/{}", manga.manga_id))?;
+        let html = guest::get_text(&format!("{DOMAIN}/series/{}", manga.manga_id))?;
         parser::parse_manga_details(&html, &manga.manga_id)
     }
 
     fn chapters(&self, manga: MangaRef) -> SourceResult<Vec<Chapter>> {
         let html = guest::get_text(&format!(
-            "{BASE}/series/{}/full-chapter-list",
+            "{DOMAIN}/series/{}/full-chapter-list",
             manga.manga_id
         ))?;
         parser::parse_chapter_list(&html, &manga.manga_id)
     }
 
-    fn pages(&self, _chapter: ChapterRef) -> SourceResult<Vec<Page>> {
-        todo!("needs /chapter-pages/ implementation")
+    fn pages(&self, chapter: ChapterRef) -> SourceResult<Vec<Page>> {
+        let html = guest::get_text(&format!("{DOMAIN}/chapters/{}", chapter.chapter_id))?;
+        parser::parse_chapter_pages(&html)
     }
-}
-
-fn opts(labels: &[&str]) -> Vec<SelectOption> {
-    labels
-        .iter()
-        .map(|s| SelectOption {
-            id: (*s).into(),
-            label: (*s).into(),
-        })
-        .collect()
 }
