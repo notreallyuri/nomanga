@@ -41,7 +41,9 @@ pub trait Source {
     fn homepage(&self) -> SourceResult<Homepage>;
     fn search(&self, query: SearchQuery) -> SourceResult<MangaPage>;
     fn section(&self, _section: SectionRef) -> SourceResult<MangaPage> {
-        Err(SourceError::NotFound)
+        Err(SourceError::NotFound {
+            message: "".to_owned(),
+        })
     }
     fn manga(&self, manga: MangaRef) -> SourceResult<Manga>;
     fn chapters(&self, manga: MangaRef) -> SourceResult<Vec<Chapter>>;

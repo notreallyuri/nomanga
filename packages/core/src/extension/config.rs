@@ -33,6 +33,19 @@ pub enum SettingKind {
         options: Vec<SelectOption>,
         default: Option<String>,
     },
+    MultiSelect {
+        options: Vec<SelectOption>,
+        default: Vec<String>,
+    },
+    TextList {
+        placeholder: Option<String>,
+        default: Vec<String>,
+    },
+    Number {
+        min: Option<i32>,
+        max: Option<i32>,
+        default: Option<i32>,
+    },
 }
 
 impl Setting {
@@ -79,6 +92,43 @@ impl Setting {
             kind: SettingKind::Select {
                 options,
                 default: None,
+            },
+        }
+    }
+
+    pub fn multi_select(id: &str, label: &str, options: Vec<SelectOption>) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            description: None,
+            kind: SettingKind::MultiSelect {
+                options,
+                default: Vec::new(),
+            },
+        }
+    }
+
+    pub fn text_list(id: &str, label: &str) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            description: None,
+            kind: SettingKind::TextList {
+                placeholder: None,
+                default: Vec::new(),
+            },
+        }
+    }
+
+    pub fn number(id: &str, label: &str, default: i32) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            description: None,
+            kind: SettingKind::Number {
+                min: None,
+                max: None,
+                default: Some(default),
             },
         }
     }

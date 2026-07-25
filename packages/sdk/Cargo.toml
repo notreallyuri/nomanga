@@ -8,3 +8,6 @@ nomanga-core = { path = "../core"}
 extism-pdk = "1.4"
 scraper = "0.27"
 percent-encoding = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

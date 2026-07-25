@@ -5,13 +5,26 @@ pub type SourceResult<T> = Result<T, SourceError>;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "kind", content = "detail")]
 pub enum SourceError {
-    Http { status: u16 },
-    Network { message: String },
-    Parse { message: String },
-    NotFound,
-    RateLimited { retry_after_secs: Option<u32> },
+    Http {
+        status: u16,
+    },
+    Network {
+        message: String,
+    },
+    Parse {
+        message: String,
+    },
+    NotFound {
+        message: String,
+    },
+    RateLimited {
+        message: String,
+        retry_after_secs: Option<u32>,
+    },
     AuthRequired,
-    Other { message: String },
+    Other {
+        message: String,
+    },
 }
 
 impl core::fmt::Display for SourceError {
@@ -20,8 +33,8 @@ impl core::fmt::Display for SourceError {
             Self::Http { status } => write!(f, "http status {status}"),
             Self::Network { message } => write!(f, "network error: {message}"),
             Self::Parse { message } => write!(f, "parse error: {message}"),
-            Self::NotFound => write!(f, "not found"),
-            Self::RateLimited { .. } => write!(f, "rate limited"),
+            Self::NotFound { message } => write!(f, "not found: {message}"),
+            Self::RateLimited { message, .. } => write!(f, "rate limited: {message}"),
             Self::AuthRequired => write!(f, "authentication required"),
             Self::Other { message } => write!(f, "{message}"),
         }
