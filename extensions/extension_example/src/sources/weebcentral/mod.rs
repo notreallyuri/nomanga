@@ -167,7 +167,12 @@ impl Source for WeebCentralSource {
     }
 
     fn pages(&self, chapter: ChapterRef) -> SourceResult<Vec<Page>> {
-        let html = guest::get_text(&format!("{DOMAIN}/chapters/{}", chapter.chapter_id))?;
+        // The chapter page ships no images; they're lazy-loaded from this HTMX
+        // endpoint. `reading_style=long_strip` returns the whole chapter at once.
+        let html = guest::get_text(&format!(
+            "{DOMAIN}/chapters/{}/images?is_prev=False&current_page=1&reading_style=long_strip",
+            chapter.chapter_id
+        ))?;
         parser::parse_chapter_pages(&html)
     }
 }

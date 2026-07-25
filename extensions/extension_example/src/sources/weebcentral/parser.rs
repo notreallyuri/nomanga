@@ -281,12 +281,18 @@ pub fn parse_search(html: &str) -> SourceResult<MangaPage> {
 pub fn parse_chapter_pages(html: &str) -> SourceResult<Vec<Page>> {
     let doc = document(html);
 
-    let image = selector("img.max-w-full")?;
+    // The images partial is just the reader section, so every absolute-URL
+    // <img> is a page. Keying off the src (rather than a CSS class) survives the
+    // site's `maw-w-full` typo and any future restyling.
+    let image = selector("img")?;
 
     let mut pages = Vec::new();
 
     for image in doc.select(&image) {
         let src = image.value().attr("src").unwrap_or_default();
+        if !src.starts_with("http") {
+            continue;
+        }
 
         pages.push(Page {
             number: pages.len() as u32,
