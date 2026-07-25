@@ -2,7 +2,25 @@ use super::*;
 use crate::cache::manga::cache_manga;
 use crate::db::open_in_memory;
 use crate::error::ServiceError;
+use chrono::{DateTime, Utc};
+use nomanga_core::data::chapter::Chapter;
 use nomanga_core::data::manga::{Manga, MangaSimple, Status};
+
+fn sample_chapter(id: &str, number: f32) -> Chapter {
+    Chapter {
+        id: id.to_owned(),
+        title: format!("Chapter {number}"),
+        manga_id: "m1".to_owned(),
+        number,
+        volume: None,
+        language: "en".to_owned(),
+        upload_date: String::new(),
+        page_count: None,
+        scanlator: None,
+        url: "https://example.com/ch".to_owned(),
+        is_locked: false,
+    }
+}
 
 fn sample_manga(_source: &str, id: &str) -> Manga {
     Manga {
@@ -241,4 +259,62 @@ async fn read_counts_come_back_with_entries() {
 
     let entry = &list_library(&pool, &CategoryFilter::All).await.unwrap()[0];
     assert_eq!(entry.read_chapters, 2);
+}
+
+#[tokio::test]
+async fn updates_exclude_hidden_categories() {
+    let pool = open_in_memory().await.unwrap();
+    cache_manga(&pool, "src", &sample_manga("src", "m1"))
+        .await
+        .unwrap();
+    add_to_library(&pool, "src", "m1").await.unwrap();
+
+    // Push added_at into the past so the second sync's new chapter is seen as
+    // an update (updates require first_seen_at > added_at).
+    let past = "2000-01-01T00:00:00Z".parse::<DateTime<Utc>>().unwrap();
+    sqlx::query!(
+        "UPDATE library_entry SET added_at = ? WHERE source_id = ? AND manga_id = ?",
+        past,
+        "src",
+        "m1"
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    // First sync seeds the existing chapter; the second brings a genuinely new one.
+    sync_chapters(&pool, "src", "m1", &[sample_chapter("c1", 1.0)])
+        .await
+        .unwrap();
+    sync_chapters(
+        &pool,
+        "src",
+        "m1",
+        &[sample_chapter("c1", 1.0), sample_chapter("c2", 2.0)],
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(library_updates(&pool, 30).await.unwrap().len(), 1);
+
+    // Filing the series under a hidden category removes it from the feed.
+    let secret = create_category(&pool, "Secret").await.unwrap();
+    update_category_options(
+        &pool,
+        &secret.id,
+        &CategoryOptions {
+            hidden: true,
+            is_default: false,
+            sort_mode: CategorySort::Added,
+            color: None,
+            icon: None,
+        },
+    )
+    .await
+    .unwrap();
+    set_entry_categories(&pool, "src", "m1", &[&secret.id])
+        .await
+        .unwrap();
+
+    assert_eq!(library_updates(&pool, 30).await.unwrap().len(), 0);
 }

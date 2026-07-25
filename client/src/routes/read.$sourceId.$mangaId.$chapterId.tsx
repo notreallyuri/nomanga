@@ -96,18 +96,24 @@ function Reader() {
 
 	const goToChapter = useCallback(
 		(id: string) => {
+			// Replace so paging through chapters keeps a single reader entry in
+			// history — exiting returns to the manga page, not the previous chapter.
 			navigate({
 				to: "/read/$sourceId/$mangaId/$chapterId",
 				params: { sourceId, mangaId, chapterId: id },
+				replace: true,
 			});
 		},
 		[navigate, sourceId, mangaId],
 	);
 
 	const exit = useCallback(() => {
+		// Hierarchical return to the manga page (not history.back), replacing the
+		// reader entry so the browser back button doesn't land back in the reader.
 		navigate({
 			to: "/manga/$sourceId/$mangaId",
 			params: { sourceId, mangaId },
+			replace: true,
 		});
 	}, [navigate, sourceId, mangaId]);
 
@@ -137,7 +143,7 @@ function Reader() {
 
 	if (pages.isPending || effective.isPending) {
 		return (
-			<div className="flex h-svh items-center justify-center bg-black">
+			<div className="flex h-full items-center justify-center bg-black">
 				<Skeleton className="h-[80vh] w-[min(60rem,90vw)]" />
 			</div>
 		);
@@ -145,7 +151,7 @@ function Reader() {
 
 	if (pages.error) {
 		return (
-			<div className="flex h-svh flex-col items-center justify-center gap-4 bg-black text-white">
+			<div className="flex h-full flex-col items-center justify-center gap-4 bg-black text-white">
 				<p className="max-w-md text-center text-sm">{pages.error.message}</p>
 				<Button onClick={exit} variant="secondary">
 					<ArrowLeftIcon />
@@ -158,7 +164,7 @@ function Reader() {
 	const chapter = list[position];
 
 	return (
-		<div className="relative h-svh overflow-hidden bg-black">
+		<div className="relative h-full overflow-hidden bg-black">
 			{layout === "VerticalScroll" ? (
 				// Wait for progress so the initial scroll position is the resume page.
 				progress.isPending ? null : (

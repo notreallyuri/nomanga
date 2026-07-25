@@ -12,7 +12,7 @@ function RouteComponent() {
 	const [settingsOpen, setSettingsOpen] = useState(false);
 
 	return (
-		<SidebarProvider className="h-svh overflow-hidden">
+		<SidebarProvider className="h-full overflow-hidden">
 			<Sidebar
 				onSettingsOpenChange={setSettingsOpen}
 				settingsOpen={settingsOpen}

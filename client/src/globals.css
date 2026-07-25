@@ -52,6 +52,9 @@
 
 @layer base {
 	:root {
+		/* Height of the custom window title bar; content areas subtract this from
+		   the viewport so nothing renders behind the drag region. */
+		--titlebar-h: 2rem;
 		--background: oklch(1 0 0);
 		--foreground: oklch(0.145 0 0);
 		--card: oklch(1 0 0);

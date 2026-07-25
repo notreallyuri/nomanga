@@ -182,6 +182,12 @@ pub async fn continue_reading(
            LEFT JOIN source_preference sp
              ON sp.source_id = rp.source_id
            WHERE COALESCE(sp.private, 0) = 0
+             AND NOT EXISTS (
+                 SELECT 1 FROM library_entry_category lec
+                   JOIN category c ON c.id = lec.category_id
+                  WHERE lec.source_id = rp.source_id
+                    AND lec.manga_id = rp.manga_id
+                    AND c.hidden = 1)
            ORDER BY rp.updated_at DESC
            LIMIT ?"#,
         limit

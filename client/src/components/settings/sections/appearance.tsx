@@ -35,7 +35,7 @@ export function AppearanceSection() {
 					label="Show titles"
 				/>
 				<Switch
-					description="Smaller covers and tighter spacing across the library, browse and search"
+					description="Tighter spacing between covers and smaller titles"
 					field="compact_mode"
 					label="Compact mode"
 				/>
@@ -48,6 +48,16 @@ export function AppearanceSection() {
 						{ label: "Rounded", value: "Rounded" },
 						{ label: "Border", value: "Border" },
 						{ label: "Shadow", value: "Shadow" },
+					]}
+				/>
+				<Select
+					description="Cover size in the library grid — smaller fits more per row"
+					field="card_size"
+					label="Card size"
+					options={[
+						{ label: "Small", value: "Small" },
+						{ label: "Medium", value: "Medium" },
+						{ label: "Large", value: "Large" },
 					]}
 				/>
 			</Group>

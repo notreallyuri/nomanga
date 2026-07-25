@@ -1,4 +1,5 @@
 import {
+	ArrowLeftIcon,
 	BookOpenIcon,
 	CaretDownIcon,
 	SlidersHorizontalIcon,
@@ -12,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProgress, useReadChapters } from "@/hooks/services/use-history";
+import { useIsInLibrary } from "@/hooks/services/use-library";
 import {
 	useSourceChapters,
 	useSourceManga,
@@ -43,6 +45,7 @@ function MangaDetails() {
 	const chapters = useSourceChapters(sourceId, mangaId);
 	const readChapters = useReadChapters(sourceId, mangaId);
 	const progress = useProgress(sourceId, mangaId);
+	const inLibrary = useIsInLibrary(sourceId, mangaId);
 
 	const [expanded, setExpanded] = useState(false);
 	const [readerOpen, setReaderOpen] = useState(false);
@@ -50,7 +53,15 @@ function MangaDetails() {
 		manga.data?.description,
 	);
 
-	if (manga.isPending) return <DetailsSkeleton />;
+	// Deterministic parent navigation rather than history.back(): a library entry
+	// returns to the library, otherwise back to the source it was browsed from.
+	// This stays correct however the page was reached (list, search, or reader).
+	const goBack = () =>
+		inLibrary.data
+			? navigate({ to: "/library" })
+			: navigate({ to: "/browse/$sourceId", params: { sourceId } });
+
+	if (manga.isPending) return <DetailsSkeleton onBack={goBack} />;
 	if (manga.error)
 		return <p className="p-6 text-destructive">{manga.error.message}</p>;
 
@@ -65,6 +76,16 @@ function MangaDetails() {
 	return (
 		<div className="flex h-full flex-col overflow-hidden lg:flex-row">
 			<aside className="min-h-0 shrink-0 overflow-y-auto border-border p-6 lg:w-96 lg:border-r xl:w-104">
+				<Button
+					className="mb-3 -ml-2"
+					onClick={goBack}
+					size="sm"
+					variant="ghost"
+				>
+					<ArrowLeftIcon />
+					{inLibrary.data ? "Library" : "Back"}
+				</Button>
+
 				<img
 					alt={manga.data.title}
 					className="mx-auto aspect-2/3 w-48 rounded-lg border border-border object-cover shadow-xl lg:w-full lg:max-w-none"
@@ -209,15 +230,26 @@ function DetailField({ label, value }: { label: string; value: string }) {
 	);
 }
 
-function DetailsSkeleton() {
+function DetailsSkeleton({ onBack }: { onBack: () => void }) {
 	return (
-		<div className="flex h-full gap-6 p-6">
-			<div className="w-96 shrink-0 space-y-3">
-				<Skeleton className="aspect-2/3 w-full" />
-				<Skeleton className="h-8 w-3/4" />
-				<Skeleton className="h-20 w-full" />
+		<div className="flex h-full flex-col gap-6 p-6">
+			<Button
+				className="-ml-2 self-start"
+				onClick={onBack}
+				size="sm"
+				variant="ghost"
+			>
+				<ArrowLeftIcon />
+				Back
+			</Button>
+			<div className="flex min-h-0 flex-1 gap-6">
+				<div className="w-96 shrink-0 space-y-3">
+					<Skeleton className="aspect-2/3 w-full" />
+					<Skeleton className="h-8 w-3/4" />
+					<Skeleton className="h-20 w-full" />
+				</div>
+				<Skeleton className="min-w-0 flex-1" />
 			</div>
-			<Skeleton className="min-w-0 flex-1" />
 		</div>
 	);
 }

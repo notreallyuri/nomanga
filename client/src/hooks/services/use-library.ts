@@ -1,12 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { type NomangaError, unwrap } from "@/lib/unwrap";
 import {
 	type CategoryFilter,
 	type CategoryOptions,
 	commands,
 	type EntryRef,
+	events,
+	type LibraryRefreshProgress,
 	type Manga,
 	type MangaSimple,
+	type RefreshScope,
 } from "@/types/bindings";
 
 export const ALL_CATEGORIES: CategoryFilter = { type: "All" };
@@ -20,6 +25,7 @@ export const libraryKeys = {
 	categories: () => [...libraryKeys.all, "categories"] as const,
 	entryCategories: (sourceId: string, mangaId: string) =>
 		[...libraryKeys.all, "entry-categories", sourceId, mangaId] as const,
+	updates: () => [...libraryKeys.all, "updates"] as const,
 };
 
 export function useLibrary(filter: CategoryFilter = ALL_CATEGORIES) {
@@ -169,6 +175,78 @@ export function useSetEntryCategories(sourceId: string, mangaId: string) {
 	return useCategoryMutation((categoryIds: string[]) =>
 		unwrap(commands.setEntryCategories(sourceId, mangaId, categoryIds)),
 	);
+}
+
+export function useLibraryUpdates(limit = 30) {
+	return useQuery({
+		queryKey: libraryKeys.updates(),
+		queryFn: () => unwrap(commands.libraryUpdates(limit)),
+	});
+}
+
+/**
+ * Drives a scoped library refresh and exposes live progress from the backend's
+ * `library-refresh-progress` events, so callers can render a determinate bar.
+ */
+export function useLibraryRefresh() {
+	const queryClient = useQueryClient();
+	const [progress, setProgress] = useState<LibraryRefreshProgress | null>(null);
+
+	useEffect(() => {
+		let unlisten: (() => void) | undefined;
+		events.libraryRefreshProgress
+			.listen((event) => {
+				const p = event.payload;
+				// The final event (done === total) closes the bar.
+				setProgress(p.total > 0 && p.done < p.total ? p : null);
+			})
+			.then((fn) => {
+				unlisten = fn;
+			});
+		return () => unlisten?.();
+	}, []);
+
+	const mutation = useMutation({
+		mutationFn: ({
+			scope,
+			force,
+		}: {
+			scope: RefreshScope;
+			force: boolean;
+			silent: boolean;
+		}) => unwrap(commands.refreshLibrary(scope, force)),
+		// A silent run (the throttled auto-check on launch) shouldn't announce
+		// itself; explicit refreshes report their result.
+		onSuccess: (summary, { silent }) => {
+			if (silent) return;
+			toast.success(
+				summary.new_chapters > 0
+					? `${summary.new_chapters} new chapter${summary.new_chapters === 1 ? "" : "s"} across ${summary.checked} series`
+					: "No new chapters",
+			);
+		},
+		onError: (e, { silent }) => {
+			if (!silent) toast.error(e.message);
+		},
+		onSettled: () => {
+			setProgress(null);
+			queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+		},
+	});
+
+	const percent =
+		progress && progress.total > 0
+			? Math.round((progress.done / progress.total) * 100)
+			: 0;
+
+	return {
+		refresh: (scope: RefreshScope, force = true, silent = false) =>
+			mutation.mutate({ scope, force, silent }),
+		summary: mutation.data,
+		isRefreshing: mutation.isPending,
+		progress,
+		percent,
+	};
 }
 
 export function useBulkCategoryCounts(entries: EntryRef[], enabled = true) {

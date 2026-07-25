@@ -124,10 +124,20 @@ pub async fn source_chapters(
     source_id: String,
     manga_id: String,
 ) -> CommandResult<Vec<Chapter>> {
-    call_source(&state, source_id, move |ext, id| {
+    let sid = source_id.clone();
+    let mid = manga_id.clone();
+
+    let chapters = call_source(&state, source_id, move |ext, id| {
         ext.chapters(id, MangaRef { manga_id })
     })
-    .await
+    .await?;
+
+    // Reconcile the chapter cache against this live fetch (adds / rewrites /
+    // removals) so every manga-details visit surfaces new chapters. A no-op for
+    // series that aren't in the library.
+    nomanga_services::library::sync_chapters(&state.pool, &sid, &mid, &chapters).await?;
+
+    Ok(chapters)
 }
 
 #[tauri::command]

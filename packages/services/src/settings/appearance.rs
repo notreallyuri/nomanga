@@ -29,6 +29,15 @@ pub enum CoverStyle {
 }
 
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Default, Clone, Serialize, Deserialize)]
+pub enum CardSize {
+    Small,
+    #[default]
+    Medium,
+    Large,
+}
+
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppearanceSettings {
@@ -37,6 +46,7 @@ pub struct AppearanceSettings {
     pub show_titles: bool,
     pub compact_mode: bool,
     pub cover_style: CoverStyle,
+    pub card_size: CardSize,
 }
 
 impl Default for AppearanceSettings {
@@ -47,6 +57,7 @@ impl Default for AppearanceSettings {
             show_titles: true,
             compact_mode: false,
             cover_style: CoverStyle::Default,
+            card_size: CardSize::Medium,
         }
     }
 }

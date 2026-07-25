@@ -80,7 +80,7 @@ export function PagedReader({
 					</div>
 
 					<div className="pointer-events-none absolute inset-0">
-						<div className="sticky top-0 flex h-svh">
+						<div className="sticky top-0 flex h-[calc(100svh-var(--titlebar-h))]">
 							<button
 								aria-label={rtl ? "Next page" : "Previous page"}
 								className="pointer-events-auto h-full w-1/3 cursor-w-resize outline-none focus-visible:outline-none"
@@ -117,7 +117,7 @@ function zoomClass(zoom: ZoomBehavior): string {
 		case "FitWidth":
 			return "w-full h-auto";
 		case "FitHeight":
-			return "h-svh w-auto max-w-none object-contain";
+			return "h-[calc(100svh-var(--titlebar-h))] w-auto max-w-none object-contain";
 		case "ActualSize":
 			return "max-w-none";
 		case "Manual":

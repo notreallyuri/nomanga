@@ -1,9 +1,95 @@
-use crate::{error::CommandResult, AppState};
+use crate::{
+    commands::LibraryRefreshProgress, error::CommandError, error::CommandResult, AppState,
+};
 use nomanga_core::data::manga::{Manga, MangaSimple};
+use nomanga_core::extension::query::MangaRef;
 use nomanga_services::library::{
     self, Category, CategoryCount, CategoryFilter, CategoryOptions, EntryRef, LibraryItem,
+    LibraryUpdate, RefreshScope,
 };
+use serde::{Deserialize, Serialize};
 use tauri::State;
+use tauri_specta::Event;
+
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+pub struct RefreshSummary {
+    pub checked: u32,
+    pub new_chapters: u32,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn refresh_library(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    scope: RefreshScope,
+    force: bool,
+) -> CommandResult<RefreshSummary> {
+    let targets = library::entries_to_refresh(&state.pool, &scope, force).await?;
+    let total = targets.len() as u32;
+
+    let mut checked = 0u32;
+    let mut new_chapters = 0u32;
+
+    for (index, target) in targets.iter().enumerate() {
+        LibraryRefreshProgress {
+            done: index as u32,
+            total,
+            current_title: target.title.clone(),
+        }
+        .emit(&app)
+        .ok();
+
+        let handle = {
+            let registry = state.registry.read()?;
+            registry.source(&target.source_id)?
+        };
+
+        let manga_id = target.manga_id.clone();
+        let source_id = target.source_id.clone();
+        let fetched = tokio::task::spawn_blocking(move || {
+            handle.with_plugin(|ext| ext.chapters(&source_id, MangaRef { manga_id }))
+        })
+        .await
+        .map_err(|e| CommandError::Internal {
+            message: format!("task panicked: {e}"),
+        })?;
+
+        // A single flaky source shouldn't abort the whole run.
+        if let Ok(chapters) = fetched {
+            new_chapters +=
+                library::sync_chapters(&state.pool, &target.source_id, &target.manga_id, &chapters)
+                    .await?;
+            checked += 1;
+        }
+
+        library::mark_checked(&state.pool, &target.source_id, &target.manga_id).await?;
+    }
+
+    LibraryRefreshProgress {
+        done: total,
+        total,
+        current_title: String::new(),
+    }
+    .emit(&app)
+    .ok();
+
+    Ok(RefreshSummary {
+        checked,
+        new_chapters,
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn library_updates(
+    state: State<'_, AppState>,
+    limit: u32,
+) -> CommandResult<Vec<LibraryUpdate>> {
+    let res = library::library_updates(&state.pool, limit as i64).await?;
+
+    Ok(res)
+}
 
 #[tauri::command]
 #[specta::specta]

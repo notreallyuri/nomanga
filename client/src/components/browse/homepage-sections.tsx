@@ -43,8 +43,6 @@ export function HomepageSections({ sourceId }: { sourceId: string }) {
 	if (isPending) return <HomepageSkeleton compact={appearance.compact_mode} />;
 	if (error) return <p className="text-destructive">{error.message}</p>;
 
-	// An empty section reads as a bug, not a feature — drop them rather than
-	// rendering a titled row with nothing under it.
 	const sections = data.sections.filter((s) => s.items.length > 0);
 
 	if (sections.length === 0) {
@@ -66,11 +64,9 @@ export function HomepageSections({ sourceId }: { sourceId: string }) {
 
 interface LayoutConfig {
 	width: string;
-	/** Card width once the compact-mode setting is on. */
 	compactWidth: string;
 	rows: number;
 	rowsClass: string;
-	/** Layouts dense enough that titles must clamp to one line regardless. */
 	denseTitle: boolean;
 }
 
@@ -176,10 +172,6 @@ function Section({
 	);
 }
 
-/**
- * Horizontal, snap-scrolling row with fading edges and hover arrows that appear
- * only on the side that can still scroll.
- */
 function ScrollRow({
 	children,
 	contentClassName,
@@ -224,7 +216,7 @@ function ScrollRow({
 
 			<div
 				className={cn(
-					"grid snap-x snap-proximity grid-flow-col overflow-x-auto overscroll-x-contain scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+					"scrollbar-none grid snap-x snap-proximity grid-flow-col overflow-x-auto overscroll-x-contain scroll-smooth pb-2 [&::-webkit-scrollbar]:hidden",
 					contentClassName,
 				)}
 				onScroll={update}
@@ -243,8 +235,8 @@ function EdgeFade({ side, shown }: { side: "left" | "right"; shown: boolean }) {
 			className={cn(
 				"pointer-events-none absolute inset-y-0 z-10 w-10 pb-2 transition-opacity duration-200",
 				side === "left"
-					? "left-0 bg-gradient-to-r from-background to-transparent"
-					: "right-0 bg-gradient-to-l from-background to-transparent",
+					? "left-0 bg-linear-to-r from-background to-transparent"
+					: "right-0 bg-linear-to-l from-background to-transparent",
 				shown ? "opacity-100" : "opacity-0",
 			)}
 		/>
@@ -289,14 +281,11 @@ function SectionCard({
 	compactTitle: boolean;
 }) {
 	const inLibrary = useIsInLibrary(sourceId, item.id);
-	// Pass the listing so a card whose details page was never opened can still
-	// cache-and-add in one call.
 	const { add, remove } = useToggleLibrary(sourceId, item.id, item);
 
 	const saved = inLibrary.data ?? false;
 
 	const toggle = (e: React.MouseEvent) => {
-		// The button sits over a navigating Link — don't follow it.
 		e.preventDefault();
 		e.stopPropagation();
 		if (saved) remove.mutate(undefined);

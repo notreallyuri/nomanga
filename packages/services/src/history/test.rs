@@ -83,3 +83,37 @@ async fn removing_progress_drops_from_shelf() {
     remove_progress_many(&pool, &[("s", "m2")]).await.unwrap();
     assert!(continue_reading(&pool, 10).await.unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn continue_reading_excludes_hidden_categories() {
+    use crate::library::{
+        CategoryOptions, CategorySort, add_to_library, create_category, set_entry_categories,
+        update_category_options,
+    };
+
+    let pool = open_in_memory().await.unwrap();
+    cache_manga(&pool, "s", &sample_manga("m1")).await.unwrap();
+    add_to_library(&pool, "s", "m1").await.unwrap();
+    finish_chapter(&pool, "s", "m1", "c1", 10).await.unwrap();
+    assert_eq!(continue_reading(&pool, 10).await.unwrap().len(), 1);
+
+    let secret = create_category(&pool, "Secret").await.unwrap();
+    update_category_options(
+        &pool,
+        &secret.id,
+        &CategoryOptions {
+            hidden: true,
+            is_default: false,
+            sort_mode: CategorySort::Added,
+            color: None,
+            icon: None,
+        },
+    )
+    .await
+    .unwrap();
+    set_entry_categories(&pool, "s", "m1", &[&secret.id])
+        .await
+        .unwrap();
+
+    assert!(continue_reading(&pool, 10).await.unwrap().is_empty());
+}
