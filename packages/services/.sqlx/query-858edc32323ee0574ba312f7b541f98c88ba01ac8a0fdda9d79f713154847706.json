@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT key, value FROM source_setting WHERE source_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "key",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "source_setting",
+            "name": "key"
+          }
+        }
+      },
+      {
+        "name": "value",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "source_setting",
+            "name": "value"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "858edc32323ee0574ba312f7b541f98c88ba01ac8a0fdda9d79f713154847706"
+}

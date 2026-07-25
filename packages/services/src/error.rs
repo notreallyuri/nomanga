@@ -12,6 +12,21 @@ pub enum ServiceError {
     Io(#[from] std::io::Error),
     #[error("manga not cached: {source_id}/{manga_id}")]
     MangaNotCached { source_id: String, manga_id: String },
+    #[error("a category named \"{name}\" already exists")]
+    CategoryExists { name: String },
+    #[error("no category with id {id}")]
+    CategoryNotFound { id: String },
+}
+
+impl ServiceError {
+    pub(crate) fn category_name(name: &str, err: sqlx::Error) -> Self {
+        match &err {
+            sqlx::Error::Database(db) if db.is_unique_violation() => Self::CategoryExists {
+                name: name.to_owned(),
+            },
+            _ => err.into(),
+        }
+    }
 }
 
 pub type ServiceResult<T> = Result<T, ServiceError>;

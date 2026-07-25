@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO source_cache (source_id, kind, payload, source_version, cached_at)\n         VALUES (?, ?, ?, ?, ?)\n         ON CONFLICT (source_id, kind) DO UPDATE SET\n             payload = excluded.payload,\n             source_version = excluded.source_version,\n             cached_at = excluded.cached_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "e3f58625508c98b84af981d434ab19a2de7aba2dc584e78401044e5317df49d9"
+}

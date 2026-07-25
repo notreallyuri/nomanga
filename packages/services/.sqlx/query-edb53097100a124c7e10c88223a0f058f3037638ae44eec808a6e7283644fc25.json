@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT payload, source_version,\n                  cached_at AS \"cached_at: DateTime<Utc>\"\n           FROM source_cache\n           WHERE source_id = ? AND kind = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "payload",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "source_cache",
+            "name": "payload"
+          }
+        }
+      },
+      {
+        "name": "source_version",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "source_cache",
+            "name": "source_version"
+          }
+        }
+      },
+      {
+        "name": "cached_at: DateTime<Utc>",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "source_cache",
+            "name": "cached_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "edb53097100a124c7e10c88223a0f058f3037638ae44eec808a6e7283644fc25"
+}

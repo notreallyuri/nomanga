@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM read_progress WHERE source_id = ? AND manga_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "82194e6ef76324b562834e832ed0dbfe2d51ce29a4e7c03004afa2f13aa2ef7a"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO manga (source_id, manga_id, title, cover_url, description, cached_at)\n         VALUES (?, ?, ?, ?, ?, ?)\n         ON CONFLICT (source_id, manga_id) DO UPDATE SET\n             title = excluded.title,\n             cover_url = excluded.cover_url,\n             description = CASE\n                 WHEN excluded.description = '' THEN manga.description\n                 ELSE excluded.description\n             END",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "0b47bf2def2ca294a7a7c56af7458393bb52b2e4639d8ff19fa2cafbcad415e9"
+}

@@ -1,38 +1,38 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name, sort_order FROM category ORDER BY sort_order, name",
+  "query": "SELECT source_id, key, value FROM source_setting",
   "describe": {
     "columns": [
       {
-        "name": "id",
+        "name": "source_id",
         "ordinal": 0,
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "category",
-            "name": "id"
+            "table": "source_setting",
+            "name": "source_id"
           }
         }
       },
       {
-        "name": "name",
+        "name": "key",
         "ordinal": 1,
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "category",
-            "name": "name"
+            "table": "source_setting",
+            "name": "key"
           }
         }
       },
       {
-        "name": "sort_order",
+        "name": "value",
         "ordinal": 2,
-        "type_info": "Integer",
+        "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "category",
-            "name": "sort_order"
+            "table": "source_setting",
+            "name": "value"
           }
         }
       }
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "2e340d65e0f715ffd471189b950f79b2dd113c8e52dcdec186073677df420c3c"
+  "hash": "d5b6a393fc2254362ba6b8b62a1db6a5a320a4b3772ddf38d1986d59118865ac"
 }

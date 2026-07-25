@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT source_id, enabled, private, blur_covers, skip_updates\n         FROM source_preference\n         WHERE source_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "source_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "source_preference",
+            "name": "source_id"
+          }
+        }
+      },
+      {
+        "name": "enabled",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "source_preference",
+            "name": "enabled"
+          }
+        }
+      },
+      {
+        "name": "private",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "source_preference",
+            "name": "private"
+          }
+        }
+      },
+      {
+        "name": "blur_covers",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "source_preference",
+            "name": "blur_covers"
+          }
+        }
+      },
+      {
+        "name": "skip_updates",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "source_preference",
+            "name": "skip_updates"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4205b7957ebe25bb7529a650c2bf7044f7dd4210fb30f3ff520ab3fca1f2078f"
+}

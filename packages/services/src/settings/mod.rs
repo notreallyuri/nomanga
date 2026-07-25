@@ -1,8 +1,6 @@
-use std::path::Path;
-
-use serde::{Deserialize, Serialize};
-
 use crate::error::ServiceResult;
+use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 pub mod appearance;
 pub mod reader;

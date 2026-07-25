@@ -1,6 +1,6 @@
 use super::*;
+use crate::cache::manga::cache_manga;
 use crate::db::open_in_memory;
-use crate::library::cache_manga;
 use nomanga_core::data::manga::{Manga, Status};
 
 fn sample_manga(id: &str) -> Manga {
@@ -54,7 +54,7 @@ async fn progress_and_finish() {
     let p = get_progress(&pool, "s", "m").await.unwrap().unwrap();
     assert_eq!(p.last_page, 5);
     assert!(!p.last_chapter_done);
-    assert_eq!(read_count(&pool, "s", "m").await.unwrap(), 0); // not read yet
+    assert_eq!(read_count(&pool, "s", "m").await.unwrap(), 0);
 
     finish_chapter(&pool, "s", "m", "c1", 20).await.unwrap();
     assert!(is_chapter_read(&pool, "s", "m", "c1").await.unwrap());
@@ -65,4 +65,21 @@ async fn progress_and_finish() {
     let shelf = continue_reading(&pool, 10).await.unwrap();
     assert_eq!(shelf.len(), 1);
     assert_eq!(shelf[0].title, "Test");
+}
+
+#[tokio::test]
+async fn removing_progress_drops_from_shelf() {
+    let pool = open_in_memory().await.unwrap();
+    cache_manga(&pool, "s", &sample_manga("m1")).await.unwrap();
+    cache_manga(&pool, "s", &sample_manga("m2")).await.unwrap();
+
+    finish_chapter(&pool, "s", "m1", "c1", 10).await.unwrap();
+    finish_chapter(&pool, "s", "m2", "c1", 10).await.unwrap();
+    assert_eq!(continue_reading(&pool, 10).await.unwrap().len(), 2);
+
+    remove_progress(&pool, "s", "m1").await.unwrap();
+    assert_eq!(continue_reading(&pool, 10).await.unwrap().len(), 1);
+
+    remove_progress_many(&pool, &[("s", "m2")]).await.unwrap();
+    assert!(continue_reading(&pool, 10).await.unwrap().is_empty());
 }

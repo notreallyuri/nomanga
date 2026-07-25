@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT category_id FROM library_entry_category\n         WHERE source_id = ? AND manga_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "category_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry_category",
+            "name": "category_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "bec5869214a86dae71d33826a0667215391386fa331e21bab0a39fd44033c6e0"
+}
