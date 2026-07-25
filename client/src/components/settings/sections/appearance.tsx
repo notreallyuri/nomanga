@@ -61,6 +61,23 @@ export function AppearanceSection() {
 					]}
 				/>
 			</Group>
+
+			<Group title="Library">
+				<Select
+					description="Cover grid or a compact list"
+					field="library_layout"
+					label="Layout"
+					options={[
+						{ label: "Grid", value: "Grid" },
+						{ label: "List", value: "List" },
+					]}
+				/>
+				<Switch
+					description="Show the unread-count badge on library covers"
+					field="show_unread_badge"
+					label="Unread badges"
+				/>
+			</Group>
 		</>
 	);
 }

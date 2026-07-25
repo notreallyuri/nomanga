@@ -4,7 +4,10 @@ import {
 	BooksIcon,
 	CheckSquareIcon,
 	FolderSimpleIcon,
+	type Icon,
+	RowsIcon,
 	SlidersHorizontalIcon,
+	SquaresFourIcon,
 	TrashIcon,
 	XIcon,
 } from "@phosphor-icons/react";
@@ -14,9 +17,15 @@ import { toast } from "sonner";
 import { BulkCategoriesDialog } from "@/components/library/bulk-categories-dialog";
 import { EditCategoriesDialog } from "@/components/library/edit-categories-dialog";
 import { LibraryCard } from "@/components/library/library-card";
+import { LibraryList } from "@/components/library/library-list";
 import { ManageCategoriesDialog } from "@/components/library/manage-categories-dialog";
 import { MangaGrid, MangaGridSkeleton } from "@/components/manga/manga-grid";
 import { Button } from "@/components/ui/button";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import {
 	Select,
@@ -25,6 +34,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	ALL_CATEGORIES,
@@ -33,14 +43,19 @@ import {
 	useLibrary,
 	useLibraryRefresh,
 } from "@/hooks/services/use-library";
-import { useAppearance } from "@/hooks/services/use-settings";
+import {
+	useAppearance,
+	useUpdateSettings,
+} from "@/hooks/services/use-settings";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { categoryIcon } from "@/lib/category-visuals";
+import { cn } from "@/lib/utils";
 import type {
 	CategoryFilter,
 	CategorySort,
 	EntryRef,
 	LibraryItem,
+	LibraryLayout,
 	RefreshScope,
 } from "@/types/bindings";
 
@@ -58,6 +73,7 @@ const UNCATEGORIZED_FILTER: CategoryFilter = { type: "Uncategorized" };
 
 const LAST_TAB_KEY = "library.last-tab";
 const SORT_KEY = "library.sort";
+const QUICK_FILTER_KEY = "library.quick-filter";
 
 const SORT_LABELS: Record<CategorySort, string> = {
 	added: "Recently added",
@@ -67,6 +83,38 @@ const SORT_LABELS: Record<CategorySort, string> = {
 
 const isCategorySort = (value: unknown): value is CategorySort =>
 	value === "added" || value === "title" || value === "unread";
+
+// Purely client-side shelves over the entries already loaded for the active
+// tab; derived from cached chapter counts, so they're free to compute.
+type QuickFilter = "all" | "unread" | "started" | "completed";
+
+const QUICK_FILTERS: { value: QuickFilter; label: string }[] = [
+	{ value: "all", label: "All" },
+	{ value: "unread", label: "Unread" },
+	{ value: "started", label: "Started" },
+	{ value: "completed", label: "Completed" },
+];
+
+const isQuickFilter = (value: unknown): value is QuickFilter =>
+	value === "all" ||
+	value === "unread" ||
+	value === "started" ||
+	value === "completed";
+
+function matchesQuickFilter(item: LibraryItem, quick: QuickFilter): boolean {
+	const total = item.cached_total_chapters;
+	const read = item.read_chapters;
+	switch (quick) {
+		case "unread":
+			return total - read > 0;
+		case "started":
+			return read > 0;
+		case "completed":
+			return total > 0 && read >= total;
+		default:
+			return true;
+	}
+}
 
 // The tab persistence stores the raw tab value; only "all"/"none" and existing
 // category ids are meaningful, but any string round-trips safely through here.
@@ -122,13 +170,21 @@ function LibraryPage() {
 		"added",
 		isCategorySort,
 	);
+	const [quickFilter, setQuickFilter] = usePersistentState<QuickFilter>(
+		QUICK_FILTER_KEY,
+		"all",
+		isQuickFilter,
+	);
 	const [editing, setEditing] = useState<LibraryItem | null>(null);
 
 	const [selectionMode, setSelectionMode] = useState(false);
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [bulkOpen, setBulkOpen] = useState(false);
 
-	const { card_size } = useAppearance();
+	const { card_size, library_layout, show_unread_badge } = useAppearance();
+	const updateSettings = useUpdateSettings();
+	const setLayout = (layout: LibraryLayout) =>
+		updateSettings("appearance", { library_layout: layout });
 	const categories = useCategories();
 	const library = useLibrary(filter);
 	const bulkRemove = useBulkRemove();
@@ -159,8 +215,11 @@ function LibraryPage() {
 	// Uncategorized tabs have no category sort, so the global default applies here.
 	const items = useMemo(() => {
 		const base = library.data ?? [];
-		return filter.type === "Category" ? base : sortItems(base, sort);
-	}, [library.data, filter.type, sort]);
+		const sorted = filter.type === "Category" ? base : sortItems(base, sort);
+		return quickFilter === "all"
+			? sorted
+			: sorted.filter((item) => matchesQuickFilter(item, quickFilter));
+	}, [library.data, filter.type, sort, quickFilter]);
 
 	const selectedItems = useMemo(
 		() => items.filter((item) => selected.has(keyOf(item))),
@@ -218,6 +277,52 @@ function LibraryPage() {
 				<h1 className="font-heading font-semibold text-2xl">Library</h1>
 
 				<div className="flex items-center gap-1">
+					<Popover>
+						<PopoverTrigger
+							render={
+								<Button aria-label="View options" size="sm" variant="ghost">
+									{library_layout === "List" ? (
+										<RowsIcon />
+									) : (
+										<SquaresFourIcon />
+									)}
+									View
+								</Button>
+							}
+						/>
+						<PopoverContent align="end" className="w-56 gap-3">
+							<div className="flex flex-col gap-1.5">
+								<span className="font-medium text-muted-foreground text-xs">
+									Layout
+								</span>
+								<div className="flex gap-1">
+									<LayoutButton
+										active={library_layout !== "List"}
+										icon={SquaresFourIcon}
+										label="Grid"
+										onClick={() => setLayout("Grid")}
+									/>
+									<LayoutButton
+										active={library_layout === "List"}
+										icon={RowsIcon}
+										label="List"
+										onClick={() => setLayout("List")}
+									/>
+								</div>
+							</div>
+							<div className="flex items-center justify-between gap-2">
+								<span className="text-sm">Unread badges</span>
+								<Switch
+									checked={show_unread_badge}
+									onCheckedChange={(checked) =>
+										updateSettings("appearance", {
+											show_unread_badge: checked,
+										})
+									}
+								/>
+							</div>
+						</PopoverContent>
+					</Popover>
 					{/* Category tabs carry their own sort (Manage categories); the All
 					    and Uncategorized tabs use this global default instead. */}
 					{filter.type !== "Category" && (
@@ -278,7 +383,15 @@ function LibraryPage() {
 					onValueChange={(value) => setFilter(toFilter(value as string))}
 					value={toTabValue(filter)}
 				>
-					<TabsList className="max-w-full overflow-x-auto" variant="line">
+					{/* h-auto + pb reserves room for the line-variant active underline
+					    (sits at bottom-[-5px]); without it the fixed h-8 clips the
+					    underline, and overflow-x-auto promotes overflow-y to auto,
+					    surfacing it as a stray scrollbar. no-scrollbar then keeps the
+					    genuine horizontal overflow (many categories) clean. */}
+					<TabsList
+						className="no-scrollbar h-auto max-w-full items-center overflow-x-auto pb-2"
+						variant="line"
+					>
 						<TabsTrigger value={ALL}>All</TabsTrigger>
 						{categories.data?.map((category) => {
 							const Icon = categoryIcon(category.icon);
@@ -300,6 +413,24 @@ function LibraryPage() {
 						)}
 					</TabsList>
 				</Tabs>
+			</div>
+
+			<div className="no-scrollbar flex gap-1.5 overflow-x-auto px-6 pt-3">
+				{QUICK_FILTERS.map(({ value, label }) => (
+					<button
+						className={cn(
+							"shrink-0 rounded-full border px-3 py-1 font-medium text-xs transition-colors",
+							quickFilter === value
+								? "border-primary bg-primary text-primary-foreground"
+								: "border-border text-muted-foreground hover:bg-muted",
+						)}
+						key={value}
+						onClick={() => setQuickFilter(value)}
+						type="button"
+					>
+						{label}
+					</button>
+				))}
 			</div>
 
 			{refresh.progress && (
@@ -378,7 +509,18 @@ function LibraryPage() {
 				) : library.error ? (
 					<p className="text-destructive text-sm">{library.error.message}</p>
 				) : items.length === 0 ? (
-					<EmptyState hasFilter={filter.type !== "All"} />
+					<EmptyState
+						hasFilter={filter.type !== "All" || quickFilter !== "all"}
+					/>
+				) : library_layout === "List" ? (
+					<LibraryList
+						items={items}
+						onEditCategories={setEditing}
+						onStartSelect={startSelect}
+						onToggleSelect={toggleSelect}
+						selected={selected}
+						selectionMode={selectionMode}
+					/>
 				) : (
 					<MangaGrid size={card_size}>
 						{items.map((item) => (
@@ -408,6 +550,34 @@ function LibraryPage() {
 
 			<EditCategoriesDialog item={editing} onClose={() => setEditing(null)} />
 		</div>
+	);
+}
+
+function LayoutButton({
+	active,
+	icon: Icon,
+	label,
+	onClick,
+}: {
+	active: boolean;
+	icon: Icon;
+	label: string;
+	onClick: () => void;
+}) {
+	return (
+		<button
+			className={cn(
+				"flex flex-1 items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 font-medium text-xs transition-colors",
+				active
+					? "border-primary bg-primary/10 text-foreground"
+					: "border-border text-muted-foreground hover:bg-muted",
+			)}
+			onClick={onClick}
+			type="button"
+		>
+			<Icon />
+			{label}
+		</button>
 	);
 }
 

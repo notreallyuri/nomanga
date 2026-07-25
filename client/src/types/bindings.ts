@@ -80,6 +80,10 @@ export type AppearanceSettings = {
 	compact_mode?: boolean,
 	cover_style?: CoverStyle,
 	card_size?: CardSize,
+	/**  How the library screen lays out entries: a cover grid or a compact list. */
+	library_layout?: LibraryLayout,
+	/**  Whether the unread-count badge is drawn on library covers. */
+	show_unread_badge?: boolean,
 };
 
 export type CardSize = "Small" | "Medium" | "Large";
@@ -229,6 +233,8 @@ export type LibraryItem = {
 	cached_total_chapters: number,
 	read_chapters: number,
 };
+
+export type LibraryLayout = "Grid" | "List";
 
 /**
  *  Emitted once per series while a library refresh runs, so the UI can show a

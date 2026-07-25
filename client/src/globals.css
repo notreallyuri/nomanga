@@ -7,6 +7,16 @@
 @custom-variant havoc (&:is(.havoc *));
 @custom-variant void (&:is(.void *));
 
+/* Horizontal-scroll strips (e.g. the library category tabs) keep their
+   overflow behaviour but hide the native scrollbar, which otherwise renders as
+   a tiny, easily-misread sliver. */
+@utility no-scrollbar {
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
 @theme inline {
 	--font-heading: var(--font-sans);
 	--font-sans: "Inter Variable", sans-serif;

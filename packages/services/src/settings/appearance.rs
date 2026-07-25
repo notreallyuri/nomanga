@@ -38,6 +38,14 @@ pub enum CardSize {
 }
 
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Default, Clone, Serialize, Deserialize)]
+pub enum LibraryLayout {
+    #[default]
+    Grid,
+    List,
+}
+
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppearanceSettings {
@@ -47,6 +55,10 @@ pub struct AppearanceSettings {
     pub compact_mode: bool,
     pub cover_style: CoverStyle,
     pub card_size: CardSize,
+    /// How the library screen lays out entries: a cover grid or a compact list.
+    pub library_layout: LibraryLayout,
+    /// Whether the unread-count badge is drawn on library covers.
+    pub show_unread_badge: bool,
 }
 
 impl Default for AppearanceSettings {
@@ -58,6 +70,8 @@ impl Default for AppearanceSettings {
             compact_mode: false,
             cover_style: CoverStyle::Default,
             card_size: CardSize::Medium,
+            library_layout: LibraryLayout::Grid,
+            show_unread_badge: true,
         }
     }
 }
