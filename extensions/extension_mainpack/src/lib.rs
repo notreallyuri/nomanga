@@ -15,5 +15,6 @@ nomanga_sdk::register_sources! {
     sources: [
         sources::weebcentral::WeebCentralSource,
         sources::mangadex::MangaDexSource,
+        sources::mangapill::MangaPillSource,
     ],
 }
