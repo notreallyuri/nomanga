@@ -6,7 +6,7 @@
 - Source-based custom rate-limit:
   - So the application may properly follow the source's rate-limiting.
   - (No rate-limit is applied by default, but the developer may set one for the
-    source.)
+    source per command.)
 - Updates:
   - [x] Move Update visualization to the bottom of the sidebar.
   - [x] Add a better updates visualization on the bottom of the sidebar,
@@ -14,7 +14,9 @@
     (Persistent sidebar indicator + detailed progress dialog with a per-series
     live log; plus a "Clear" action that dismisses the current updates without
     marking them read.)
-  - [ ] Add support for background updates + tray menu implementation.
+  - [x] Add support for background updates (configurable interval in System
+    settings, off by default; desktop notification on new chapters).
+  - [ ] Tray menu implementation.
 - Library:
   - [x] Listing layout (Allow user to toggle the layout in the library)
   - [x] Badge Toggle
@@ -24,3 +26,9 @@
 - Browse:
   - [ ] Allow name-searching in all sources (does not include source-specific
     filters)
+- UI:
+  - [x] Fix overflow-x in manga update dialog
+  - [ ] Refine `source-specific` settings components
+  - [ ] Refine `_app/browse.tsx` route
+  - [x] Make visual improvements on the Appearance settings
+    (Mode / Colour / Cover style are now visual preview grids.)
