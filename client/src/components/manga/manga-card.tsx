@@ -7,7 +7,6 @@ import { useAppearance } from "@/hooks/services/use-settings";
 import { cn } from "@/lib/utils";
 import type { CoverStyle } from "@/types/bindings";
 
-// Undefined props fall back to the matching setting; passing one forces it.
 interface MangaCardProps {
 	sourceId: string;
 	mangaId: string;
@@ -128,9 +127,6 @@ function Cover({
 					className={cn(
 						"h-full w-full object-cover transition-all duration-300",
 						"group-hover:scale-105",
-						// Fade in rather than popping — covers arrive from remote
-						// CDNs at unpredictable times, and a hard swap in a grid of
-						// thirty reads as flicker.
 						state === "loading" ? "opacity-0" : "opacity-100",
 						blurred && "blur-lg group-hover:blur-none",
 					)}
@@ -146,9 +142,6 @@ function Cover({
 				<div className="absolute inset-0 animate-pulse bg-muted" />
 			)}
 
-			{/* A failed cover still needs to be identifiable — a broken-image
-			    icon alone tells you nothing about which series it was. The
-			    title is shown here even when titles are otherwise hidden. */}
 			{state === "error" && (
 				<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
 					<ImageBrokenIcon className="text-muted-foreground" size={24} />
@@ -160,9 +153,6 @@ function Cover({
 				</div>
 			)}
 
-			{/* Marks the cover as deliberately hidden rather than failing to
-			    load — without it, a blurred cover and a broken one look
-			    similar at a glance. */}
 			{blurred && state === "loaded" && (
 				<div className="absolute inset-0 flex items-center justify-center opacity-70 transition-opacity group-hover:opacity-0">
 					<EyeSlashIcon className="text-foreground drop-shadow" size={20} />
@@ -174,13 +164,6 @@ function Cover({
 	);
 }
 
-/**
- * Unread-count badge for library cards.
- *
- * Kept next to the card rather than in the library screen because the badge
- * has to sit inside the cover's positioning context, and its styling should
- * track the card's.
- */
 export function UnreadBadge({ count }: { count: number }) {
 	if (count <= 0) return null;
 

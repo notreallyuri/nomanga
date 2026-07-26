@@ -84,8 +84,6 @@ const SORT_LABELS: Record<CategorySort, string> = {
 const isCategorySort = (value: unknown): value is CategorySort =>
 	value === "added" || value === "title" || value === "unread";
 
-// Purely client-side shelves over the entries already loaded for the active
-// tab; derived from cached chapter counts, so they're free to compute.
 type QuickFilter = "all" | "unread" | "started" | "completed";
 
 const QUICK_FILTERS: { value: QuickFilter; label: string }[] = [
@@ -116,8 +114,6 @@ function matchesQuickFilter(item: LibraryItem, quick: QuickFilter): boolean {
 	}
 }
 
-// The tab persistence stores the raw tab value; only "all"/"none" and existing
-// category ids are meaningful, but any string round-trips safely through here.
 const isTabValue = (value: unknown): value is string =>
 	typeof value === "string";
 
@@ -136,7 +132,6 @@ function sortItems(items: LibraryItem[], sort: CategorySort): LibraryItem[] {
 			);
 			break;
 		default:
-			// "added" — the backend already returns newest-first.
 			break;
 	}
 	return next;
@@ -155,8 +150,6 @@ function toFilter(value: string): CategoryFilter {
 }
 
 function LibraryPage() {
-	// The active tab is remembered across sessions; a Category value is validated
-	// against the current categories once they load (see below).
 	const [lastTab, setLastTab] = usePersistentState<string>(
 		LAST_TAB_KEY,
 		ALL,
@@ -190,8 +183,6 @@ function LibraryPage() {
 	const bulkRemove = useBulkRemove();
 	const refresh = useLibraryRefresh();
 
-	// A remembered category can disappear (deleted elsewhere); fall back to All so
-	// the user isn't stranded on an empty, unselectable tab.
 	useEffect(() => {
 		if (filter.type !== "Category" || !categories.data) return;
 		if (!categories.data.some((c) => c.id === filter.id)) {
@@ -200,8 +191,6 @@ function LibraryPage() {
 		}
 	}, [categories.data, filter, setLastTab]);
 
-	// The header refresh follows the active tab; the bulk bar refreshes exactly
-	// the selection.
 	const tabScope = (): RefreshScope =>
 		filter.type === "Category"
 			? { type: "Category", id: filter.id }
@@ -211,8 +200,6 @@ function LibraryPage() {
 	const showUncategorized =
 		(uncategorized.data?.length ?? 0) > 0 || filter.type === "Uncategorized";
 
-	// Category tabs are ordered server-side by their own sort_mode; the All and
-	// Uncategorized tabs have no category sort, so the global default applies here.
 	const items = useMemo(() => {
 		const base = library.data ?? [];
 		const sorted = filter.type === "Category" ? base : sortItems(base, sort);
@@ -231,8 +218,6 @@ function LibraryPage() {
 		setSelected(new Set());
 	};
 
-	// Switching tabs would leave selected keys pointing at now-hidden entries,
-	// so the selection is cleared alongside the filter.
 	const setFilter = (next: CategoryFilter) => {
 		setFilterState(next);
 		setLastTab(toTabValue(next));
@@ -323,8 +308,6 @@ function LibraryPage() {
 							</div>
 						</PopoverContent>
 					</Popover>
-					{/* Category tabs carry their own sort (Manage categories); the All
-					    and Uncategorized tabs use this global default instead. */}
 					{filter.type !== "Category" && (
 						<Select
 							onValueChange={(value) => setSort(value as CategorySort)}
@@ -383,11 +366,6 @@ function LibraryPage() {
 					onValueChange={(value) => setFilter(toFilter(value as string))}
 					value={toTabValue(filter)}
 				>
-					{/* h-auto + pb reserves room for the line-variant active underline
-					    (sits at bottom-[-5px]); without it the fixed h-8 clips the
-					    underline, and overflow-x-auto promotes overflow-y to auto,
-					    surfacing it as a stray scrollbar. no-scrollbar then keeps the
-					    genuine horizontal overflow (many categories) clean. */}
 					<TabsList
 						className="no-scrollbar h-auto max-w-full items-center overflow-x-auto pb-2"
 						variant="line"
@@ -415,7 +393,7 @@ function LibraryPage() {
 				</Tabs>
 			</div>
 
-			<div className="no-scrollbar flex gap-1.5 overflow-x-auto px-6 pt-3">
+			<div className="no-scrollbar flex gap-1.5 overflow-x-auto px-6 pt-3 pb-2">
 				{QUICK_FILTERS.map(({ value, label }) => (
 					<button
 						className={cn(
