@@ -167,7 +167,7 @@ impl Source for MySource {
 
     fn search(&self, query: SearchQuery) -> SourceResult<MangaPage> {
         let filters = query.filters.as_slice();
-        let mut url = format!("https://example.org/search?q={}", encode_query(&query.query));
+        let mut url = format!("https://example.org/search?q={}", encode_query(&query.term));
 
         if let Some((sort, _)) = filters.sort("sort") {
             url.push_str(&format!("&sort={sort}"));

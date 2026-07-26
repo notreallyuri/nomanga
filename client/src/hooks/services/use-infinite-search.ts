@@ -7,7 +7,7 @@ import { sourceKeys } from "./use-sources";
 
 export function useInfiniteSourceSearch(
 	sourceId: string | undefined,
-	query: string,
+	term: string,
 	filters: FilterValue[],
 	enabled = true,
 ) {
@@ -16,13 +16,13 @@ export function useInfiniteSourceSearch(
 			...sourceKeys.all,
 			sourceId ?? "",
 			"search-infinite",
-			query,
+			term,
 			filters,
 		],
 		queryFn: ({ pageParam }) =>
 			unwrap(
 				commands.sourceSearch(sourceId as string, {
-					query,
+					term,
 					page: pageParam,
 					filters,
 				}),
