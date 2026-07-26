@@ -1,17 +1,17 @@
 # TODO
 
 - [ ] Extensions:
-  - [x] MangaPill (`com.mangapill.en`) — verified live via nomanga-cli.
+  - [x] WeebCentral (`com.weebcentral.en`)
+  - [x] MangaDex (`org.mangadex`)  
+  - [x] MangaPill (`com.mangapill.en`)
   - [x] NatoManga (`com.natomanga.en`) — written and fixture-tested. Only
     `chapters()` works live today; the rest wait on the Cloudflare bypass below.
-  - [x] WEBTOON (`com.webtoons.en`) — verified live via nomanga-cli. Episode
-    lists cost one request per 10 episodes (no bulk endpoint exists: Naver's
-    JSON API needs HMAC-signed requests and the RSS feed truncates at 20), so a
-    650-episode series takes ~84s.
+  - [x] WEBTOON (`com.webtoons.en`)
   - [ ] AsuraScans (`asuracomic.net`) — not started. Behind Cloudflare but
     passing as of 2026-07-26, so its selectors can be verified against live
     HTML rather than saved fixtures. Manhwa-heavy.
   - [ ] Hitomi - not started.
+  - [ ] MadaraDex - not started.
 - [ ] Add a simple cloudfare bypass:
   - Invokes another window, user pass the cloudfare
   - Returns, the app grabs the cloudfare key.
