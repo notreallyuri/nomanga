@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE library_entry SET updates_cleared_at = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "cd224c58ec118bff403b7e22eec53769065f633d4adbc5df096269d0b0143aff"
+}

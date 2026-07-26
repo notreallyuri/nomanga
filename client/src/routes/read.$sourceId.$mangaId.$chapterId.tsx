@@ -92,22 +92,42 @@ function Reader() {
 		if (resumeIndex > 0) setIndex(resumeIndex);
 	}, [chapterId, total, progress.isPending, resumeIndex]);
 
-	useReportProgress({ sourceId, mangaId, chapterId, index, total });
+	const markChapterFinished = useReportProgress({
+		sourceId,
+		mangaId,
+		chapterId,
+		index,
+		total,
+	});
 
 	const goToChapter = useCallback(
 		(id: string) => {
+			// Replace so paging through chapters keeps a single reader entry in
+			// history — exiting returns to the manga page, not the previous chapter.
 			navigate({
 				to: "/read/$sourceId/$mangaId/$chapterId",
 				params: { sourceId, mangaId, chapterId: id },
+				replace: true,
 			});
 		},
 		[navigate, sourceId, mangaId],
 	);
 
+	// Moving on to the next chapter counts the current one as read, even if its
+	// exact last page was never the active index (common in vertical scroll).
+	const goToNextChapter = useCallback(() => {
+		if (!nextChapter) return;
+		markChapterFinished(chapterId, Math.max(index, total - 1));
+		goToChapter(nextChapter.id);
+	}, [nextChapter, chapterId, index, total, markChapterFinished, goToChapter]);
+
 	const exit = useCallback(() => {
+		// Hierarchical return to the manga page (not history.back), replacing the
+		// reader entry so the browser back button doesn't land back in the reader.
 		navigate({
 			to: "/manga/$sourceId/$mangaId",
 			params: { sourceId, mangaId },
+			replace: true,
 		});
 	}, [navigate, sourceId, mangaId]);
 
@@ -115,9 +135,9 @@ function Reader() {
 		if (index < total - 1) {
 			setIndex((i) => i + 1);
 		} else if (nextChapter) {
-			goToChapter(nextChapter.id);
+			goToNextChapter();
 		}
-	}, [index, total, nextChapter, goToChapter]);
+	}, [index, total, nextChapter, goToNextChapter]);
 
 	const retreat = useCallback(() => {
 		if (index > 0) {
@@ -137,7 +157,7 @@ function Reader() {
 
 	if (pages.isPending || effective.isPending) {
 		return (
-			<div className="flex h-svh items-center justify-center bg-black">
+			<div className="flex h-full items-center justify-center bg-black">
 				<Skeleton className="h-[80vh] w-[min(60rem,90vw)]" />
 			</div>
 		);
@@ -145,7 +165,7 @@ function Reader() {
 
 	if (pages.error) {
 		return (
-			<div className="flex h-svh flex-col items-center justify-center gap-4 bg-black text-white">
+			<div className="flex h-full flex-col items-center justify-center gap-4 bg-black text-white">
 				<p className="max-w-md text-center text-sm">{pages.error.message}</p>
 				<Button onClick={exit} variant="secondary">
 					<ArrowLeftIcon />
@@ -158,7 +178,7 @@ function Reader() {
 	const chapter = list[position];
 
 	return (
-		<div className="relative h-svh overflow-hidden bg-black">
+		<div className="relative h-full overflow-hidden bg-black">
 			{layout === "VerticalScroll" ? (
 				// Wait for progress so the initial scroll position is the resume page.
 				progress.isPending ? null : (
@@ -193,6 +213,7 @@ function Reader() {
 				nextChapter={nextChapter?.id}
 				onExit={exit}
 				onGoToChapter={goToChapter}
+				onGoToNextChapter={goToNextChapter}
 				onOpenSettings={() => setSettingsOpen(true)}
 				prevChapter={prevChapter?.id}
 				total={total}
@@ -217,6 +238,7 @@ function Chrome({
 	total,
 	onExit,
 	onGoToChapter,
+	onGoToNextChapter,
 	onOpenSettings,
 	nextChapter,
 	prevChapter,
@@ -228,6 +250,7 @@ function Chrome({
 	total: number;
 	onExit: () => void;
 	onGoToChapter: (id: string) => void;
+	onGoToNextChapter: () => void;
 	onOpenSettings: () => void;
 	nextChapter?: string;
 	prevChapter?: string;
@@ -275,7 +298,7 @@ function Chrome({
 
 				<Button
 					disabled={!nextChapter}
-					onClick={() => nextChapter && onGoToChapter(nextChapter)}
+					onClick={onGoToNextChapter}
 					size="icon"
 					variant="ghost"
 				>
@@ -321,6 +344,17 @@ function useReportProgress({
 
 		return () => clearTimeout(timer);
 	}, [sourceId, mangaId, chapterId, index, total]);
+
+	// Marks a chapter finished explicitly — used when the reader jumps forward to
+	// the next chapter, which may happen (footer button, strip mode) before the
+	// last page is ever the current index. Idempotent with the auto-finish above.
+	return useCallback(
+		(id: string, lastPage: number) => {
+			finished.current = id;
+			finishChapter({ chapterId: id, lastPage });
+		},
+		[finishChapter],
+	);
 }
 
 function useReaderKeys({

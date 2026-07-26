@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { unwrap } from "@/lib/unwrap";
 import { commands, type HistoryEntryRef } from "@/types/bindings";
+import { libraryKeys } from "./use-library";
+
+// Read-state changes shift a series' unread count, which the library grid/list
+// shows; without this the count stays stale behind the global 5-min staleTime.
+const LIBRARY_LIST_KEY = [...libraryKeys.all, "list"] as const;
 
 export const historyKeys = {
 	all: ["history"] as const,
@@ -71,6 +76,7 @@ export function useMarkChapterRead(sourceId: string, mangaId: string) {
 			queryClient.invalidateQueries({
 				queryKey: historyKeys.readChapters(sourceId, mangaId),
 			});
+			queryClient.invalidateQueries({ queryKey: LIBRARY_LIST_KEY });
 		},
 	});
 }
@@ -85,6 +91,7 @@ export function useMarkChaptersRead(sourceId: string, mangaId: string) {
 			queryClient.invalidateQueries({
 				queryKey: historyKeys.readChapters(sourceId, mangaId),
 			});
+			queryClient.invalidateQueries({ queryKey: LIBRARY_LIST_KEY });
 		},
 	});
 }
@@ -98,6 +105,7 @@ export function useMarkChaptersUnread(sourceId: string, mangaId: string) {
 			queryClient.invalidateQueries({
 				queryKey: historyKeys.readChapters(sourceId, mangaId),
 			});
+			queryClient.invalidateQueries({ queryKey: LIBRARY_LIST_KEY });
 		},
 	});
 }
@@ -116,6 +124,7 @@ export function useFinishChapter(sourceId: string, mangaId: string) {
 			unwrap(commands.finishChapter(sourceId, mangaId, chapterId, lastPage)),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: historyKeys.all });
+			queryClient.invalidateQueries({ queryKey: LIBRARY_LIST_KEY });
 		},
 	});
 }

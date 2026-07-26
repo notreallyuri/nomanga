@@ -7,6 +7,7 @@ use std::{
 };
 use tauri::Manager;
 
+pub mod background;
 pub mod commands;
 pub mod error;
 
@@ -19,65 +20,72 @@ pub struct AppState {
 }
 
 pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
-    tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
-        // library
-        library::list_library,
-        library::add_to_library,
-        library::add_listing_to_library,
-        library::add_manga_to_library,
-        library::remove_from_library,
-        library::is_in_library,
-        library::list_categories,
-        library::create_category,
-        library::rename_category,
-        library::update_category_options,
-        library::delete_category,
-        library::reorder_categories,
-        library::categories_for_entry,
-        library::set_entry_categories,
-        library::bulk_category_counts,
-        library::bulk_update_categories,
-        // history
-        history::continue_reading,
-        history::remove_history_entries,
-        history::mark_chapter_read,
-        history::mark_chapter_unread,
-        history::mark_chapters_read,
-        history::mark_chapters_unread,
-        history::is_chapter_read,
-        history::read_chapters_for_manga,
-        history::read_count,
-        history::update_progress,
-        history::get_progress,
-        history::finish_chapter,
-        // sources
-        source::list_sources,
-        source::source_filters,
-        source::source_homepage,
-        source::source_search,
-        source::source_section,
-        source::source_manga,
-        source::source_chapters,
-        source::source_pages,
-        source::install_extension,
-        // settings
-        settings::get_settings,
-        settings::save_settings,
-        settings::effective_reader_settings,
-        settings::get_source_reader_override,
-        settings::set_source_reader_override,
-        settings::get_manga_reader_override,
-        settings::set_manga_reader_override,
-        // extension
-        extension::list_extensions,
-        extension::uninstall_extension,
-        extension::list_sources_with_preferences,
-        extension::set_source_preference,
-        extension::get_source_settings,
-        extension::save_source_settings,
-        //startup
-        startup::take_startup_warnings
-    ])
+    tauri_specta::Builder::<tauri::Wry>::new()
+        .events(tauri_specta::collect_events![
+            commands::LibraryRefreshProgress
+        ])
+        .commands(tauri_specta::collect_commands![
+            // library
+            library::list_library,
+            library::add_to_library,
+            library::add_listing_to_library,
+            library::add_manga_to_library,
+            library::remove_from_library,
+            library::is_in_library,
+            library::list_categories,
+            library::create_category,
+            library::rename_category,
+            library::update_category_options,
+            library::delete_category,
+            library::reorder_categories,
+            library::categories_for_entry,
+            library::set_entry_categories,
+            library::bulk_category_counts,
+            library::bulk_update_categories,
+            library::refresh_library,
+            library::library_updates,
+            library::clear_library_updates,
+            // history
+            history::continue_reading,
+            history::remove_history_entries,
+            history::mark_chapter_read,
+            history::mark_chapter_unread,
+            history::mark_chapters_read,
+            history::mark_chapters_unread,
+            history::is_chapter_read,
+            history::read_chapters_for_manga,
+            history::read_count,
+            history::update_progress,
+            history::get_progress,
+            history::finish_chapter,
+            // sources
+            source::list_sources,
+            source::source_filters,
+            source::source_homepage,
+            source::source_search,
+            source::source_section,
+            source::source_manga,
+            source::source_chapters,
+            source::source_pages,
+            source::install_extension,
+            // settings
+            settings::get_settings,
+            settings::save_settings,
+            settings::effective_reader_settings,
+            settings::get_source_reader_override,
+            settings::set_source_reader_override,
+            settings::get_manga_reader_override,
+            settings::set_manga_reader_override,
+            // extension
+            extension::list_extensions,
+            extension::uninstall_extension,
+            extension::list_sources_with_preferences,
+            extension::set_source_preference,
+            extension::get_source_settings,
+            extension::save_source_settings,
+            //startup
+            startup::take_startup_warnings
+        ])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -91,6 +99,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
@@ -149,6 +158,8 @@ pub fn run() {
                 settings_path,
                 startup_warnings: Arc::new(RwLock::new(warnings)),
             });
+
+            tauri::async_runtime::spawn(background::run_loop(handle.clone()));
 
             Ok(())
         })

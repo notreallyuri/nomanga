@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE library_entry SET last_checked_at = ?\n          WHERE source_id = ? AND manga_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "3cdbff328bf6515c3e1dcca755677aa2464178e14a3aa0d32004ac61e3972e2a"
+}

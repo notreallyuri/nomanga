@@ -89,6 +89,10 @@ export function useSourceChapters(
 		queryFn: () =>
 			unwrap(commands.sourceChapters(sourceId as string, mangaId as string)),
 		enabled: Boolean(sourceId && mangaId),
+		// Always re-check the source on entry so adds/rewrites show up; the cached
+		// list stays visible while it revalidates (stale-while-revalidate).
+		staleTime: 0,
+		refetchOnMount: "always",
 	});
 }
 

@@ -100,7 +100,7 @@ function HistoryPage() {
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
 			<div className="flex min-h-14 items-center justify-between gap-4 px-6 pt-6">
-				<h1 className="font-heading text-2xl">History</h1>
+				<h1 className="font-heading font-semibold text-2xl">History</h1>
 
 				{liveSelected.size > 0 && (
 					<div className="flex items-center gap-3">

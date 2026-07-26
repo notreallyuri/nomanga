@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT rp.source_id, rp.manga_id, m.title, m.cover_url,\n                  rp.last_chapter_id, rp.last_page, rp.last_chapter_done,\n                  rp.updated_at AS \"updated_at: DateTime<Utc>\"\n           FROM read_progress rp\n           JOIN manga m\n             ON m.source_id = rp.source_id AND m.manga_id = rp.manga_id\n           LEFT JOIN source_preference sp\n             ON sp.source_id = rp.source_id\n           WHERE COALESCE(sp.private, 0) = 0\n           ORDER BY rp.updated_at DESC\n           LIMIT ?",
+  "query": "SELECT rp.source_id, rp.manga_id, m.title, m.cover_url,\n                  rp.last_chapter_id, rp.last_page, rp.last_chapter_done,\n                  rp.updated_at AS \"updated_at: DateTime<Utc>\"\n           FROM read_progress rp\n           JOIN manga m\n             ON m.source_id = rp.source_id AND m.manga_id = rp.manga_id\n           LEFT JOIN source_preference sp\n             ON sp.source_id = rp.source_id\n           WHERE COALESCE(sp.private, 0) = 0\n             AND NOT EXISTS (\n                 SELECT 1 FROM library_entry_category lec\n                   JOIN category c ON c.id = lec.category_id\n                  WHERE lec.source_id = rp.source_id\n                    AND lec.manga_id = rp.manga_id\n                    AND c.hidden = 1)\n           ORDER BY rp.updated_at DESC\n           LIMIT ?",
   "describe": {
     "columns": [
       {
@@ -106,5 +106,5 @@
       false
     ]
   },
-  "hash": "508acb8b596245e51e0a73c00c8d2ed8bcc41edc6df04853deb0b7d2fa63d1de"
+  "hash": "e9be70c2e4fce9adc2a698afe126cb24958bc3a77d2052520ae25a12c21a8b58"
 }

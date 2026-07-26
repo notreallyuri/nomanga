@@ -42,7 +42,7 @@ function BrowseIndex() {
 	return (
 		<div className="p-6">
 			<div className="mb-4 flex items-baseline justify-between">
-				<h1 className="font-heading text-2xl">Browse</h1>
+				<h1 className="font-heading font-semibold text-2xl">Browse</h1>
 				{hiddenCount > 0 && (
 					<p className="text-muted-foreground text-xs">
 						{hiddenCount} source{hiddenCount === 1 ? "" : "s"} hidden

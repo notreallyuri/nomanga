@@ -1,12 +1,12 @@
 import { EyeSlashIcon, ImageBrokenIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+import { cva } from "class-variance-authority";
 import { type ReactNode, useState } from "react";
 import { useSourcePreference } from "@/hooks/services/use-extensions";
 import { useAppearance } from "@/hooks/services/use-settings";
 import { cn } from "@/lib/utils";
 import type { CoverStyle } from "@/types/bindings";
 
-// Undefined props fall back to the matching setting; passing one forces it.
 interface MangaCardProps {
 	sourceId: string;
 	mangaId: string;
@@ -19,12 +19,44 @@ interface MangaCardProps {
 	showTitle?: boolean;
 }
 
-const COVER_STYLES: Record<CoverStyle, string> = {
-	Default: "rounded-none",
-	Rounded: "rounded-lg",
-	Border: "rounded-none border-2 border-border",
-	Shadow: "rounded-none shadow-lg shadow-black/25",
-};
+const cardVariants = cva("group block focus-visible:outline-none", {
+	variants: {
+		dimmed: {
+			true: "opacity-60 hover:opacity-100",
+			false: "",
+		},
+	},
+	defaultVariants: { dimmed: false },
+});
+
+const coverVariants = cva(
+	[
+		"relative aspect-2/3 overflow-hidden bg-muted",
+		"ring-offset-2 ring-offset-background transition-shadow",
+		"group-focus-visible:ring-2 group-focus-visible:ring-ring",
+	],
+	{
+		variants: {
+			coverStyle: {
+				Default: "rounded-none",
+				Rounded: "rounded-lg",
+				Border: "rounded-none border-2 border-border",
+				Shadow: "rounded-none shadow-black/25 shadow-lg",
+			} satisfies Record<CoverStyle, string>,
+		},
+		defaultVariants: { coverStyle: "Default" },
+	},
+);
+
+const titleVariants = cva("leading-tight", {
+	variants: {
+		compact: {
+			true: "mt-1.5 line-clamp-1 text-xs",
+			false: "mt-2 line-clamp-2 text-sm",
+		},
+	},
+	defaultVariants: { compact: false },
+});
 
 export function MangaCard({
 	sourceId,
@@ -46,32 +78,21 @@ export function MangaCard({
 
 	return (
 		<Link
-			className={cn(
-				"group block focus-visible:outline-none",
-				dimmed && "opacity-60 hover:opacity-100",
-			)}
+			className={cardVariants({ dimmed })}
 			params={{ sourceId, mangaId }}
 			to="/manga/$sourceId/$mangaId"
 		>
 			<Cover
 				badge={badge}
 				blurred={blurCover}
-				style={COVER_STYLES[appearance.cover_style]}
+				className={coverVariants({ coverStyle: appearance.cover_style })}
 				title={title}
 				titleVisible={titleVisible}
 				url={coverUrl}
 			/>
 
 			{titleVisible && (
-				<p
-					className={cn(
-						"leading-tight",
-						compact
-							? "mt-1.5 line-clamp-1 text-xs"
-							: "mt-2 line-clamp-2 text-sm",
-					)}
-					title={title}
-				>
+				<p className={titleVariants({ compact })} title={title}>
 					{title}
 				</p>
 			)}
@@ -87,35 +108,25 @@ function Cover({
 	blurred,
 	badge,
 	titleVisible,
-	style,
+	className,
 }: {
 	url: string;
 	title: string;
 	blurred: boolean;
 	badge?: ReactNode;
 	titleVisible: boolean;
-	style: string;
+	className: string;
 }) {
 	const [state, setState] = useState<LoadState>(url ? "loading" : "error");
 
 	return (
-		<div
-			className={cn(
-				"relative aspect-2/3 overflow-hidden bg-muted",
-				style,
-				"ring-offset-2 ring-offset-background transition-shadow",
-				"group-focus-visible:ring-2 group-focus-visible:ring-ring",
-			)}
-		>
+		<div className={className}>
 			{state !== "error" && (
 				<img
 					alt=""
 					className={cn(
 						"h-full w-full object-cover transition-all duration-300",
 						"group-hover:scale-105",
-						// Fade in rather than popping — covers arrive from remote
-						// CDNs at unpredictable times, and a hard swap in a grid of
-						// thirty reads as flicker.
 						state === "loading" ? "opacity-0" : "opacity-100",
 						blurred && "blur-lg group-hover:blur-none",
 					)}
@@ -131,9 +142,6 @@ function Cover({
 				<div className="absolute inset-0 animate-pulse bg-muted" />
 			)}
 
-			{/* A failed cover still needs to be identifiable — a broken-image
-			    icon alone tells you nothing about which series it was. The
-			    title is shown here even when titles are otherwise hidden. */}
 			{state === "error" && (
 				<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
 					<ImageBrokenIcon className="text-muted-foreground" size={24} />
@@ -145,9 +153,6 @@ function Cover({
 				</div>
 			)}
 
-			{/* Marks the cover as deliberately hidden rather than failing to
-			    load — without it, a blurred cover and a broken one look
-			    similar at a glance. */}
 			{blurred && state === "loaded" && (
 				<div className="absolute inset-0 flex items-center justify-center opacity-70 transition-opacity group-hover:opacity-0">
 					<EyeSlashIcon className="text-foreground drop-shadow" size={20} />
@@ -159,13 +164,6 @@ function Cover({
 	);
 }
 
-/**
- * Unread-count badge for library cards.
- *
- * Kept next to the card rather than in the library screen because the badge
- * has to sit inside the cover's positioning context, and its styling should
- * track the card's.
- */
 export function UnreadBadge({ count }: { count: number }) {
 	if (count <= 0) return null;
 

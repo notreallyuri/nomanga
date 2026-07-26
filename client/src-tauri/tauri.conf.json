@@ -12,9 +12,13 @@
   "app": {
     "windows": [
       {
-        "title": "client",
-        "width": 800,
-        "height": 600
+        "label": "main",
+        "title": "nomanga",
+        "width": 1100,
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 500,
+        "decorations": false
       }
     ],
     "security": {

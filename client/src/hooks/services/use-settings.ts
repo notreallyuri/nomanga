@@ -58,6 +58,9 @@ export const APPEARANCE_DEFAULTS: Required<AppearanceSettings> = {
 	show_titles: true,
 	compact_mode: false,
 	cover_style: "Default",
+	card_size: "Medium",
+	library_layout: "Grid",
+	show_unread_badge: true,
 };
 
 export function useAppearance(): Required<AppearanceSettings> {
@@ -70,6 +73,11 @@ export function useAppearance(): Required<AppearanceSettings> {
 		show_titles: appearance?.show_titles ?? APPEARANCE_DEFAULTS.show_titles,
 		compact_mode: appearance?.compact_mode ?? APPEARANCE_DEFAULTS.compact_mode,
 		cover_style: appearance?.cover_style ?? APPEARANCE_DEFAULTS.cover_style,
+		card_size: appearance?.card_size ?? APPEARANCE_DEFAULTS.card_size,
+		library_layout:
+			appearance?.library_layout ?? APPEARANCE_DEFAULTS.library_layout,
+		show_unread_badge:
+			appearance?.show_unread_badge ?? APPEARANCE_DEFAULTS.show_unread_badge,
 	};
 }
 

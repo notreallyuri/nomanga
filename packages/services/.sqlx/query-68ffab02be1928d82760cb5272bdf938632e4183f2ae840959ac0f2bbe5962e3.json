@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO cached_chapter\n                    (source_id, manga_id, chapter_id, number, title, volume,\n                     language, upload_date, url, first_seen_at)\n                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "68ffab02be1928d82760cb5272bdf938632e4183f2ae840959ac0f2bbe5962e3"
+}

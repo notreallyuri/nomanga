@@ -1,11 +1,21 @@
+import { BookmarkSimpleIcon, CheckIcon, PlusIcon } from "@phosphor-icons/react";
 import { useEffect } from "react";
+import { toast } from "sonner";
 import {
 	useInfiniteSourceSearch,
 	useInView,
 } from "@/hooks/services/use-infinite-search";
-import type { FilterValue } from "@/types/bindings";
+import { useIsInLibrary, useToggleLibrary } from "@/hooks/services/use-library";
+import { cn } from "@/lib/utils";
+import type { FilterValue, MangaSimple } from "@/types/bindings";
 import { MangaCard } from "../manga/manga-card";
 import { MangaGrid, MangaGridSkeleton } from "../manga/manga-grid";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuTrigger,
+} from "../ui/context-menu";
 
 export function SearchResults({
 	sourceId,
@@ -54,12 +64,11 @@ export function SearchResults({
 		<>
 			<MangaGrid>
 				{items.map((item) => (
-					<MangaCard
-						coverUrl={item.cover_url}
+					<SearchCard
 						key={item.id}
-						mangaId={item.id}
 						sourceId={sourceId}
-						title={item.title}
+						item={item}
+						compactTitle={true}
 					/>
 				))}
 			</MangaGrid>
@@ -74,5 +83,79 @@ export function SearchResults({
 				</p>
 			)}
 		</>
+	);
+}
+
+function SearchCard({
+	sourceId,
+	item,
+	compactTitle,
+}: {
+	sourceId: string;
+	item: MangaSimple;
+	compactTitle: boolean;
+}) {
+	const inLibrary = useIsInLibrary(sourceId, item.id);
+	const { add, remove } = useToggleLibrary(sourceId, item.id, item);
+
+	const saved = inLibrary.data ?? false;
+
+	const toggle = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (saved) remove.mutate(undefined);
+		else add.mutate(undefined, { onError: (err) => toast.error(err.message) });
+	};
+
+	return (
+		<ContextMenu>
+			<ContextMenuTrigger>
+				<div className="group/card relative">
+					<MangaCard
+						compactTitle={compactTitle}
+						coverUrl={item.cover_url}
+						mangaId={item.id}
+						sourceId={sourceId}
+						title={item.title}
+					/>
+
+					<button
+						aria-label={saved ? "Remove from library" : "Add to library"}
+						className={cn(
+							"absolute top-1.5 right-1.5 z-10 flex size-7 items-center justify-center rounded-full shadow-sm backdrop-blur transition-all focus-visible:opacity-100 focus-visible:outline-none",
+							saved
+								? "bg-primary text-primary-foreground opacity-100"
+								: "bg-background/80 text-foreground opacity-0 hover:bg-background group-hover/card:opacity-100",
+						)}
+						onClick={toggle}
+						type="button"
+					>
+						{saved ? (
+							<CheckIcon size={14} weight="bold" />
+						) : (
+							<PlusIcon size={14} weight="bold" />
+						)}
+					</button>
+				</div>
+			</ContextMenuTrigger>
+
+			<ContextMenuContent>
+				{saved ? (
+					<ContextMenuItem onClick={() => remove.mutate(undefined)}>
+						<CheckIcon />
+						In library
+					</ContextMenuItem>
+				) : (
+					<ContextMenuItem
+						onClick={() =>
+							add.mutate(undefined, { onError: (e) => toast.error(e.message) })
+						}
+					>
+						<BookmarkSimpleIcon />
+						Add to library
+					</ContextMenuItem>
+				)}
+			</ContextMenuContent>
+		</ContextMenu>
 	);
 }

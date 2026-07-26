@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT le.source_id, le.manga_id, m.title, m.cover_url,\n                  le.added_at AS \"added_at: DateTime<Utc>\",\n                  le.cached_total_chapters AS \"cached_total_chapters: i32\",\n                  (SELECT COUNT(*) FROM read_chapter rc\n                    WHERE rc.source_id = le.source_id\n                      AND rc.manga_id = le.manga_id) AS \"read_chapters: i32\"\n           FROM library_entry le\n           JOIN manga m ON m.source_id = le.source_id AND m.manga_id = le.manga_id\n           WHERE CASE ?\n               WHEN 'all' THEN 1\n               WHEN 'none' THEN NOT EXISTS (\n                   SELECT 1 FROM library_entry_category lec\n                    WHERE lec.source_id = le.source_id AND lec.manga_id = le.manga_id)\n               ELSE EXISTS (\n                   SELECT 1 FROM library_entry_category lec\n                    WHERE lec.source_id = le.source_id AND lec.manga_id = le.manga_id\n                      AND lec.category_id = ?)\n           END\n           ORDER BY le.added_at DESC",
+  "query": "SELECT le.source_id, le.manga_id, m.title, m.cover_url,\n                  le.added_at AS \"added_at: DateTime<Utc>\",\n                  le.cached_total_chapters AS \"cached_total_chapters: i32\",\n                  (SELECT COUNT(*) FROM read_chapter rc\n                    WHERE rc.source_id = le.source_id\n                      AND rc.manga_id = le.manga_id) AS \"read_chapters: i32\"\n           FROM library_entry le\n           JOIN manga m ON m.source_id = le.source_id AND m.manga_id = le.manga_id\n           WHERE CASE ?\n               WHEN 'all' THEN NOT EXISTS (\n                   SELECT 1 FROM library_entry_category lec\n                     JOIN category c ON c.id = lec.category_id\n                    WHERE lec.source_id = le.source_id AND lec.manga_id = le.manga_id\n                      AND c.hidden = 1)\n               WHEN 'none' THEN NOT EXISTS (\n                   SELECT 1 FROM library_entry_category lec\n                    WHERE lec.source_id = le.source_id AND lec.manga_id = le.manga_id)\n               ELSE EXISTS (\n                   SELECT 1 FROM library_entry_category lec\n                    WHERE lec.source_id = le.source_id AND lec.manga_id = le.manga_id\n                      AND lec.category_id = ?)\n           END\n           ORDER BY le.added_at DESC",
   "describe": {
     "columns": [
       {
@@ -89,5 +89,5 @@
       false
     ]
   },
-  "hash": "bfc696dfc6a4b010a936e2b268c0a1a54ba2769fb0385842ad006d9216188146"
+  "hash": "17a98e1e2628dc9bb062f5cc8e39ab7149ce04a07106fc0db9df69ef67488cc9"
 }

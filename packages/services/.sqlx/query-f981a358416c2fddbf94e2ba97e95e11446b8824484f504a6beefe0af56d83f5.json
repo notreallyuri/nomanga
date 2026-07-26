@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO reader_override (source_id, manga_id, data) VALUES (?, ?, ?)\n             ON CONFLICT (source_id, manga_id) DO UPDATE SET data = excluded.data",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "f981a358416c2fddbf94e2ba97e95e11446b8824484f504a6beefe0af56d83f5"
+}
