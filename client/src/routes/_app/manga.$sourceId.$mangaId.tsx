@@ -18,6 +18,7 @@ import {
 	useSourceChapters,
 	useSourceManga,
 } from "@/hooks/services/use-sources";
+import { sourceImageUrl } from "@/lib/source-image";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/manga/$sourceId/$mangaId")({
@@ -89,7 +90,7 @@ function MangaDetails() {
 				<img
 					alt={manga.data.title}
 					className="mx-auto aspect-2/3 w-48 rounded-lg border border-border object-cover shadow-xl lg:w-full lg:max-w-none"
-					src={manga.data.cover_url}
+					src={sourceImageUrl(sourceId, manga.data.cover_url)}
 				/>
 
 				<h1 className="mt-4 text-balance font-bold font-heading text-2xl leading-tight">

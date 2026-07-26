@@ -278,7 +278,7 @@ async fn fetch_page_list(
     .map_err(|e| e.to_string())
 }
 
-fn source_base_url(registry: &Arc<RwLock<Registry>>, source_id: &str) -> String {
+pub fn source_base_url(registry: &Arc<RwLock<Registry>>, source_id: &str) -> String {
     registry
         .read()
         .ok()

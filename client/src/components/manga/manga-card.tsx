@@ -4,6 +4,7 @@ import { cva } from "class-variance-authority";
 import { type ReactNode, useState } from "react";
 import { useSourcePreference } from "@/hooks/services/use-extensions";
 import { useAppearance } from "@/hooks/services/use-settings";
+import { sourceImageUrl } from "@/lib/source-image";
 import { cn } from "@/lib/utils";
 import type { CoverStyle } from "@/types/bindings";
 
@@ -88,7 +89,9 @@ export function MangaCard({
 				className={coverVariants({ coverStyle: appearance.cover_style })}
 				title={title}
 				titleVisible={titleVisible}
-				url={coverUrl}
+				// Proxied so covers on hotlink-protected CDNs (NatoManga) load;
+				// a pass-through for every other source.
+				url={sourceImageUrl(sourceId, coverUrl)}
 			/>
 
 			{titleVisible && (

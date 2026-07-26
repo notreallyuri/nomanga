@@ -22,6 +22,7 @@ import {
 	useSourceChapters,
 	useSourceManga,
 } from "@/hooks/services/use-sources";
+import { sourceImageUrl } from "@/lib/source-image";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/read/$sourceId/$mangaId/$chapterId")({
@@ -45,6 +46,18 @@ function Reader() {
 	const reader = effective.data;
 	const layout = reader?.page_layout ?? "SinglePage";
 	const rtl = reader?.reading_direction === "RightToLeft";
+
+	// Resolved once here rather than inside each reader so the proxy also covers
+	// the paged reader's preloading. Downloaded chapters come back as local
+	// asset URLs, which pass through untouched.
+	const readerPages = useMemo(
+		() =>
+			(pages.data ?? []).map((page) => ({
+				...page,
+				image_url: sourceImageUrl(sourceId, page.image_url),
+			})),
+		[pages.data, sourceId],
+	);
 
 	const list = chapters.data ?? [];
 	const position = list.findIndex((c) => c.id === chapterId);
@@ -186,7 +199,7 @@ function Reader() {
 						initialIndex={resumeIndex}
 						onIndexChange={setIndex}
 						onToggleChrome={() => setChromeVisible((v) => !v)}
-						pages={pages.data}
+						pages={readerPages}
 						zoom={reader?.zoom_behavior ?? "FitWidth"}
 						zoomLevel={reader?.zoom_level ?? undefined}
 					/>
@@ -199,7 +212,7 @@ function Reader() {
 					onRetreat={retreat}
 					onSeek={setIndex}
 					onToggleChrome={() => setChromeVisible((v) => !v)}
-					pages={pages.data}
+					pages={readerPages}
 					rtl={rtl}
 					zoom={reader?.zoom_behavior ?? "FitWidth"}
 					zoomLevel={reader?.zoom_level ?? undefined}

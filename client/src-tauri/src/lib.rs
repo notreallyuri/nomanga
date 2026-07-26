@@ -11,9 +11,13 @@ pub mod background;
 pub mod commands;
 pub mod downloads;
 pub mod error;
+pub mod image_proxy;
 
 pub struct AppState {
     pub pool: sqlx::SqlitePool,
+    /// Shared client for the image proxy; sources that hotlink-protect their
+    /// CDNs need the request to originate here rather than in the webview.
+    pub http: reqwest::Client,
     pub registry: Arc<RwLock<nomanga_host::registry::Registry>>,
     pub settings: Arc<RwLock<nomanga_services::settings::Settings>>,
     pub settings_path: PathBuf,
@@ -110,6 +114,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .register_asynchronous_uri_scheme_protocol(image_proxy::SCHEME, image_proxy::handle)
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
@@ -167,6 +172,13 @@ pub fn run() {
 
             app.manage(AppState {
                 pool,
+                http: reqwest::Client::builder()
+                    .user_agent(
+                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 \
+                         (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+                    )
+                    .build()
+                    .expect("failed to build http client"),
                 registry: Arc::new(RwLock::new(registry)),
                 settings: Arc::new(RwLock::new(settings)),
                 settings_path,
