@@ -24,7 +24,7 @@ enum Command {
     Homepage,
     Filters,
     Search {
-        query: String,
+        term: String,
         #[arg(long, default_value_t = 1)]
         page: u32,
     },
@@ -78,9 +78,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         Command::Info => unreachable!("handled above"),
         Command::Homepage => to_value(ext.homepage(source)?, cli.json)?,
         Command::Filters => to_value(ext.filters(source)?, cli.json)?,
-        Command::Search { query, page } => {
+        Command::Search { term, page } => {
             let q = SearchQuery {
-                query,
+                term,
                 page,
                 filters: vec![],
             };

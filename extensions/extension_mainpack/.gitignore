@@ -1,0 +1,5 @@
+/target
+
+# Image/JS assets that tag along with a browser "Webpage, Complete" dump — 16MB
+# of noise. The .html fixtures beside them are what the parser tests read.
+fixtures/**/_saved_assets/

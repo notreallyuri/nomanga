@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SearchQuery {
-    pub query: String,
+    pub term: String,
     pub page: u32,
     #[serde(default)]
     pub filters: Vec<FilterValue>,

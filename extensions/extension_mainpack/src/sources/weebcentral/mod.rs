@@ -121,7 +121,7 @@ impl Source for WeebCentralSource {
 
         let mut url = format!(
             "{DOMAIN}/search/data?limit={PAGE_SIZE}&offset={offset}&text={}&display_mode=Full+Display",
-            encode_query(&query.query),
+            encode_query(&query.term),
         );
 
         let filters = query.filters.as_slice();

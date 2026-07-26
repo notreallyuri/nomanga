@@ -369,7 +369,7 @@ export type RefreshSummary = {
 };
 
 export type SearchQuery = {
-	query: string,
+	term: string,
 	page: number,
 	filters?: FilterValue[],
 };

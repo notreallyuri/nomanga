@@ -229,8 +229,8 @@ impl Source for MangaDexSource {
             base_params()
         );
 
-        if !query.query.trim().is_empty() {
-            url.push_str(&format!("&title={}", encode_query(&query.query)));
+        if !query.term.trim().is_empty() {
+            url.push_str(&format!("&title={}", encode_query(&query.term)));
         }
 
         let filters = query.filters.as_slice();

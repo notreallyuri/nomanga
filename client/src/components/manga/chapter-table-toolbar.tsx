@@ -5,6 +5,8 @@ import {
 	CaretDoubleRightIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
+	CheckCircleIcon,
+	CircleIcon,
 	DownloadSimpleIcon,
 	MagnifyingGlassIcon,
 	XIcon,
@@ -30,6 +32,8 @@ interface Props {
 	descending: boolean;
 	onToggleSort: () => void;
 	selectedIds: string[];
+	/** Read state of the topmost selected chapter — drives which action shows. */
+	firstSelectedRead: boolean;
 	onMarkRead: (ids: string[]) => void;
 	onMarkUnread: (ids: string[]) => void;
 	onDownload: (ids: string[]) => void;
@@ -43,6 +47,7 @@ export function ChapterTableToolbar({
 	descending,
 	onToggleSort,
 	selectedIds,
+	firstSelectedRead,
 	onMarkRead,
 	onMarkUnread,
 	onDownload,
@@ -132,15 +137,26 @@ export function ChapterTableToolbar({
 			{selectedIds.length > 0 && (
 				<div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
 					<span className="text-sm">{selectedIds.length} selected</span>
-					<Button onClick={() => onMarkRead(selectedIds)} size="sm">
-						Mark read
-					</Button>
+					{/*
+					 * One action rather than two: the topmost selected chapter
+					 * decides the direction, so an already-read run offers to
+					 * unread and vice versa. Removes the "which button applies
+					 * to a mixed selection?" guess.
+					 */}
 					<Button
-						onClick={() => onMarkUnread(selectedIds)}
+						onClick={() =>
+							firstSelectedRead
+								? onMarkUnread(selectedIds)
+								: onMarkRead(selectedIds)
+						}
 						size="sm"
-						variant="outline"
 					>
-						Mark unread
+						{firstSelectedRead ? (
+							<CircleIcon />
+						) : (
+							<CheckCircleIcon weight="fill" />
+						)}
+						Mark {firstSelectedRead ? "unread" : "read"}
 					</Button>
 					<Button
 						onClick={() => onDownload(selectedIds)}
