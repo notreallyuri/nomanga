@@ -1568,7 +1568,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "extension_example"
+name = "extension_mainpack"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
