@@ -55,7 +55,7 @@ export function UpdatesDialog({
 				</DialogHeader>
 
 				{running ? (
-					<div className="space-y-3">
+					<div className="min-w-0 space-y-3">
 						<div className="space-y-1.5">
 							<div className="flex items-center justify-between text-xs">
 								<span className="min-w-0 flex-1 truncate text-muted-foreground">
@@ -70,7 +70,7 @@ export function UpdatesDialog({
 						</div>
 
 						{log.length > 0 && (
-							<ul className="no-scrollbar max-h-56 space-y-1 overflow-y-auto">
+							<ul className="no-scrollbar max-h-56 min-w-0 space-y-1 overflow-y-auto">
 								{[...log].reverse().map((entry, i) => {
 									// The newest entry is the one currently being checked; the
 									// rest have completed.
@@ -102,7 +102,7 @@ export function UpdatesDialog({
 						)}
 					</div>
 				) : updates.length > 0 ? (
-					<ul className="no-scrollbar max-h-80 space-y-1 overflow-y-auto">
+					<ul className="no-scrollbar max-h-80 min-w-0 space-y-1 overflow-y-auto">
 						{updates.map((update) => (
 							<li key={`${update.source_id}/${update.manga_id}`}>
 								<Link
