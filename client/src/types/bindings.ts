@@ -69,6 +69,7 @@ export const commands = {
 	downloadedChapterIds: (sourceId: string, mangaId: string) => typedError<string[], CommandError>(__TAURI_INVOKE("downloaded_chapter_ids", { sourceId, mangaId })),
 	localPages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("local_pages", { sourceId, mangaId, chapterId })),
 	deleteDownload: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("delete_download", { sourceId, mangaId, chapterId })),
+	listDownloads: () => typedError<DownloadedManga[], CommandError>(__TAURI_INVOKE("list_downloads")),
 	takeStartupWarnings: () => typedError<StartupWarning[], CommandError>(__TAURI_INVOKE("take_startup_warnings")),
 };
 
@@ -182,6 +183,25 @@ export type DownloadState = "Queued" | "Downloading" | "Done" | "Failed";
 export type DownloadTarget = {
 	chapter_id: string,
 	title: string,
+};
+
+export type DownloadedChapter = {
+	source_id: string,
+	manga_id: string,
+	chapter_id: string,
+	title: string,
+	page_count: number,
+	total_bytes: number | null,
+	downloaded_at: string,
+};
+
+export type DownloadedManga = {
+	source_id: string,
+	manga_id: string,
+	title: string,
+	cover_url: string,
+	total_bytes: number | null,
+	chapters: DownloadedChapter[],
 };
 
 export type EntryRef = {

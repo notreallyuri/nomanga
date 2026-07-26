@@ -1,6 +1,7 @@
 use crate::error::ServiceResult;
 use crate::now;
 use nomanga_core::data::chapter::Page;
+use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::path::{Path, PathBuf};
 
@@ -33,6 +34,7 @@ pub async fn record_chapter(
     source_id: &str,
     manga_id: &str,
     chapter_id: &str,
+    title: &str,
     pages: &[PageFile],
     total_bytes: u64,
 ) -> ServiceResult<()> {
@@ -44,15 +46,17 @@ pub async fn record_chapter(
 
     sqlx::query!(
         "INSERT INTO downloaded_chapter
-            (source_id, manga_id, chapter_id, page_count, total_bytes, downloaded_at)
-         VALUES (?, ?, ?, ?, ?, ?)
+            (source_id, manga_id, chapter_id, title, page_count, total_bytes, downloaded_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (source_id, manga_id, chapter_id) DO UPDATE SET
+            title = excluded.title,
             page_count = excluded.page_count,
             total_bytes = excluded.total_bytes,
             downloaded_at = excluded.downloaded_at",
         source_id,
         manga_id,
         chapter_id,
+        title,
         page_count,
         bytes,
         ts,
@@ -171,4 +175,81 @@ pub async fn remove_chapter(
     .await?;
 
     Ok(())
+}
+
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DownloadedChapter {
+    pub source_id: String,
+    pub manga_id: String,
+    pub chapter_id: String,
+    pub title: String,
+    pub page_count: u32,
+    pub total_bytes: f64,
+    pub downloaded_at: String,
+}
+
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DownloadedManga {
+    pub source_id: String,
+    pub manga_id: String,
+    pub title: String,
+    pub cover_url: String,
+    pub total_bytes: f64,
+    pub chapters: Vec<DownloadedChapter>,
+}
+
+/// Every downloaded chapter, grouped by series (with the cached cover/title),
+/// for the downloads management screen.
+pub async fn list_downloads(pool: &SqlitePool) -> ServiceResult<Vec<DownloadedManga>> {
+    let rows = sqlx::query!(
+        r#"SELECT
+            dc.source_id AS "source_id!",
+            dc.manga_id AS "manga_id!",
+            dc.chapter_id AS "chapter_id!",
+            CASE WHEN dc.title = '' THEN dc.chapter_id ELSE dc.title END AS "title!",
+            dc.page_count AS "page_count!",
+            dc.total_bytes AS "total_bytes!",
+            dc.downloaded_at AS "downloaded_at!",
+            COALESCE(m.title, dc.manga_id) AS "manga_title!",
+            COALESCE(m.cover_url, '') AS "cover_url!"
+        FROM downloaded_chapter dc
+        LEFT JOIN manga m
+            ON m.source_id = dc.source_id AND m.manga_id = dc.manga_id
+        ORDER BY COALESCE(m.title, dc.manga_id), dc.source_id, dc.manga_id, dc.downloaded_at"#
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let mut out: Vec<DownloadedManga> = Vec::new();
+    for row in rows {
+        let bytes = row.total_bytes as f64;
+        let chapter = DownloadedChapter {
+            source_id: row.source_id.clone(),
+            manga_id: row.manga_id.clone(),
+            chapter_id: row.chapter_id,
+            title: row.title,
+            page_count: row.page_count as u32,
+            total_bytes: bytes,
+            downloaded_at: row.downloaded_at,
+        };
+
+        match out.last_mut() {
+            Some(m) if m.source_id == row.source_id && m.manga_id == row.manga_id => {
+                m.total_bytes += bytes;
+                m.chapters.push(chapter);
+            }
+            _ => out.push(DownloadedManga {
+                source_id: row.source_id,
+                manga_id: row.manga_id,
+                title: row.manga_title,
+                cover_url: row.cover_url,
+                total_bytes: bytes,
+                chapters: vec![chapter],
+            }),
+        }
+    }
+
+    Ok(out)
 }

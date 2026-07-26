@@ -1,8 +1,16 @@
 use crate::downloads::DownloadTarget;
 use crate::{error::CommandResult, AppState};
 use nomanga_core::data::chapter::Page;
-use nomanga_services::downloads;
+use nomanga_services::downloads::{self, DownloadedManga};
 use tauri::State;
+
+#[tauri::command]
+#[specta::specta]
+pub async fn list_downloads(
+    state: State<'_, AppState>,
+) -> CommandResult<Vec<DownloadedManga>> {
+    Ok(downloads::list_downloads(&state.pool).await?)
+}
 
 #[tauri::command]
 #[specta::specta]

@@ -1,6 +1,6 @@
 import {
 	BookOpenIcon,
-	BooksIcon,
+	DownloadSimpleIcon,
 	GearSixIcon,
 	type Icon,
 	PaletteIcon,
@@ -10,9 +10,9 @@ import {
 export type SettingsRoute =
 	| "Appearance"
 	| "Reader"
-	| "Library"
 	| "Sources"
 	| "Extensions"
+	| "Downloads"
 	| "System";
 
 export interface SettingsItem {
@@ -41,11 +41,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 				description: "How pages are displayed while reading",
 			},
 			{
-				name: "Library",
-				icon: BooksIcon,
-				description: "Defaults for your saved series",
-			},
-			{
 				name: "System",
 				icon: GearSixIcon,
 				description: "Confirmations, notifications, and updates",
@@ -64,6 +59,11 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 				name: "Extensions",
 				icon: PlugsIcon,
 				description: "Installed extensions and updates",
+			},
+			{
+				name: "Downloads",
+				icon: DownloadSimpleIcon,
+				description: "Manage chapters saved for offline reading",
 			},
 		],
 	},

@@ -1,0 +1,107 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n            dc.source_id AS \"source_id!\",\n            dc.manga_id AS \"manga_id!\",\n            dc.chapter_id AS \"chapter_id!\",\n            CASE WHEN dc.title = '' THEN dc.chapter_id ELSE dc.title END AS \"title!\",\n            dc.page_count AS \"page_count!\",\n            dc.total_bytes AS \"total_bytes!\",\n            dc.downloaded_at AS \"downloaded_at!\",\n            COALESCE(m.title, dc.manga_id) AS \"manga_title!\",\n            COALESCE(m.cover_url, '') AS \"cover_url!\"\n        FROM downloaded_chapter dc\n        LEFT JOIN manga m\n            ON m.source_id = dc.source_id AND m.manga_id = dc.manga_id\n        ORDER BY COALESCE(m.title, dc.manga_id), dc.source_id, dc.manga_id, dc.downloaded_at",
+  "describe": {
+    "columns": [
+      {
+        "name": "source_id!",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaded_chapter",
+            "name": "source_id"
+          }
+        }
+      },
+      {
+        "name": "manga_id!",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaded_chapter",
+            "name": "manga_id"
+          }
+        }
+      },
+      {
+        "name": "chapter_id!",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaded_chapter",
+            "name": "chapter_id"
+          }
+        }
+      },
+      {
+        "name": "title!",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "name": "page_count!",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "downloaded_chapter",
+            "name": "page_count"
+          }
+        }
+      },
+      {
+        "name": "total_bytes!",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "downloaded_chapter",
+            "name": "total_bytes"
+          }
+        }
+      },
+      {
+        "name": "downloaded_at!",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaded_chapter",
+            "name": "downloaded_at"
+          }
+        }
+      },
+      {
+        "name": "manga_title!",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "name": "cover_url!",
+        "ordinal": 8,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "58eba707c034822774847b1472546594242fee8f8937e0499825ee69412709ec"
+}

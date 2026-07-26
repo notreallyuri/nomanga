@@ -236,9 +236,17 @@ async fn process(
         progress(DownloadState::Downloading, index as u32 + 1);
     }
 
-    downloads::record_chapter(&pool, &source_id, &manga_id, &chapter_id, &files, total_bytes)
-        .await
-        .map_err(|e| e.to_string())?;
+    downloads::record_chapter(
+        &pool,
+        &source_id,
+        &manga_id,
+        &chapter_id,
+        &job.target.title,
+        &files,
+        total_bytes,
+    )
+    .await
+    .map_err(|e| e.to_string())?;
 
     progress(DownloadState::Done, total);
     Ok(())

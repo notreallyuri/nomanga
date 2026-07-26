@@ -92,6 +92,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::downloads::downloaded_chapter_ids,
             commands::downloads::local_pages,
             commands::downloads::delete_download,
+            commands::downloads::list_downloads,
             //startup
             startup::take_startup_warnings
         ])
