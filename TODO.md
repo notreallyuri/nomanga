@@ -25,7 +25,11 @@
   - [x] Badge Toggle
   - [x] Quick filters
   - [ ] Update Behavior customization
-  - [ ] Downloads
+  - [x] Downloads
+    (Per-chapter + bulk download to disk, delete, and offline reading via the
+    asset protocol. A background queue worker fetches pages over reqwest and
+    streams DownloadProgress events to a persistent sidebar indicator + queue
+    dialog. Chapter table shows per-row download/delete state.)
 - Browse:
   - [ ] Allow name-searching in all sources (does not include source-specific
     filters) — search-all bar stubbed in the browse landing; backend pending.

@@ -4,6 +4,7 @@ import {
 	SidebarFooter,
 	SidebarRail,
 } from "../ui/sidebar";
+import { NavDownloads } from "./downloads";
 import { NavMain } from "./main";
 import { NavUpdates } from "./updates";
 
@@ -26,6 +27,7 @@ export function Sidebar({
 				/>
 			</SidebarContent>
 			<SidebarFooter>
+				<NavDownloads />
 				<NavUpdates />
 			</SidebarFooter>
 			<SidebarRail />

@@ -9,6 +9,7 @@ use tauri::Manager;
 
 pub mod background;
 pub mod commands;
+pub mod downloads;
 pub mod error;
 
 pub struct AppState {
@@ -17,12 +18,15 @@ pub struct AppState {
     pub settings: Arc<RwLock<nomanga_services::settings::Settings>>,
     pub settings_path: PathBuf,
     pub startup_warnings: Arc<RwLock<Vec<nomanga_services::StartupWarning>>>,
+    pub downloads: downloads::DownloadManager,
+    pub downloads_dir: PathBuf,
 }
 
 pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
         .events(tauri_specta::collect_events![
-            commands::LibraryRefreshProgress
+            commands::LibraryRefreshProgress,
+            downloads::DownloadProgress
         ])
         .commands(tauri_specta::collect_commands![
             // library
@@ -83,6 +87,12 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             extension::set_source_preference,
             extension::get_source_settings,
             extension::save_source_settings,
+            // downloads
+            commands::downloads::queue_downloads,
+            commands::downloads::downloaded_chapter_ids,
+            commands::downloads::local_pages,
+            commands::downloads::delete_download,
+            commands::downloads::list_downloads,
             //startup
             startup::take_startup_warnings
         ])
@@ -151,12 +161,18 @@ pub fn run() {
                 }
             };
 
+            let downloads_dir = dir.join("downloads");
+            std::fs::create_dir_all(&downloads_dir).ok();
+            let downloads = downloads::DownloadManager::new(handle.clone(), downloads_dir.clone());
+
             app.manage(AppState {
                 pool,
                 registry: Arc::new(RwLock::new(registry)),
                 settings: Arc::new(RwLock::new(settings)),
                 settings_path,
                 startup_warnings: Arc::new(RwLock::new(warnings)),
+                downloads,
+                downloads_dir,
             });
 
             tauri::async_runtime::spawn(background::run_loop(handle.clone()));

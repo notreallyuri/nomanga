@@ -5,6 +5,7 @@ import {
 	CaretDoubleRightIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
+	DownloadSimpleIcon,
 	MagnifyingGlassIcon,
 	XIcon,
 } from "@phosphor-icons/react";
@@ -31,6 +32,7 @@ interface Props {
 	selectedIds: string[];
 	onMarkRead: (ids: string[]) => void;
 	onMarkUnread: (ids: string[]) => void;
+	onDownload: (ids: string[]) => void;
 	onClearSelection: () => void;
 }
 
@@ -43,6 +45,7 @@ export function ChapterTableToolbar({
 	selectedIds,
 	onMarkRead,
 	onMarkUnread,
+	onDownload,
 	onClearSelection,
 }: Props) {
 	const { pageIndex, pageSize } = table.getState().pagination;
@@ -138,6 +141,14 @@ export function ChapterTableToolbar({
 						variant="outline"
 					>
 						Mark unread
+					</Button>
+					<Button
+						onClick={() => onDownload(selectedIds)}
+						size="sm"
+						variant="outline"
+					>
+						<DownloadSimpleIcon />
+						Download
 					</Button>
 					<Button
 						className="ml-auto"

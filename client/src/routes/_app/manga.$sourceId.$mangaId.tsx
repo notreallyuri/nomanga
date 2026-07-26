@@ -204,6 +204,7 @@ function MangaDetails() {
 					<ChapterTable
 						chapters={chapters.data}
 						mangaId={mangaId}
+						mangaTitle={manga.data?.title ?? ""}
 						readChapters={readChapters.data ?? new Set()}
 						resumeChapterId={resumeId}
 						resumePage={

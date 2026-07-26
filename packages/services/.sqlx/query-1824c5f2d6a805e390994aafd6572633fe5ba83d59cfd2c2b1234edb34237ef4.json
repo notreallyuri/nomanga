@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT chapter_id FROM downloaded_chapter\n         WHERE source_id = ? AND manga_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "chapter_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaded_chapter",
+            "name": "chapter_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1824c5f2d6a805e390994aafd6572633fe5ba83d59cfd2c2b1234edb34237ef4"
+}
