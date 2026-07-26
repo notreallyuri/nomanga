@@ -14,9 +14,10 @@ import {
 	getSortedRowModel,
 	type RowSelectionState,
 	type SortingState,
+	type Table as TableInstance,
 	useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -74,6 +75,78 @@ export function ChapterTable({
 	const [selection, setSelection] = useState<RowSelectionState>({});
 	const [filter, setFilter] = useState("");
 
+	// The last row the user toggled by hand, which is what a range selection
+	// measures from. Cleared whenever the selection is emptied.
+	const [anchorId, setAnchorId] = useState<string | null>(null);
+
+	// Range helpers need the table's current row order, but the table is built
+	// from `columns` below — so they read it through a ref instead, which also
+	// keeps them stable enough for the `columns` memo.
+	const tableRef = useRef<TableInstance<Chapter> | null>(null);
+
+	/**
+	 * Ids in the order the user actually sees them: filtered and sorted, but
+	 * across every page rather than just the visible one. "Above" and "below"
+	 * therefore mean what they look like on screen, under either sort direction.
+	 */
+	const orderedIds = useCallback(
+		() => tableRef.current?.getSortedRowModel().rows.map((row) => row.id) ?? [],
+		[],
+	);
+
+	const select = useCallback((ids: string[]) => {
+		if (ids.length === 0) return;
+		setSelection((prev) => {
+			const next = { ...prev };
+			for (const id of ids) next[id] = true;
+			return next;
+		});
+	}, []);
+
+	const selectAbove = useCallback(
+		(id: string) => {
+			const ids = orderedIds();
+			const at = ids.indexOf(id);
+			if (at >= 0) select(ids.slice(0, at + 1));
+		},
+		[orderedIds, select],
+	);
+
+	const selectBelow = useCallback(
+		(id: string) => {
+			const ids = orderedIds();
+			const at = ids.indexOf(id);
+			if (at >= 0) select(ids.slice(at));
+		},
+		[orderedIds, select],
+	);
+
+	/** Everything between the anchor and `id`, inclusive, in display order. */
+	const selectRangeTo = useCallback(
+		(id: string) => {
+			const ids = orderedIds();
+			const to = ids.indexOf(id);
+			const from = anchorId ? ids.indexOf(anchorId) : -1;
+
+			// With no anchor yet there is no range to fill, so fall back to
+			// selecting just this row and letting it become the anchor.
+			if (to < 0 || from < 0) {
+				select([id]);
+				setAnchorId(id);
+				return;
+			}
+
+			const [start, end] = from <= to ? [from, to] : [to, from];
+			select(ids.slice(start, end + 1));
+		},
+		[anchorId, orderedIds, select],
+	);
+
+	const clearSelection = useCallback(() => {
+		setSelection({});
+		setAnchorId(null);
+	}, []);
+
 	const markOne = useMarkChapterRead(sourceId, mangaId);
 	const markMany = useMarkChaptersRead(sourceId, mangaId);
 
@@ -102,7 +175,17 @@ export function ChapterTable({
 					<Checkbox
 						aria-label="Select chapter"
 						checked={row.getIsSelected()}
-						onCheckedChange={(v) => row.toggleSelected(!!v)}
+						onCheckedChange={(v) => {
+							row.toggleSelected(!!v);
+							setAnchorId(row.id);
+						}}
+						// Shift-click fills from the last hand-toggled row, the
+						// range gesture people already expect from file managers.
+						onClick={(e) => {
+							if (!e.shiftKey) return;
+							e.preventDefault();
+							selectRangeTo(row.id);
+						}}
 					/>
 				),
 				enableSorting: false,
@@ -223,6 +306,19 @@ export function ChapterTable({
 									Mark as {isRead ? "unread" : "read"}
 								</DropdownMenuItem>
 								<DropdownMenuSeparator />
+								<DropdownMenuItem onClick={() => selectAbove(chapter.id)}>
+									Select all above
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => selectBelow(chapter.id)}>
+									Select all below
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									disabled={!anchorId || anchorId === chapter.id}
+									onClick={() => selectRangeTo(chapter.id)}
+								>
+									Select up to here
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
 								<DropdownMenuItem
 									onClick={() => {
 										const current = chapter.number;
@@ -256,6 +352,10 @@ export function ChapterTable({
 			markMany,
 			downloadedSet,
 			mangaTitle,
+			anchorId,
+			selectAbove,
+			selectBelow,
+			selectRangeTo,
 		],
 	);
 
@@ -274,7 +374,24 @@ export function ChapterTable({
 		initialState: { pagination: { pageSize: 50 } },
 	});
 
-	const selectedIds = Object.keys(selection).filter((id) => selection[id]);
+	tableRef.current = table;
+
+	// Ordered by what the user sees, not by object key order, so "the first
+	// selected chapter" means the topmost one on screen.
+	const selectedIds = useMemo(
+		() =>
+			table
+				.getSortedRowModel()
+				.rows.map((row) => row.id)
+				.filter((id) => selection[id]),
+		[table, selection],
+	);
+
+	// The bulk action follows the first selected chapter: if it is already read
+	// the button offers to unread the selection, and vice versa. Saves guessing
+	// which of two buttons applies to a mixed selection.
+	const firstSelectedRead =
+		selectedIds.length > 0 && readChapters.has(selectedIds[0]);
 
 	const markManyRead = useMarkChaptersRead(sourceId, mangaId);
 	const markManyUnread = useMarkChaptersUnread(sourceId, mangaId);
@@ -284,15 +401,16 @@ export function ChapterTable({
 			<ChapterTableToolbar
 				descending={sorting[0]?.desc ?? true}
 				filter={filter}
-				onClearSelection={() => setSelection({})}
+				firstSelectedRead={firstSelectedRead}
+				onClearSelection={clearSelection}
 				onFilterChange={setFilter}
 				onMarkRead={(ids) => {
 					markManyRead.mutate(ids);
-					setSelection({});
+					clearSelection();
 				}}
 				onMarkUnread={(ids) => {
 					markManyUnread.mutate(ids);
-					setSelection({});
+					clearSelection();
 				}}
 				onDownload={(ids) => {
 					const targets = ids
@@ -304,7 +422,7 @@ export function ChapterTable({
 					if (targets.length > 0) {
 						queueDownloads.mutate({ sourceId, mangaId, mangaTitle, targets });
 					}
-					setSelection({});
+					clearSelection();
 				}}
 				onToggleSort={() =>
 					setSorting([{ id: "number", desc: !sorting[0]?.desc }])
