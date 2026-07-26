@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -6,7 +5,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { DEFAULT_SETTINGS_ROUTE, type SettingsItem } from "./nav";
+import { useSettingsUI } from "./context";
 import { SECTIONS } from "./sections";
 import { SettingsSidebar } from "./sidebar";
 
@@ -16,7 +15,7 @@ interface Props {
 }
 
 export function SettingsDialog({ open, onOpenChange }: Props) {
-	const [active, setActive] = useState<SettingsItem>(DEFAULT_SETTINGS_ROUTE);
+	const { active, setActive } = useSettingsUI();
 
 	const Section = SECTIONS[active.name];
 

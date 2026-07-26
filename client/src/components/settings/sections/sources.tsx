@@ -1,35 +1,32 @@
-import { CaretDownIcon, GearSixIcon, GlobeIcon } from "@phosphor-icons/react";
+import {
+	ArrowLeftIcon,
+	CaretRightIcon,
+	GlobeIcon,
+} from "@phosphor-icons/react";
 import { useState } from "react";
-import { SettingGroup } from "@/components/settings/components/parts";
-import { SourceSettingsForm } from "@/components/settings/sections/source-settings-form";
+import {
+	SettingGroup,
+	SettingRow,
+} from "@/components/settings/components/parts";
+import { ExtensionSettings } from "@/components/settings/sections/source-settings-form";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
 	useSetSourcePreference,
+	useSourcePreference,
 	useSourcesWithPreferences,
 } from "@/hooks/services/use-extensions";
-import { cn } from "@/lib/utils";
-import type { SourcePreference } from "@/types/bindings";
-
-interface Configuring {
-	id: string;
-	name: string;
-}
+import type { SourceInfo } from "@/types/bindings";
 
 export function SourceSection() {
 	const { data: rows, isPending, error } = useSourcesWithPreferences();
 
-	const [configuring, setConfiguring] = useState<Configuring | null>(null);
+	const [configuring, setConfiguring] = useState<SourceInfo | null>(null);
 
 	if (configuring) {
 		return (
-			<SourceSettingsForm
-				onBack={() => setConfiguring(null)}
-				sourceId={configuring.id}
-				sourceName={configuring.name}
-			/>
+			<SourceDetail info={configuring} onBack={() => setConfiguring(null)} />
 		);
 	}
 
@@ -58,119 +55,153 @@ export function SourceSection() {
 	return (
 		<SettingGroup title="Installed sources">
 			{rows.map((row) => (
-				<SourceRow
-					icon={row.info.icon_url ?? undefined}
+				<SourceListRow
+					info={row.info}
 					key={row.info.id}
-					language={row.info.language}
-					name={row.info.name}
-					nsfw={row.info.nsfw}
-					onConfigure={() =>
-						setConfiguring({ id: row.info.id, name: row.info.name })
-					}
-					preference={row.preference}
+					onConfigure={() => setConfiguring(row.info)}
 				/>
 			))}
 		</SettingGroup>
 	);
 }
 
-function SourceRow({
-	name,
-	language,
-	nsfw,
-	preference,
-	icon,
+function SourceListRow({
+	info,
 	onConfigure,
 }: {
-	name: string;
-	language: string;
-	nsfw: boolean;
-	preference: SourcePreference;
-	icon?: string;
+	info: SourceInfo;
 	onConfigure: () => void;
 }) {
-	const [expanded, setExpanded] = useState(false);
+	const preference = useSourcePreference(info.id);
 	const { mutate } = useSetSourcePreference();
 
-	const toggle = (patch: Partial<SourcePreference>) =>
+	return (
+		<div className="flex items-center gap-3 py-3">
+			<button
+				className="flex min-w-0 flex-1 items-center gap-3 text-left"
+				onClick={onConfigure}
+				type="button"
+			>
+				<SourceIcon name={info.name} url={info.icon_url ?? undefined} />
+
+				<div className="min-w-0">
+					<SourceName name={info.name} nsfw={info.nsfw} />
+					<p className="text-muted-foreground text-xs uppercase">
+						{info.language}
+					</p>
+				</div>
+
+				<CaretRightIcon className="shrink-0 text-muted-foreground" size={14} />
+			</button>
+
+			<Switch
+				checked={preference.enabled}
+				onCheckedChange={(enabled) => mutate({ ...preference, enabled })}
+			/>
+		</div>
+	);
+}
+
+/**
+ * One cohesive view for a single source: the app's own policy toggles and the
+ * extension-declared settings side by side, rather than split between an
+ * expanding row and a separate screen.
+ */
+function SourceDetail({
+	info,
+	onBack,
+}: {
+	info: SourceInfo;
+	onBack: () => void;
+}) {
+	const preference = useSourcePreference(info.id);
+	const { mutate } = useSetSourcePreference();
+
+	const toggle = (patch: Partial<typeof preference>) =>
 		mutate({ ...preference, ...patch });
 
 	return (
-		<div className="py-3">
-			<div className="flex items-center justify-between gap-4">
-				<button
-					className="flex min-w-0 flex-1 items-center gap-2 text-left"
-					onClick={() => setExpanded((v) => !v)}
-					type="button"
+		<div>
+			<div className="mb-6 flex items-center gap-3">
+				<Button
+					aria-label="Back to sources"
+					onClick={onBack}
+					size="icon"
+					variant="ghost"
 				>
-					<CaretDownIcon
-						className={cn(
-							"shrink-0 text-muted-foreground transition-transform",
-							!expanded && "-rotate-90",
-						)}
-						size={14}
-					/>
-
-					<SourceIcon name={name} url={icon} />
-
-					<div className="min-w-0">
-						<p className="truncate font-medium text-sm">
-							{name}
-							{nsfw && (
-								<span className="ml-2 rounded bg-destructive/10 px-1.5 py-0.5 text-destructive text-xs">
-									18+
-								</span>
-							)}
-						</p>
-						<p className="text-muted-foreground text-xs uppercase">
-							{language}
-						</p>
-					</div>
-				</button>
-
-				<Switch
-					checked={preference.enabled}
-					onCheckedChange={(enabled) => toggle({ enabled })}
-				/>
+					<ArrowLeftIcon />
+				</Button>
+				<SourceIcon name={info.name} url={info.icon_url ?? undefined} />
+				<div className="min-w-0 flex-1">
+					<SourceName name={info.name} nsfw={info.nsfw} />
+					<p className="text-muted-foreground text-xs uppercase">
+						{info.language}
+					</p>
+				</div>
 			</div>
 
-			{expanded && (
-				<div className="mt-3 ml-6 space-y-3 border-border border-l pl-4">
-					<Toggle
+			<SettingGroup title="Behaviour">
+				<SettingRow
+					description="Show this source and its titles in Browse"
+					label="Enabled"
+				>
+					<Switch
+						checked={preference.enabled}
+						onCheckedChange={(enabled) => toggle({ enabled })}
+					/>
+				</SettingRow>
+				<SettingRow
+					description="Keep reading progress, but hide this source from history"
+					label="Private"
+				>
+					<Switch
 						checked={preference.private}
-						description="Keep reading progress, but hide this source from history"
-						label="Private"
-						onChange={(v) => toggle({ private: v })}
+						onCheckedChange={(v) => toggle({ private: v })}
 					/>
-					<Toggle
+				</SettingRow>
+				<SettingRow
+					description="Blur cover art until hovered"
+					label="Blur covers"
+				>
+					<Switch
 						checked={preference.blur_covers}
-						description="Blur cover art until hovered"
-						label="Blur covers"
-						onChange={(v) => toggle({ blur_covers: v })}
+						onCheckedChange={(v) => toggle({ blur_covers: v })}
 					/>
-					<Toggle
+				</SettingRow>
+				<SettingRow
+					description="Exclude this source from library update runs"
+					label="Skip updates"
+				>
+					<Switch
 						checked={preference.skip_updates}
-						description="Exclude this source from library update runs"
-						label="Skip updates"
-						onChange={(v) => toggle({ skip_updates: v })}
+						onCheckedChange={(v) => toggle({ skip_updates: v })}
 					/>
+				</SettingRow>
+			</SettingGroup>
 
-					{/* Separated from the toggles above because it's a different
-					    kind of thing: those are the app's policy about the source,
-					    this opens config the *extension* declared. */}
-					<div className="border-border border-t pt-3">
-						<Button onClick={onConfigure} size="sm" variant="outline">
-							<GearSixIcon />
-							Source settings
-						</Button>
-						<p className="mt-1.5 text-muted-foreground text-xs">
-							Options provided by the extension itself — API keys, tag filters,
-							language.
-						</p>
-					</div>
+			<SettingGroup title="Source settings">
+				<div className="pt-2">
+					<p className="mb-4 text-muted-foreground text-xs">
+						Options provided by the extension itself — API keys, tag filters,
+						language.
+					</p>
+					<ExtensionSettings sourceId={info.id} />
 				</div>
-			)}
+			</SettingGroup>
 		</div>
+	);
+}
+
+function SourceName({ name, nsfw }: { name: string; nsfw: boolean }) {
+	return (
+		<p className="truncate font-medium text-sm">
+			{name}
+			{nsfw && (
+				<span className="ml-2 rounded bg-destructive/10 px-1.5 py-0.5 text-destructive text-xs">
+					18+
+				</span>
+			)}
+		</p>
 	);
 }
 
@@ -197,27 +228,5 @@ function SourceIcon({ url, name }: { url?: string; name: string }) {
 			onError={() => setFailed(true)}
 			src={url}
 		/>
-	);
-}
-
-function Toggle({
-	label,
-	description,
-	checked,
-	onChange,
-}: {
-	label: string;
-	description: string;
-	checked: boolean;
-	onChange: (value: boolean) => void;
-}) {
-	return (
-		<div className="flex items-center justify-between gap-4">
-			<div className="min-w-0">
-				<Label className="text-sm">{label}</Label>
-				<p className="text-muted-foreground text-xs">{description}</p>
-			</div>
-			<Switch checked={checked} onCheckedChange={onChange} />
-		</div>
 	);
 }

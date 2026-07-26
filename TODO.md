@@ -25,10 +25,15 @@
   - [ ] Downloads
 - Browse:
   - [ ] Allow name-searching in all sources (does not include source-specific
-    filters)
+    filters) — search-all bar stubbed in the browse landing; backend pending.
 - UI:
   - [x] Fix overflow-x in manga update dialog
-  - [ ] Refine `source-specific` settings components
-  - [ ] Refine `_app/browse.tsx` route
+  - [x] Refine `source-specific` settings components
+    (Unified per-source detail view: app-policy toggles + extension-declared
+    settings in one screen; simplified source list.)
+  - [x] Refine `_app/browse.tsx` route
+    (Wired up "View more" paginated section view; reworked the browse landing
+    with a nicer source grid + a search-all placeholder; extracted a shared
+    BrowseCard.)
   - [x] Make visual improvements on the Appearance settings
     (Mode / Colour / Cover style are now visual preview grids.)
