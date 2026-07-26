@@ -208,14 +208,18 @@ export function useLibraryRefresh() {
 		events.libraryRefreshProgress
 			.listen((event) => {
 				const p = event.payload;
-				// The final event (done === total) closes the bar.
-				setProgress(p.total > 0 && p.done < p.total ? p : null);
+				const running = p.total > 0 && p.done < p.total;
+				setProgress(running ? p : null);
+				// A completed run (including a background check) may have added chapters.
+				if (p.total > 0 && p.done >= p.total) {
+					queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+				}
 			})
 			.then((fn) => {
 				unlisten = fn;
 			});
 		return () => unlisten?.();
-	}, []);
+	}, [queryClient]);
 
 	const mutation = useMutation({
 		mutationFn: ({

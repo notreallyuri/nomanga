@@ -402,6 +402,7 @@ export type Status = "Ongoing" | "Completed" | "Hiatus" | "Cancelled" | "Unknown
 
 export type SystemSettings = {
 	update_on_startup?: boolean,
+	background_updates?: UpdateInterval,
 	confirm_removal?: boolean,
 	enable_notifications?: boolean,
 };
@@ -414,6 +415,9 @@ export type Tag = {
 export type Theme = "Default" | "Void" | "Havoc";
 
 export type ThemeDarkMode = "System" | "Light" | "Dark";
+
+/**  How often the app checks the library for new chapters in the background. */
+export type UpdateInterval = "Off" | "Every6Hours" | "Every12Hours" | "Every24Hours";
 
 export type WarningKind = "SettingsCorrupt" | "ExtensionFailed";
 

@@ -3,11 +3,14 @@ use crate::{
 };
 use nomanga_core::data::manga::{Manga, MangaSimple};
 use nomanga_core::extension::query::MangaRef;
+use nomanga_host::registry::Registry;
 use nomanga_services::library::{
     self, Category, CategoryCount, CategoryFilter, CategoryOptions, EntryRef, LibraryItem,
     LibraryUpdate, RefreshScope,
 };
 use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
+use std::sync::{Arc, RwLock};
 use tauri::State;
 use tauri_specta::Event;
 
@@ -25,7 +28,19 @@ pub async fn refresh_library(
     scope: RefreshScope,
     force: bool,
 ) -> CommandResult<RefreshSummary> {
-    let targets = library::entries_to_refresh(&state.pool, &scope, force).await?;
+    run_refresh(&state.pool, &state.registry, &app, scope, force).await
+}
+
+/// Shared refresh engine for the `refresh_library` command and the background
+/// loop; streams `LibraryRefreshProgress` events so any listener can show it.
+pub async fn run_refresh(
+    pool: &SqlitePool,
+    registry: &Arc<RwLock<Registry>>,
+    app: &tauri::AppHandle,
+    scope: RefreshScope,
+    force: bool,
+) -> CommandResult<RefreshSummary> {
+    let targets = library::entries_to_refresh(pool, &scope, force).await?;
     let total = targets.len() as u32;
 
     let mut checked = 0u32;
@@ -37,11 +52,11 @@ pub async fn refresh_library(
             total,
             current_title: target.title.clone(),
         }
-        .emit(&app)
+        .emit(app)
         .ok();
 
         let handle = {
-            let registry = state.registry.read()?;
+            let registry = registry.read()?;
             registry.source(&target.source_id)?
         };
 
@@ -58,12 +73,11 @@ pub async fn refresh_library(
         // A single flaky source shouldn't abort the whole run.
         if let Ok(chapters) = fetched {
             new_chapters +=
-                library::sync_chapters(&state.pool, &target.source_id, &target.manga_id, &chapters)
-                    .await?;
+                library::sync_chapters(pool, &target.source_id, &target.manga_id, &chapters).await?;
             checked += 1;
         }
 
-        library::mark_checked(&state.pool, &target.source_id, &target.manga_id).await?;
+        library::mark_checked(pool, &target.source_id, &target.manga_id).await?;
     }
 
     LibraryRefreshProgress {
@@ -71,7 +85,7 @@ pub async fn refresh_library(
         total,
         current_title: String::new(),
     }
-    .emit(&app)
+    .emit(app)
     .ok();
 
     Ok(RefreshSummary {

@@ -7,6 +7,7 @@ use std::{
 };
 use tauri::Manager;
 
+pub mod background;
 pub mod commands;
 pub mod error;
 
@@ -98,6 +99,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
@@ -156,6 +158,8 @@ pub fn run() {
                 settings_path,
                 startup_warnings: Arc::new(RwLock::new(warnings)),
             });
+
+            tauri::async_runtime::spawn(background::run_loop(handle.clone()));
 
             Ok(())
         })
