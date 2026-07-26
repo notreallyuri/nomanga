@@ -11,6 +11,7 @@ import { ReaderOverrideDialog } from "@/components/reader/reader-override-dialog
 import { StripReader } from "@/components/reader/strip-reader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useChapterPages } from "@/hooks/services/use-downloads";
 import {
 	useFinishChapter,
 	useProgress,
@@ -20,7 +21,6 @@ import { useEffectiveReader } from "@/hooks/services/use-settings";
 import {
 	useSourceChapters,
 	useSourceManga,
-	useSourcePages,
 } from "@/hooks/services/use-sources";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ function Reader() {
 	const { sourceId, mangaId, chapterId } = Route.useParams();
 	const navigate = useNavigate();
 
-	const pages = useSourcePages(sourceId, mangaId, chapterId);
+	const pages = useChapterPages(sourceId, mangaId, chapterId);
 	const chapters = useSourceChapters(sourceId, mangaId);
 	const manga = useSourceManga(sourceId, mangaId);
 	const progress = useProgress(sourceId, mangaId);

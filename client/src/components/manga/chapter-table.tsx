@@ -36,6 +36,10 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import {
+	useDownloadedChapters,
+	useQueueDownloads,
+} from "@/hooks/services/use-downloads";
+import {
 	useMarkChapterRead,
 	useMarkChaptersRead,
 	useMarkChaptersUnread,
@@ -43,11 +47,13 @@ import {
 import { cn } from "@/lib/utils";
 import type { Chapter } from "@/types/bindings";
 import { ChapterTableToolbar } from "./chapter-table-toolbar";
+import { DownloadCell } from "./download-cell";
 
 interface Props {
 	chapters: Chapter[];
 	sourceId: string;
 	mangaId: string;
+	mangaTitle: string;
 	readChapters: Set<string>;
 	resumeChapterId?: string;
 	resumePage?: number;
@@ -57,6 +63,7 @@ export function ChapterTable({
 	chapters,
 	sourceId,
 	mangaId,
+	mangaTitle,
 	readChapters,
 	resumeChapterId,
 	resumePage,
@@ -69,6 +76,13 @@ export function ChapterTable({
 
 	const markOne = useMarkChapterRead(sourceId, mangaId);
 	const markMany = useMarkChaptersRead(sourceId, mangaId);
+
+	const downloaded = useDownloadedChapters(sourceId, mangaId);
+	const downloadedSet = useMemo(
+		() => new Set(downloaded.data ?? []),
+		[downloaded.data],
+	);
+	const queueDownloads = useQueueDownloads();
 
 	const columns = useMemo<ColumnDef<Chapter>[]>(
 		() => [
@@ -170,6 +184,21 @@ export function ChapterTable({
 				size: 110,
 			},
 			{
+				id: "download",
+				header: "",
+				cell: ({ row }) => (
+					<DownloadCell
+						chapter={row.original}
+						downloaded={downloadedSet.has(row.original.id)}
+						mangaId={mangaId}
+						mangaTitle={mangaTitle}
+						sourceId={sourceId}
+					/>
+				),
+				enableSorting: false,
+				size: 44,
+			},
+			{
 				id: "actions",
 				header: "",
 				cell: ({ row }) => {
@@ -225,6 +254,8 @@ export function ChapterTable({
 			mangaId,
 			markOne,
 			markMany,
+			downloadedSet,
+			mangaTitle,
 		],
 	);
 
@@ -261,6 +292,18 @@ export function ChapterTable({
 				}}
 				onMarkUnread={(ids) => {
 					markManyUnread.mutate(ids);
+					setSelection({});
+				}}
+				onDownload={(ids) => {
+					const targets = ids
+						.filter((id) => !downloadedSet.has(id))
+						.map((id) => {
+							const chapter = chapters.find((c) => c.id === id);
+							return { chapter_id: id, title: chapter?.title ?? id };
+						});
+					if (targets.length > 0) {
+						queueDownloads.mutate({ sourceId, mangaId, mangaTitle, targets });
+					}
 					setSelection({});
 				}}
 				onToggleSort={() =>

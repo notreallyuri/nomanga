@@ -24,6 +24,7 @@ pub enum DownloadState {
 pub struct DownloadProgress {
     pub source_id: String,
     pub manga_id: String,
+    pub manga_title: String,
     pub chapter_id: String,
     pub title: String,
     pub state: DownloadState,
@@ -41,6 +42,7 @@ pub struct DownloadTarget {
 struct Job {
     source_id: String,
     manga_id: String,
+    manga_title: String,
     target: DownloadTarget,
 }
 
@@ -76,7 +78,13 @@ impl DownloadManager {
         Self { app, tx, queued }
     }
 
-    pub fn enqueue(&self, source_id: String, manga_id: String, targets: Vec<DownloadTarget>) {
+    pub fn enqueue(
+        &self,
+        source_id: String,
+        manga_id: String,
+        manga_title: String,
+        targets: Vec<DownloadTarget>,
+    ) {
         for target in targets {
             let key = (source_id.clone(), manga_id.clone(), target.chapter_id.clone());
 
@@ -91,6 +99,7 @@ impl DownloadManager {
                 &self.app,
                 &source_id,
                 &manga_id,
+                &manga_title,
                 &target.chapter_id,
                 &target.title,
                 DownloadState::Queued,
@@ -102,6 +111,7 @@ impl DownloadManager {
             let _ = self.tx.send(Job {
                 source_id: source_id.clone(),
                 manga_id: manga_id.clone(),
+                manga_title: manga_title.clone(),
                 target,
             });
         }
@@ -135,6 +145,7 @@ async fn worker(
                 &app,
                 &job.source_id,
                 &job.manga_id,
+                &job.manga_title,
                 &job.target.chapter_id,
                 &job.target.title,
                 DownloadState::Failed,
@@ -173,6 +184,7 @@ async fn process(
             app,
             &source_id,
             &manga_id,
+            &job.manga_title,
             &chapter_id,
             &job.target.title,
             state,
@@ -296,6 +308,7 @@ fn emit(
     app: &AppHandle,
     source_id: &str,
     manga_id: &str,
+    manga_title: &str,
     chapter_id: &str,
     title: &str,
     state: DownloadState,
@@ -306,6 +319,7 @@ fn emit(
     let _ = DownloadProgress {
         source_id: source_id.to_owned(),
         manga_id: manga_id.to_owned(),
+        manga_title: manga_title.to_owned(),
         chapter_id: chapter_id.to_owned(),
         title: title.to_owned(),
         state,

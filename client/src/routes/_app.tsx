@@ -6,6 +6,7 @@ import {
 	useSettingsUI,
 } from "@/components/settings/context";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { DownloadsProvider } from "@/hooks/services/use-downloads";
 
 export const Route = createFileRoute("/_app")({
 	component: RouteComponent,
@@ -14,7 +15,9 @@ export const Route = createFileRoute("/_app")({
 function RouteComponent() {
 	return (
 		<SettingsUIProvider>
-			<AppShell />
+			<DownloadsProvider>
+				<AppShell />
+			</DownloadsProvider>
 		</SettingsUIProvider>
 	);
 }

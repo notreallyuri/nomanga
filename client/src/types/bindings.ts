@@ -65,7 +65,7 @@ export const commands = {
 	setSourcePreference: (preference: SourcePreference) => typedError<null, CommandError>(__TAURI_INVOKE("set_source_preference", { preference })),
 	getSourceSettings: (sourceId: string) => typedError<SourceSettings, CommandError>(__TAURI_INVOKE("get_source_settings", { sourceId })),
 	saveSourceSettings: (sourceId: string, values: { [key in string]: string }) => typedError<null, CommandError>(__TAURI_INVOKE("save_source_settings", { sourceId, values })),
-	queueDownloads: (sourceId: string, mangaId: string, targets: DownloadTarget[]) => typedError<null, CommandError>(__TAURI_INVOKE("queue_downloads", { sourceId, mangaId, targets })),
+	queueDownloads: (sourceId: string, mangaId: string, mangaTitle: string, targets: DownloadTarget[]) => typedError<null, CommandError>(__TAURI_INVOKE("queue_downloads", { sourceId, mangaId, mangaTitle, targets })),
 	downloadedChapterIds: (sourceId: string, mangaId: string) => typedError<string[], CommandError>(__TAURI_INVOKE("downloaded_chapter_ids", { sourceId, mangaId })),
 	localPages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("local_pages", { sourceId, mangaId, chapterId })),
 	deleteDownload: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("delete_download", { sourceId, mangaId, chapterId })),
@@ -168,6 +168,7 @@ export type CoverStyle = "Default" | "Rounded" | "Border" | "Shadow";
 export type DownloadProgress = {
 	source_id: string,
 	manga_id: string,
+	manga_title: string,
 	chapter_id: string,
 	title: string,
 	state: DownloadState,

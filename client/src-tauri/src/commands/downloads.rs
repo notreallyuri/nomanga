@@ -10,9 +10,12 @@ pub async fn queue_downloads(
     state: State<'_, AppState>,
     source_id: String,
     manga_id: String,
+    manga_title: String,
     targets: Vec<DownloadTarget>,
 ) -> CommandResult<()> {
-    state.downloads.enqueue(source_id, manga_id, targets);
+    state
+        .downloads
+        .enqueue(source_id, manga_id, manga_title, targets);
     Ok(())
 }
 
