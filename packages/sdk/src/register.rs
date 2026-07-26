@@ -65,6 +65,17 @@ macro_rules! register_sources {
         }
 
         #[::extism_pdk::plugin_fn]
+        pub fn get_rate_limits(
+            input: ::extism_pdk::Json<$crate::extension::prelude::Sourced<()>>,
+        ) -> ::extism_pdk::FnResult<
+            ::extism_pdk::Json<::std::vec::Vec<$crate::extension::prelude::RateLimit>>,
+        > {
+            Ok(::extism_pdk::Json(
+                __find_source(&input.0.source_id)?.rate_limits(),
+            ))
+        }
+
+        #[::extism_pdk::plugin_fn]
         pub fn get_homepage(
             input: ::extism_pdk::Json<$crate::extension::prelude::Sourced<()>>,
         ) -> ::extism_pdk::FnResult<

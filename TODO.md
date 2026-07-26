@@ -3,10 +3,13 @@
 - Add a simple cloudfare bypass:
   - Invokes another window, user pass the cloudfare
   - Returns, the app grabs the cloudfare key.
-- Source-based custom rate-limit:
+- [x] Source-based custom rate-limit:
   - So the application may properly follow the source's rate-limiting.
   - (No rate-limit is applied by default, but the developer may set one for the
     source per command.)
+  - Done: `Source::rate_limits()` declares per-method limits (Homepage, Search,
+    Section, Manga, Chapters, Pages); host enforces them with a per-method token
+    bucket that delays (never drops) calls. ABI bumped to 2.
 - Updates:
   - [x] Move Update visualization to the bottom of the sidebar.
   - [x] Add a better updates visualization on the bottom of the sidebar,

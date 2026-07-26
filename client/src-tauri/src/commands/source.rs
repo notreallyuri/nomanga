@@ -7,10 +7,16 @@ use nomanga_core::data::homepage::Homepage;
 use nomanga_core::data::manga::Manga;
 use nomanga_core::extension::filter::Filter;
 use nomanga_core::extension::query::{ChapterRef, MangaPage, MangaRef, SearchQuery, SectionRef};
+use nomanga_core::extension::rate_limit::SourceMethod;
 use nomanga_core::extension::source::SourceInfo;
 use tauri::State;
 
-async fn call_source<T, F>(state: &AppState, source_id: String, f: F) -> CommandResult<T>
+async fn call_source<T, F>(
+    state: &AppState,
+    source_id: String,
+    method: SourceMethod,
+    f: F,
+) -> CommandResult<T>
 where
     T: Send + 'static,
     F: FnOnce(&mut nomanga_host::LoadedExtension, &str) -> nomanga_host::error::HostResult<T>
@@ -24,7 +30,7 @@ where
 
     let called_id = source_id.clone();
 
-    tokio::task::spawn_blocking(move || handle.with_plugin(|ext| f(ext, &source_id)))
+    tokio::task::spawn_blocking(move || handle.throttled(method, |ext| f(ext, &source_id)))
         .await
         .map_err(|e| CommandError::Internal {
             message: format!("task panicked: {e}"),
@@ -64,7 +70,19 @@ pub async fn source_filters(
         return Ok(filters);
     }
 
-    let filters = call_source(&state, source_id.clone(), |ext, id| ext.filters(id)).await?;
+    let handle = {
+        let registry = state.registry.read()?;
+        registry.source(&source_id)?
+    };
+    let fetch_id = source_id.clone();
+    let filters = tokio::task::spawn_blocking(move || {
+        handle.with_plugin(|ext| ext.filters(&fetch_id))
+    })
+    .await
+    .map_err(|e| CommandError::Internal {
+        message: format!("task panicked: {e}"),
+    })?
+    .map_err(|e| CommandError::from(e).with_source_id(&source_id))?;
 
     source_cache::set_filters(&state.pool, &source_id, &filters, &version).await?;
 
@@ -77,7 +95,10 @@ pub async fn source_homepage(
     state: State<'_, AppState>,
     source_id: String,
 ) -> CommandResult<Homepage> {
-    call_source(&state, source_id, |ext, id| ext.homepage(id)).await
+    call_source(&state, source_id, SourceMethod::Homepage, |ext, id| {
+        ext.homepage(id)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -87,7 +108,10 @@ pub async fn source_search(
     source_id: String,
     query: SearchQuery,
 ) -> CommandResult<MangaPage> {
-    call_source(&state, source_id, move |ext, id| ext.search(id, query)).await
+    call_source(&state, source_id, SourceMethod::Search, move |ext, id| {
+        ext.search(id, query)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -97,7 +121,10 @@ pub async fn source_section(
     source_id: String,
     section: SectionRef,
 ) -> CommandResult<MangaPage> {
-    call_source(&state, source_id, move |ext, id| ext.section(id, section)).await
+    call_source(&state, source_id, SourceMethod::Section, move |ext, id| {
+        ext.section(id, section)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -107,7 +134,7 @@ pub async fn source_manga(
     source_id: String,
     manga_id: String,
 ) -> CommandResult<Manga> {
-    let manga = call_source(&state, source_id.clone(), move |ext, id| {
+    let manga = call_source(&state, source_id.clone(), SourceMethod::Manga, move |ext, id| {
         ext.manga(id, MangaRef { manga_id })
     })
     .await?;
@@ -127,7 +154,7 @@ pub async fn source_chapters(
     let sid = source_id.clone();
     let mid = manga_id.clone();
 
-    let chapters = call_source(&state, source_id, move |ext, id| {
+    let chapters = call_source(&state, source_id, SourceMethod::Chapters, move |ext, id| {
         ext.chapters(id, MangaRef { manga_id })
     })
     .await?;
@@ -148,7 +175,7 @@ pub async fn source_pages(
     manga_id: String,
     chapter_id: String,
 ) -> CommandResult<Vec<Page>> {
-    call_source(&state, source_id, move |ext, id| {
+    call_source(&state, source_id, SourceMethod::Pages, move |ext, id| {
         ext.pages(
             id,
             ChapterRef {

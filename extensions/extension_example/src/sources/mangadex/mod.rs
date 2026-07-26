@@ -39,6 +39,14 @@ impl Source for MangaDexSource {
         }
     }
 
+    fn rate_limits(&self) -> Vec<RateLimit> {
+        vec![
+            RateLimit::per_second(SourceMethod::Search, 5),
+            RateLimit::per_second(SourceMethod::Homepage, 5),
+            RateLimit::per_second(SourceMethod::Chapters, 5),
+        ]
+    }
+
     fn settings(&self) -> Vec<Setting> {
         let mut settings = vec![
             Setting::select(

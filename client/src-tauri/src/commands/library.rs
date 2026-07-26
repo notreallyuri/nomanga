@@ -3,6 +3,7 @@ use crate::{
 };
 use nomanga_core::data::manga::{Manga, MangaSimple};
 use nomanga_core::extension::query::MangaRef;
+use nomanga_core::extension::rate_limit::SourceMethod;
 use nomanga_host::registry::Registry;
 use nomanga_services::library::{
     self, Category, CategoryCount, CategoryFilter, CategoryOptions, EntryRef, LibraryItem,
@@ -63,7 +64,9 @@ pub async fn run_refresh(
         let manga_id = target.manga_id.clone();
         let source_id = target.source_id.clone();
         let fetched = tokio::task::spawn_blocking(move || {
-            handle.with_plugin(|ext| ext.chapters(&source_id, MangaRef { manga_id }))
+            handle.throttled(SourceMethod::Chapters, |ext| {
+                ext.chapters(&source_id, MangaRef { manga_id })
+            })
         })
         .await
         .map_err(|e| CommandError::Internal {

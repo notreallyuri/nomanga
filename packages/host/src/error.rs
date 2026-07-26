@@ -7,6 +7,8 @@ pub enum HostError {
     AbiMismatch { found: u32, supported: u32 },
     #[error("unknown source id: {0}")]
     UnknownSource(String),
+    #[error("host lock poisoned")]
+    Poisoned,
     #[error("source error: {0}")]
     Source(#[from] SourceError),
     #[error("could not read wasm at {path}: {source}")]

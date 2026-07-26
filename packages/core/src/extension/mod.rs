@@ -4,6 +4,7 @@ pub mod error;
 pub mod filter;
 pub mod info;
 pub mod query;
+pub mod rate_limit;
 pub mod source;
 
 pub mod prelude {
@@ -13,5 +14,6 @@ pub mod prelude {
     pub use super::filter::*;
     pub use super::info::*;
     pub use super::query::*;
+    pub use super::rate_limit::*;
     pub use super::source::*;
 }

@@ -5,9 +5,10 @@ use crate::extension::config::Setting;
 use crate::extension::error::{SourceError, SourceResult};
 use crate::extension::filter::Filter;
 use crate::extension::query::{ChapterRef, MangaPage, MangaRef, SearchQuery, SectionRef};
+use crate::extension::rate_limit::RateLimit;
 use serde::{Deserialize, Serialize};
 
-pub const ABI_VERSION: u32 = 1;
+pub const ABI_VERSION: u32 = 2;
 
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -36,6 +37,9 @@ pub trait Source {
         Vec::new()
     }
     fn settings(&self) -> Vec<Setting> {
+        Vec::new()
+    }
+    fn rate_limits(&self) -> Vec<RateLimit> {
         Vec::new()
     }
     fn homepage(&self) -> SourceResult<Homepage>;
