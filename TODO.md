@@ -1,6 +1,6 @@
 # TODO
 
-- Add a simple cloudfare bypass:
+- [ ] Add a simple cloudfare bypass:
   - Invokes another window, user pass the cloudfare
   - Returns, the app grabs the cloudfare key.
 - [x] Source-based custom rate-limit:
@@ -10,7 +10,7 @@
   - Done: `Source::rate_limits()` declares per-method limits (Homepage, Search,
     Section, Manga, Chapters, Pages); host enforces them with a per-method token
     bucket that delays (never drops) calls. ABI bumped to 2.
-- Updates:
+- [ ] Updates:
   - [x] Move Update visualization to the bottom of the sidebar.
   - [x] Add a better updates visualization on the bottom of the sidebar,
     allowing users to see anywhere in the app the current state.
@@ -20,7 +20,7 @@
   - [x] Add support for background updates (configurable interval in System
     settings, off by default; desktop notification on new chapters).
   - [ ] Tray menu implementation.
-- Library:
+- [ ] Library:
   - [x] Listing layout (Allow user to toggle the layout in the library)
   - [x] Badge Toggle
   - [x] Quick filters
@@ -30,10 +30,10 @@
     asset protocol. A background queue worker fetches pages over reqwest and
     streams DownloadProgress events to a persistent sidebar indicator + queue
     dialog. Chapter table shows per-row download/delete state.)
-- Browse:
+- [ ] Browse:
   - [ ] Allow name-searching in all sources (does not include source-specific
     filters) — search-all bar stubbed in the browse landing; backend pending.
-- UI:
+- [x] UI:
   - [x] Fix overflow-x in manga update dialog
   - [x] Refine `source-specific` settings components
     (Unified per-source detail view: app-policy toggles + extension-declared
