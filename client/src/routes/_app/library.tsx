@@ -262,10 +262,31 @@ function LibraryPage() {
 				<h1 className="font-heading font-semibold text-2xl">Library</h1>
 
 				<div className="flex items-center gap-1">
+					{filter.type !== "Category" && (
+						<Select
+							onValueChange={(value) => setSort(value as CategorySort)}
+							value={sort}
+						>
+							<SelectTrigger
+								aria-label="Sort library"
+								className="h-9 w-auto gap-1.5 border-0 bg-transparent px-2 text-sm shadow-none hover:bg-muted"
+							>
+								<ArrowsDownUpIcon />
+								<SelectValue>{SORT_LABELS[sort]}</SelectValue>
+							</SelectTrigger>
+							<SelectContent>
+								{(Object.keys(SORT_LABELS) as CategorySort[]).map((value) => (
+									<SelectItem key={value} value={value}>
+										{SORT_LABELS[value]}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					)}
 					<Popover>
 						<PopoverTrigger
 							render={
-								<Button aria-label="View options" size="sm" variant="ghost">
+								<Button aria-label="View options" variant="ghost">
 									{library_layout === "List" ? (
 										<RowsIcon />
 									) : (
@@ -308,31 +329,9 @@ function LibraryPage() {
 							</div>
 						</PopoverContent>
 					</Popover>
-					{filter.type !== "Category" && (
-						<Select
-							onValueChange={(value) => setSort(value as CategorySort)}
-							value={sort}
-						>
-							<SelectTrigger
-								aria-label="Sort library"
-								className="h-9 w-auto gap-1.5 border-0 bg-transparent px-2 text-sm shadow-none hover:bg-muted"
-							>
-								<ArrowsDownUpIcon />
-								<SelectValue>{SORT_LABELS[sort]}</SelectValue>
-							</SelectTrigger>
-							<SelectContent>
-								{(Object.keys(SORT_LABELS) as CategorySort[]).map((value) => (
-									<SelectItem key={value} value={value}>
-										{SORT_LABELS[value]}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					)}
 					<Button
 						disabled={refresh.isRefreshing}
 						onClick={() => refresh.refresh(tabScope())}
-						size="sm"
 						variant="ghost"
 					>
 						<ArrowClockwiseIcon
@@ -344,7 +343,6 @@ function LibraryPage() {
 						onClick={() =>
 							selectionMode ? exitSelection() : setSelectionMode(true)
 						}
-						size="sm"
 						variant="ghost"
 					>
 						<CheckSquareIcon />
@@ -352,7 +350,7 @@ function LibraryPage() {
 					</Button>
 					<ManageCategoriesDialog
 						trigger={
-							<Button size="sm" variant="ghost">
+							<Button size="lg" variant="ghost">
 								<SlidersHorizontalIcon />
 								Manage categories
 							</Button>

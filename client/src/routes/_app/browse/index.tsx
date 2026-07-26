@@ -1,8 +1,19 @@
-import { GlobeIcon, PlugsIcon, WarningIcon } from "@phosphor-icons/react";
+import {
+	CaretRightIcon,
+	GlobeIcon,
+	MagnifyingGlassIcon,
+	PlugsIcon,
+	PlusIcon,
+	WarningIcon,
+} from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { useSettingsUI } from "@/components/settings/context";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSourcesWithPreferences } from "@/hooks/services/use-extensions";
+import type { SourceInfo } from "@/types/bindings";
 
 export const Route = createFileRoute("/_app/browse/")({
 	component: BrowseIndex,
@@ -13,81 +24,174 @@ function BrowseIndex() {
 
 	if (isPending) {
 		return (
-			<div className="p-6">
-				<h1 className="mb-4 font-heading text-2xl">Browse</h1>
-				<div className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3">
-					{["a", "b", "c"].map((k) => (
-						<Skeleton className="h-20" key={k} />
+			<Page>
+				<SearchAllBar disabled />
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
+					{["a", "b", "c", "d", "e", "f"].map((k) => (
+						<Skeleton className="h-[4.5rem]" key={k} />
 					))}
 				</div>
-			</div>
+			</Page>
 		);
 	}
 
 	if (error) {
-		return <p className="p-6 text-destructive">{error.message}</p>;
+		return (
+			<Page>
+				<p className="text-destructive">{error.message}</p>
+			</Page>
+		);
 	}
-
-	const enabled = rows.filter((row) => row.preference.enabled);
-	const hiddenCount = rows.length - enabled.length;
 
 	if (rows.length === 0) {
 		return <EmptyState kind="no-extensions" />;
 	}
 
+	const enabled = rows.filter((row) => row.preference.enabled);
+
 	if (enabled.length === 0) {
 		return <EmptyState kind="all-disabled" />;
 	}
 
+	const hiddenCount = rows.length - enabled.length;
+
 	return (
-		<div className="p-6">
-			<div className="mb-4 flex items-baseline justify-between">
-				<h1 className="font-heading font-semibold text-2xl">Browse</h1>
+		<Page>
+			<SearchAllBar />
+
+			<div className="mb-3 flex items-baseline justify-between">
+				<h2 className="font-heading font-semibold text-muted-foreground text-sm uppercase tracking-wide">
+					Sources
+				</h2>
 				{hiddenCount > 0 && (
-					<p className="text-muted-foreground text-xs">
-						{hiddenCount} source{hiddenCount === 1 ? "" : "s"} hidden
-					</p>
+					<p className="text-muted-foreground text-xs">{hiddenCount} hidden</p>
 				)}
 			</div>
 
-			<div className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3">
+			<div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
 				{enabled.map(({ info }) => (
-					<Link
-						key={info.id}
-						params={{ sourceId: info.id }}
-						to="/browse/$sourceId"
-					>
-						<div className="flex h-full flex-col items-center gap-2 bg-muted/50 p-2 transition-colors hover:bg-muted">
-							{info.icon_url ? (
-								<img
-									alt=""
-									className="mt-4 size-10 shrink-0 rounded object-cover"
-									src={info.icon_url}
-								/>
-							) : (
-								<div className="flex size-10 shrink-0 items-center justify-center rounded bg-muted">
-									<GlobeIcon className="text-muted-foreground" size={20} />
-								</div>
-							)}
-
-							<div className="min-w-0 flex-1">
-								<div className="flex items-center gap-1.5">
-									<p className="truncate font-medium">{info.name}</p>
-									{info.nsfw && (
-										<Badge className="shrink-0" variant="destructive">
-											18+
-										</Badge>
-									)}
-								</div>
-								<p className="text-muted-foreground text-xs uppercase">
-									{info.language}
-								</p>
-							</div>
-						</div>
-					</Link>
+					<SourceCard info={info} key={info.id} />
 				))}
+				<AddMoreCard />
 			</div>
+		</Page>
+	);
+}
+
+/**
+ * Sends the user to the Extensions tab of the settings dialog, where sources
+ * are installed — so the grid always offers a way to add to it.
+ */
+function AddMoreCard() {
+	const { openSettings } = useSettingsUI();
+
+	return (
+		<button
+			className="group flex items-center gap-3 rounded-lg border border-border border-dashed p-3 text-left text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+			onClick={() => openSettings("Extensions")}
+			type="button"
+		>
+			<div className="flex size-10 shrink-0 items-center justify-center rounded bg-muted transition-colors group-hover:bg-background">
+				<PlusIcon size={20} />
+			</div>
+			<div className="min-w-0 flex-1">
+				<p className="truncate font-medium">Add more</p>
+				<p className="text-xs">Install extensions</p>
+			</div>
+		</button>
+	);
+}
+
+function Page({ children }: { children: React.ReactNode }) {
+	return (
+		<div className="h-full overflow-y-auto p-6">
+			<h1 className="mb-4 font-heading font-semibold text-2xl">Browse</h1>
+			{children}
 		</div>
+	);
+}
+
+/**
+ * Placeholder for cross-source search. The control is intentionally inert for
+ * now — it reserves the layout and signals the coming capability rather than
+ * pretending to work. Wire it to a search-all command when one exists.
+ */
+function SearchAllBar({ disabled }: { disabled?: boolean }) {
+	const [value, setValue] = useState("");
+
+	return (
+		<div className="relative mb-6">
+			<MagnifyingGlassIcon
+				className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+				size={18}
+			/>
+			<Input
+				aria-label="Search all sources"
+				className="h-11 pr-28 pl-10"
+				disabled={disabled}
+				onChange={(e) => setValue(e.target.value)}
+				placeholder="Search across all sources…"
+				value={value}
+			/>
+			<Badge
+				className="absolute top-1/2 right-3 -translate-y-1/2"
+				variant="secondary"
+			>
+				Coming soon
+			</Badge>
+		</div>
+	);
+}
+
+function SourceCard({ info }: { info: SourceInfo }) {
+	return (
+		<Link
+			className="group flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-muted"
+			params={{ sourceId: info.id }}
+			to="/browse/$sourceId"
+		>
+			<SourceIcon name={info.name} url={info.icon_url ?? undefined} />
+
+			<div className="min-w-0 flex-1">
+				<div className="flex items-center gap-1.5">
+					<p className="truncate font-medium">{info.name}</p>
+					{info.nsfw && (
+						<Badge className="shrink-0" variant="destructive">
+							18+
+						</Badge>
+					)}
+				</div>
+				<p className="text-muted-foreground text-xs uppercase tracking-wide">
+					{info.language}
+				</p>
+			</div>
+
+			<CaretRightIcon
+				className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+				size={16}
+			/>
+		</Link>
+	);
+}
+
+function SourceIcon({ url, name }: { url?: string; name: string }) {
+	const [failed, setFailed] = useState(false);
+
+	if (!url || failed) {
+		return (
+			<div className="flex size-10 shrink-0 items-center justify-center rounded bg-muted">
+				<GlobeIcon className="text-muted-foreground" size={20} />
+			</div>
+		);
+	}
+
+	return (
+		<img
+			alt={`${name} icon`}
+			className="size-10 shrink-0 rounded object-cover"
+			onError={() => setFailed(true)}
+			src={url}
+		/>
 	);
 }
 

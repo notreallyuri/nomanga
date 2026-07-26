@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { FilterSheet } from "@/components/browse/filter-sheet";
 import { HomepageSections } from "@/components/browse/homepage-sections";
 import { SearchResults } from "@/components/browse/search-result";
+import { SectionView } from "@/components/browse/section-view";
 import { Input } from "@/components/ui/input";
 import type { FilterValue } from "@/types/bindings";
 
@@ -19,13 +20,17 @@ export const Route = createFileRoute("/_app/browse/$sourceId")({
 		filters: Array.isArray(search.filters)
 			? (search.filters as FilterValue[])
 			: undefined,
+		section:
+			typeof search.section === "string" && search.section
+				? search.section
+				: undefined,
 	}),
 	component: BrowseSource,
 });
 
 function BrowseSource() {
 	const { sourceId } = Route.useParams();
-	const { q = "", filters = [] } = Route.useSearch();
+	const { q = "", filters = [], section } = Route.useSearch();
 	const navigate = Route.useNavigate();
 
 	const [draft, setDraft] = useState(q);
@@ -53,6 +58,23 @@ function BrowseSource() {
 	};
 
 	const searching = q.trim().length > 0 || filters.length > 0;
+
+	if (section) {
+		return (
+			<div className="h-full overflow-y-auto px-6 py-6">
+				<SectionView
+					onBack={() =>
+						navigate({
+							search: (prev) => ({ ...prev, section: undefined }),
+							replace: true,
+						})
+					}
+					sectionId={section}
+					sourceId={sourceId}
+				/>
+			</div>
+		);
+	}
 
 	return (
 		<div

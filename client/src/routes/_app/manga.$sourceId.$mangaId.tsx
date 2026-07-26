@@ -156,7 +156,7 @@ function MangaDetails() {
 				{manga.data.tags.length > 0 && (
 					<div className="mt-4 flex flex-wrap gap-2">
 						{manga.data.tags.map((tag) => (
-							<Badge className="bg-muted p-1 px-2" key={tag.id}>
+							<Badge variant="secondary" key={tag.id}>
 								{tag.label}
 							</Badge>
 						))}

@@ -1,7 +1,10 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useState } from "react";
 import { Sidebar } from "@/components/nav";
 import { SettingsDialog } from "@/components/settings";
+import {
+	SettingsUIProvider,
+	useSettingsUI,
+} from "@/components/settings/context";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/_app")({
@@ -9,20 +12,25 @@ export const Route = createFileRoute("/_app")({
 });
 
 function RouteComponent() {
-	const [settingsOpen, setSettingsOpen] = useState(false);
+	return (
+		<SettingsUIProvider>
+			<AppShell />
+		</SettingsUIProvider>
+	);
+}
+
+function AppShell() {
+	const { open, setOpen } = useSettingsUI();
 
 	return (
 		<SidebarProvider className="h-full overflow-hidden">
-			<Sidebar
-				onSettingsOpenChange={setSettingsOpen}
-				settingsOpen={settingsOpen}
-			/>
+			<Sidebar onSettingsOpenChange={setOpen} settingsOpen={open} />
 			<SidebarInset className="min-w-0 overflow-hidden">
 				<main className="min-h-0 min-w-0 flex-1 overflow-hidden">
 					<Outlet />
 				</main>
 			</SidebarInset>
-			<SettingsDialog onOpenChange={setSettingsOpen} open={settingsOpen} />
+			<SettingsDialog onOpenChange={setOpen} open={open} />
 		</SidebarProvider>
 	);
 }

@@ -1,10 +1,7 @@
 import {
 	ArrowRightIcon,
-	BookmarkSimpleIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
-	CheckIcon,
-	PlusIcon,
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -14,25 +11,13 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { toast } from "sonner";
-import { useIsInLibrary, useToggleLibrary } from "@/hooks/services/use-library";
 import { useAppearance } from "@/hooks/services/use-settings";
 import { useSourceHomepage } from "@/hooks/services/use-sources";
 import { cn } from "@/lib/utils";
-import type {
-	HomepageSection,
-	MangaSimple,
-	SectionLayout,
-} from "@/types/bindings";
-import { MangaCard } from "../manga/manga-card";
+import type { HomepageSection, SectionLayout } from "@/types/bindings";
 import { Button } from "../ui/button";
-import {
-	ContextMenu,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuTrigger,
-} from "../ui/context-menu";
 import { Skeleton } from "../ui/skeleton";
+import { BrowseCard } from "./browse-card";
 
 export function HomepageSections({ sourceId }: { sourceId: string }) {
 	const { data, isPending, error } = useSourceHomepage(sourceId);
@@ -160,7 +145,7 @@ function Section({
 						)}
 						key={item.id}
 					>
-						<SectionCard
+						<BrowseCard
 							compactTitle={config.denseTitle || compact}
 							item={item}
 							sourceId={sourceId}
@@ -268,80 +253,6 @@ function ScrollArrow({
 		>
 			{side === "left" ? <CaretLeftIcon /> : <CaretRightIcon />}
 		</button>
-	);
-}
-
-function SectionCard({
-	sourceId,
-	item,
-	compactTitle,
-}: {
-	sourceId: string;
-	item: MangaSimple;
-	compactTitle: boolean;
-}) {
-	const inLibrary = useIsInLibrary(sourceId, item.id);
-	const { add, remove } = useToggleLibrary(sourceId, item.id, item);
-
-	const saved = inLibrary.data ?? false;
-
-	const toggle = (e: React.MouseEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		if (saved) remove.mutate(undefined);
-		else add.mutate(undefined, { onError: (err) => toast.error(err.message) });
-	};
-
-	return (
-		<ContextMenu>
-			<ContextMenuTrigger>
-				<div className="group/card relative">
-					<MangaCard
-						compactTitle={compactTitle}
-						coverUrl={item.cover_url}
-						mangaId={item.id}
-						sourceId={sourceId}
-						title={item.title}
-					/>
-
-					<button
-						aria-label={saved ? "Remove from library" : "Add to library"}
-						className={cn(
-							"absolute top-1.5 right-1.5 z-10 flex size-7 items-center justify-center rounded-full shadow-sm backdrop-blur transition-all focus-visible:opacity-100 focus-visible:outline-none",
-							saved
-								? "bg-primary text-primary-foreground opacity-100"
-								: "bg-background/80 text-foreground opacity-0 hover:bg-background group-hover/card:opacity-100",
-						)}
-						onClick={toggle}
-						type="button"
-					>
-						{saved ? (
-							<CheckIcon size={14} weight="bold" />
-						) : (
-							<PlusIcon size={14} weight="bold" />
-						)}
-					</button>
-				</div>
-			</ContextMenuTrigger>
-
-			<ContextMenuContent>
-				{saved ? (
-					<ContextMenuItem onClick={() => remove.mutate(undefined)}>
-						<CheckIcon />
-						In library
-					</ContextMenuItem>
-				) : (
-					<ContextMenuItem
-						onClick={() =>
-							add.mutate(undefined, { onError: (e) => toast.error(e.message) })
-						}
-					>
-						<BookmarkSimpleIcon />
-						Add to library
-					</ContextMenuItem>
-				)}
-			</ContextMenuContent>
-		</ContextMenu>
 	);
 }
 

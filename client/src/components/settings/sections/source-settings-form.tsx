@@ -1,8 +1,4 @@
-import {
-	ArrowLeftIcon,
-	MagnifyingGlassIcon,
-	XIcon,
-} from "@phosphor-icons/react";
+import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -53,15 +49,12 @@ function defaultValue(kind: SettingKind): string {
 	}
 }
 
-export function SourceSettingsForm({
-	sourceId,
-	sourceName,
-	onBack,
-}: {
-	sourceId: string;
-	sourceName: string;
-	onBack: () => void;
-}) {
+/**
+ * The extension-declared settings for a source — API keys, tag filters, and so
+ * on. This is only the schema-driven body; the surrounding header and the
+ * app-side source policy toggles live in the unified source detail view.
+ */
+export function ExtensionSettings({ sourceId }: { sourceId: string }) {
 	const { data, isPending, error } = useSourceSettings(sourceId);
 	const { mutate: save, isPending: isSaving } = useSaveSourceSettings(sourceId);
 
@@ -86,72 +79,62 @@ export function SourceSettingsForm({
 	const setValue = (id: string, value: string) =>
 		setDraft({ ...current, [id]: value });
 
-	return (
-		<div className="flex h-full flex-col">
-			<div className="mb-4 flex items-center gap-2">
-				<Button onClick={onBack} size="icon" variant="ghost">
-					<ArrowLeftIcon />
-				</Button>
-				<div className="min-w-0 flex-1">
-					<p className="truncate font-medium">{sourceName}</p>
-					<p className="text-muted-foreground text-xs">Source settings</p>
-				</div>
+	if (isPending) {
+		return (
+			<div className="space-y-4">
+				{["a", "b", "c"].map((k) => (
+					<Skeleton className="h-14" key={k} />
+				))}
 			</div>
+		);
+	}
 
-			{isPending && (
-				<div className="space-y-4">
-					{["a", "b", "c"].map((k) => (
-						<Skeleton className="h-14" key={k} />
-					))}
-				</div>
-			)}
+	if (error) {
+		return <p className="text-destructive text-sm">{error.message}</p>;
+	}
 
-			{error && <p className="text-destructive text-sm">{error.message}</p>}
+	if (!data || data.schema.length === 0) {
+		return (
+			<p className="py-6 text-muted-foreground text-sm">
+				This source has no configurable settings.
+			</p>
+		);
+	}
 
-			{data && data.schema.length === 0 && (
-				<p className="py-10 text-center text-muted-foreground text-sm">
-					This source has no configurable settings.
-				</p>
-			)}
+	return (
+		<div className="space-y-6">
+			{data.schema.map((setting) => (
+				<SettingField
+					key={setting.id}
+					onChange={(v) => setValue(setting.id, v)}
+					setting={setting}
+					value={current[setting.id] ?? ""}
+				/>
+			))}
 
-			{data && data.schema.length > 0 && (
-				<>
-					<div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-1">
-						{data.schema.map((setting) => (
-							<SettingField
-								key={setting.id}
-								onChange={(v) => setValue(setting.id, v)}
-								setting={setting}
-								value={current[setting.id] ?? ""}
-							/>
-						))}
-					</div>
-
-					<div className="mt-4 flex shrink-0 items-center gap-2 border-border border-t pt-4">
-						<Button
-							disabled={!dirty || isSaving}
-							onClick={() =>
-								save(current, {
-									onSuccess: () => {
-										setDraft(null);
-										toast.success("Settings saved");
-									},
-									onError: (e) => toast.error(e.message),
-								})
-							}
-						>
-							{isSaving ? "Saving…" : "Save"}
-						</Button>
-						<Button
-							disabled={!dirty || isSaving}
-							onClick={() => setDraft(null)}
-							variant="ghost"
-						>
-							Discard
-						</Button>
-					</div>
-				</>
-			)}
+			<div className="flex items-center gap-2 border-border border-t pt-4">
+				<Button
+					disabled={!dirty || isSaving}
+					onClick={() =>
+						save(current, {
+							onSuccess: () => {
+								setDraft(null);
+								toast.success("Settings saved");
+							},
+							onError: (e) => toast.error(e.message),
+						})
+					}
+				>
+					{isSaving ? "Saving…" : "Save"}
+				</Button>
+				<Button
+					disabled={!dirty || isSaving}
+					onClick={() => setDraft(null)}
+					variant="ghost"
+				>
+					Discard
+				</Button>
+			</div>
 		</div>
 	);
 }

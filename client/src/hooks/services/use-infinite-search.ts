@@ -34,6 +34,32 @@ export function useInfiniteSourceSearch(
 	});
 }
 
+export function useInfiniteSourceSection(
+	sourceId: string | undefined,
+	sectionId: string,
+	enabled = true,
+) {
+	return useInfiniteQuery({
+		queryKey: [
+			...sourceKeys.all,
+			sourceId ?? "",
+			"section-infinite",
+			sectionId,
+		],
+		queryFn: ({ pageParam }) =>
+			unwrap(
+				commands.sourceSection(sourceId as string, {
+					section_id: sectionId,
+					page: pageParam,
+				}),
+			),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage, allPages) =>
+			lastPage.has_next ? allPages.length + 1 : undefined,
+		enabled: Boolean(sourceId && sectionId) && enabled,
+	});
+}
+
 export function useInView<T extends HTMLElement>(rootMargin = "400px") {
 	const [inView, setInView] = useState(false);
 	const [node, setNode] = useState<T | null>(null);
