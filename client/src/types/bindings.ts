@@ -65,11 +65,16 @@ export const commands = {
 	setSourcePreference: (preference: SourcePreference) => typedError<null, CommandError>(__TAURI_INVOKE("set_source_preference", { preference })),
 	getSourceSettings: (sourceId: string) => typedError<SourceSettings, CommandError>(__TAURI_INVOKE("get_source_settings", { sourceId })),
 	saveSourceSettings: (sourceId: string, values: { [key in string]: string }) => typedError<null, CommandError>(__TAURI_INVOKE("save_source_settings", { sourceId, values })),
+	queueDownloads: (sourceId: string, mangaId: string, targets: DownloadTarget[]) => typedError<null, CommandError>(__TAURI_INVOKE("queue_downloads", { sourceId, mangaId, targets })),
+	downloadedChapterIds: (sourceId: string, mangaId: string) => typedError<string[], CommandError>(__TAURI_INVOKE("downloaded_chapter_ids", { sourceId, mangaId })),
+	localPages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("local_pages", { sourceId, mangaId, chapterId })),
+	deleteDownload: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("delete_download", { sourceId, mangaId, chapterId })),
 	takeStartupWarnings: () => typedError<StartupWarning[], CommandError>(__TAURI_INVOKE("take_startup_warnings")),
 };
 
 /** Events */
 export const events = {
+	downloadProgress: makeEvent<DownloadProgress>("download-progress"),
 	libraryRefreshProgress: makeEvent<LibraryRefreshProgress>("library-refresh-progress"),
 };
 
@@ -159,6 +164,24 @@ export type ContinueReadingItem = {
 };
 
 export type CoverStyle = "Default" | "Rounded" | "Border" | "Shadow";
+
+export type DownloadProgress = {
+	source_id: string,
+	manga_id: string,
+	chapter_id: string,
+	title: string,
+	state: DownloadState,
+	done: number,
+	total: number,
+	error: string | null,
+};
+
+export type DownloadState = "Queued" | "Downloading" | "Done" | "Failed";
+
+export type DownloadTarget = {
+	chapter_id: string,
+	title: string,
+};
 
 export type EntryRef = {
 	source_id: string,

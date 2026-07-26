@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT number, path FROM downloaded_page\n         WHERE source_id = ? AND manga_id = ? AND chapter_id = ?\n         ORDER BY number",
+  "describe": {
+    "columns": [
+      {
+        "name": "number",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "downloaded_page",
+            "name": "number"
+          }
+        }
+      },
+      {
+        "name": "path",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "downloaded_page",
+            "name": "path"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "a509409b9108278000abdf7456da8525b9afe5cf7d49559d5829965adfd0f53e"
+}

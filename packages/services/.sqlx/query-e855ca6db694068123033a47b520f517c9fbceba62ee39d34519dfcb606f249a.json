@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO downloaded_chapter\n            (source_id, manga_id, chapter_id, page_count, total_bytes, downloaded_at)\n         VALUES (?, ?, ?, ?, ?, ?)\n         ON CONFLICT (source_id, manga_id, chapter_id) DO UPDATE SET\n            page_count = excluded.page_count,\n            total_bytes = excluded.total_bytes,\n            downloaded_at = excluded.downloaded_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "e855ca6db694068123033a47b520f517c9fbceba62ee39d34519dfcb606f249a"
+}

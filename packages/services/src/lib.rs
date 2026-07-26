@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod cache;
 pub mod db;
+pub mod downloads;
 pub mod error;
 pub mod history;
 pub mod library;
