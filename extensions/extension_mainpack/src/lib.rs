@@ -17,5 +17,6 @@ nomanga_sdk::register_sources! {
         sources::mangadex::MangaDexSource,
         sources::mangapill::MangaPillSource,
         sources::natomanga::NatoMangaSource,
+        sources::webtoons::WebtoonsSource,
     ],
 }
