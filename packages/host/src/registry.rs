@@ -1,5 +1,7 @@
+use crate::rate_limit::RateLimiter;
 use crate::{ExtensionMetadata, HostError, HostResult, LoadedExtension};
 use nomanga_core::extension::info::ExtensionInfo;
+use nomanga_core::extension::rate_limit::SourceMethod;
 use nomanga_core::extension::source::SourceInfo;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -11,6 +13,7 @@ pub struct SourceHandle {
     pub extension_id: String,
     wasm_path: PathBuf,
     plugin: Arc<Mutex<LoadedExtension>>,
+    limiter: Arc<Mutex<RateLimiter>>,
 }
 
 impl SourceHandle {
@@ -18,11 +21,26 @@ impl SourceHandle {
         &self,
         f: impl FnOnce(&mut LoadedExtension) -> HostResult<T>,
     ) -> HostResult<T> {
-        let mut guard = self
-            .plugin
-            .lock()
-            .map_err(|_| HostError::UnknownSource("plugin mutex poisoned".into()))?;
+        let mut guard = self.plugin.lock().map_err(|_| HostError::Poisoned)?;
         f(&mut guard)
+    }
+
+    /// Like [`with_plugin`](Self::with_plugin) but first waits out any rate
+    /// limit the source declared for `method`. Safe to call from a blocking
+    /// task — it may sleep the current thread.
+    pub fn throttled<T>(
+        &self,
+        method: SourceMethod,
+        f: impl FnOnce(&mut LoadedExtension) -> HostResult<T>,
+    ) -> HostResult<T> {
+        let wait = {
+            let mut limiter = self.limiter.lock().map_err(|_| HostError::Poisoned)?;
+            limiter.reserve(method)
+        };
+        if !wait.is_zero() {
+            std::thread::sleep(wait);
+        }
+        self.with_plugin(f)
     }
 }
 
@@ -101,10 +119,12 @@ impl Registry {
             .find(|s| s.id == source_id)
             .ok_or_else(|| HostError::UnknownSource(source_id.into()))?;
 
-        let plugin = meta.activate(source.hosts.clone(), config)?;
+        let mut plugin = meta.activate(source.hosts.clone(), config)?;
+        let limits = plugin.rate_limits(source_id).unwrap_or_default();
 
         if let Some(h) = self.sources.get_mut(source_id) {
             h.plugin = Arc::new(Mutex::new(plugin));
+            h.limiter = Arc::new(Mutex::new(RateLimiter::new(&limits)));
         }
 
         Ok(())
@@ -120,7 +140,8 @@ impl Registry {
 
         for source in &meta.sources {
             let config = configs.get(&source.id).cloned().unwrap_or_default();
-            let plugin = meta.activate(source.hosts.clone(), config)?;
+            let mut plugin = meta.activate(source.hosts.clone(), config)?;
+            let limits = plugin.rate_limits(&source.id).unwrap_or_default();
 
             self.sources.insert(
                 source.id.clone(),
@@ -128,6 +149,7 @@ impl Registry {
                     info: source.clone(),
                     extension_id: extension_id.clone(),
                     plugin: Arc::new(Mutex::new(plugin)),
+                    limiter: Arc::new(Mutex::new(RateLimiter::new(&limits))),
                     wasm_path: path.to_path_buf(),
                 },
             );

@@ -12,12 +12,14 @@ use nomanga_core::{
         filter::Filter,
         info::ExtensionInfo,
         query::{ChapterRef, MangaPage, MangaRef, SearchQuery, SectionRef},
+        rate_limit::RateLimit,
         source::{ABI_VERSION, SourceInfo, Sourced},
     },
 };
 use std::collections::HashMap;
 
 pub mod error;
+pub mod rate_limit;
 pub mod registry;
 
 pub struct ExtensionMetadata {
@@ -135,6 +137,18 @@ impl LoadedExtension {
         self.ensure_source(source_id)?;
         let Json(v): Json<Vec<Setting>> = self.plugin.call(
             "get_settings",
+            Json(Sourced {
+                source_id: source_id.to_owned(),
+                payload: (),
+            }),
+        )?;
+        Ok(v)
+    }
+
+    pub fn rate_limits(&mut self, source_id: &str) -> HostResult<Vec<RateLimit>> {
+        self.ensure_source(source_id)?;
+        let Json(v): Json<Vec<RateLimit>> = self.plugin.call(
+            "get_rate_limits",
             Json(Sourced {
                 source_id: source_id.to_owned(),
                 payload: (),
