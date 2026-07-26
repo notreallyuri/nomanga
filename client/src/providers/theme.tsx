@@ -42,7 +42,15 @@ export function ThemeProvider({
 		if (isLoading) return;
 
 		const root = window.document.documentElement;
-		root.classList.remove("light", "dark", "havoc", "void");
+		root.classList.remove(
+			"light",
+			"dark",
+			"havoc",
+			"void",
+			"amber",
+			"rose",
+			"cyberpunk",
+		);
 
 		if (theme === "System") {
 			const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")

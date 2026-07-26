@@ -412,7 +412,7 @@ export type Tag = {
 	label: string,
 };
 
-export type Theme = "Default" | "Void" | "Havoc";
+export type Theme = "Default" | "Void" | "Havoc" | "Amber" | "Rose" | "Cyberpunk";
 
 export type ThemeDarkMode = "System" | "Light" | "Dark";
 

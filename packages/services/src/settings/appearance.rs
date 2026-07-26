@@ -7,6 +7,9 @@ pub enum Theme {
     Default,
     Void,
     Havoc,
+    Amber,
+    Rose,
+    Cyberpunk,
 }
 
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
