@@ -1,1 +1,0 @@
-.star-rating{display:inline-flex;direction:ltr;cursor:pointer}.star{width:16px;height:16px;margin-right:4px;fill:#ccc;transition:fill .2s}.star.full{fill:gold}.star.half{fill:url(#halfGradient)}.star-rating.disabled{pointer-events:none;opacity:.6}
