@@ -6,20 +6,8 @@ import {
 	useDeleteDownload,
 	useDownloads,
 } from "@/hooks/services/use-downloads";
-import { cn } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 import type { DownloadedManga } from "@/types/bindings";
-
-function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${Math.round(bytes)} B`;
-	const units = ["KB", "MB", "GB"];
-	let value = bytes / 1024;
-	let unit = 0;
-	while (value >= 1024 && unit < units.length - 1) {
-		value /= 1024;
-		unit += 1;
-	}
-	return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
-}
 
 export function DownloadsSection() {
 	const downloads = useDownloads();

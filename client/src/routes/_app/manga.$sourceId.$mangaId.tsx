@@ -90,7 +90,7 @@ function MangaDetails() {
 				<img
 					alt={manga.data.title}
 					className="mx-auto aspect-2/3 w-48 rounded-lg border border-border object-cover shadow-xl lg:w-full lg:max-w-none"
-					src={sourceImageUrl(sourceId, manga.data.cover_url)}
+					src={sourceImageUrl(sourceId, manga.data.cover_url, { cache: true })}
 				/>
 
 				<h1 className="mt-4 text-balance font-bold font-heading text-2xl leading-tight">
