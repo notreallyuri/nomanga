@@ -58,9 +58,7 @@ pub struct AppearanceSettings {
     pub compact_mode: bool,
     pub cover_style: CoverStyle,
     pub card_size: CardSize,
-    /// How the library screen lays out entries: a cover grid or a compact list.
     pub library_layout: LibraryLayout,
-    /// Whether the unread-count badge is drawn on library covers.
     pub show_unread_badge: bool,
 }
 
