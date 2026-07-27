@@ -58,3 +58,26 @@ impl From<(&str, &str)> for SelectOption {
         Self::new(id, label)
     }
 }
+
+/// The request an extension hands to the host transport, and the response it
+/// gets back. Extensions no longer reach the network themselves: routing every
+/// fetch through the host is what lets it observe, throttle, and attach
+/// credentials (a Cloudflare clearance cookie) to calls it did not compose.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HostRequest {
+    pub method: String,
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Option<Vec<u8>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HostResponse {
+    pub status: u16,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+    /// Set when the request never produced a response at all — DNS failure, TLS
+    /// error, a host the extension is not allowed to reach. Distinct from a
+    /// non-2xx status, which is a real answer from the server.
+    pub transport_error: Option<String>,
+}

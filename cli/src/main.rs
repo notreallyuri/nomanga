@@ -2,6 +2,10 @@ use std::collections::HashMap;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use nomanga_core::extension::common::{HostRequest, HostResponse};
+use nomanga_host::transport::{CallLog, TransportShared};
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use nomanga_core::extension::query::{ChapterRef, MangaRef, SearchQuery};
 use nomanga_host::ExtensionMetadata;
 
@@ -72,7 +76,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .as_deref()
         .ok_or("--source <id> is required for this command (try `info` to list sources)")?;
 
-    let mut ext = meta.activate(meta.all_hosts(), HashMap::new())?;
+    let transport = blocking_transport();
+    let mut ext = meta.activate(
+        meta.all_hosts(),
+        HashMap::new(),
+        transport.context(meta.all_hosts()),
+    )?;
 
     let value = match cli.command {
         Command::Info => unreachable!("handled above"),
@@ -145,5 +154,59 @@ fn print_info(meta: &ExtensionMetadata) {
     println!("\ndeclared hosts:");
     for h in meta.all_hosts() {
         println!("  {h}");
+    }
+}
+
+/// The CLI has no async runtime, so extension requests go out through a plain
+/// blocking client rather than the app's reqwest bridge.
+fn blocking_transport() -> TransportShared {
+    TransportShared {
+        fetch: Arc::new(|request: HostRequest| {
+            let mut builder = ureq::http::Request::builder()
+                .method(request.method.as_str())
+                .uri(&request.url);
+            for (key, value) in &request.headers {
+                builder = builder.header(key, value);
+            }
+
+            let built = builder.body(request.body.unwrap_or_default());
+            let sent = match built {
+                Ok(req) => ureq::run(req),
+                Err(e) => return transport_failure(&e.to_string()),
+            };
+
+            let mut response = match sent {
+                Ok(response) => response,
+                Err(e) => return transport_failure(&e.to_string()),
+            };
+
+            let status = response.status().as_u16();
+            let headers = response
+                .headers()
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or_default().to_owned()))
+                .collect();
+
+            match response.body_mut().read_to_vec() {
+                Ok(body) => HostResponse {
+                    status,
+                    headers,
+                    body,
+                    transport_error: None,
+                },
+                Err(e) => transport_failure(&e.to_string()),
+            }
+        }),
+        log: Arc::new(CallLog::default()),
+        recording: Arc::new(AtomicBool::new(false)),
+    }
+}
+
+fn transport_failure(message: &str) -> HostResponse {
+    HostResponse {
+        status: 0,
+        headers: Vec::new(),
+        body: Vec::new(),
+        transport_error: Some(message.to_owned()),
     }
 }

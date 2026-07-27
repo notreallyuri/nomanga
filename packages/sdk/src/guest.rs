@@ -1,7 +1,24 @@
-use extism_pdk::{HttpRequest, http};
+use extism_pdk::{Json, host_fn};
+use nomanga_core::extension::common::{HostRequest, HostResponse};
 use nomanga_core::extension::error::{SourceError, SourceResult};
 use serde::{Serialize, de::DeserializeOwned};
 use std::collections::BTreeMap;
+
+#[host_fn]
+unsafe extern "ExtismHost" {
+    fn nomanga_fetch(request: Json<HostRequest>) -> Json<HostResponse>;
+}
+
+/// Every extension request goes through the host: it owns the HTTP client, the
+/// allowed-host check, and the cookies a challenge-protected source needs.
+fn send(request: HostRequest) -> SourceResult<HostResponse> {
+    let Json(response) =
+        unsafe { nomanga_fetch(Json(request)) }.map_err(|e| SourceError::Network {
+            message: format!("host transport failed: {e}"),
+        })?;
+
+    Ok(response)
+}
 
 pub const USER_AGENT: &str =
     "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0";
@@ -57,19 +74,23 @@ impl Request {
     }
 
     pub fn text(self) -> SourceResult<String> {
-        let mut req = HttpRequest::new(&self.url).with_method(self.method);
-        for (key, value) in &self.headers {
-            req = req.with_header(key, value);
-        }
-
         let host = host_of(&self.url).to_owned();
 
-        let res = http::request(&req, self.body).map_err(|e| SourceError::Network {
-            message: format!("request to {host} failed: {e}"),
+        let res = send(HostRequest {
+            method: self.method.to_owned(),
+            url: self.url,
+            headers: self.headers.into_iter().collect(),
+            body: self.body,
         })?;
 
-        match res.status_code() {
-            200..=299 => String::from_utf8(res.body()).map_err(|e| SourceError::Parse {
+        if let Some(error) = &res.transport_error {
+            return Err(SourceError::Network {
+                message: format!("request to {host} failed: {error}"),
+            });
+        }
+
+        match res.status {
+            200..=299 => String::from_utf8(res.body.clone()).map_err(|e| SourceError::Parse {
                 message: format!("response was not utf-8: {e}"),
             }),
             404 => Err(SourceError::NotFound {
@@ -101,8 +122,8 @@ fn host_of(url: &str) -> &str {
         .unwrap_or(url)
 }
 
-fn retry_after(res: &extism_pdk::HttpResponse) -> Option<u32> {
-    res.headers()
+fn retry_after(res: &HostResponse) -> Option<u32> {
+    res.headers
         .iter()
         .find(|(k, _)| k.eq_ignore_ascii_case("retry-after"))
         .and_then(|(_, v)| v.trim().parse().ok())
