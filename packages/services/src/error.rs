@@ -16,6 +16,16 @@ pub enum ServiceError {
     CategoryExists { name: String },
     #[error("no category with id {id}")]
     CategoryNotFound { id: String },
+    #[error("backup was written by a newer version (found {found}, supports up to {supported})")]
+    BackupVersion { found: u32, supported: u32 },
+    #[error("no sync folder has been chosen")]
+    SyncNotConfigured,
+    #[error("the sync folder has no snapshot yet")]
+    SyncNoSnapshot,
+    #[error("{kind} command failed: {detail}")]
+    SyncHookFailed { kind: String, detail: String },
+    #[error("{kind} command did not finish within {seconds}s")]
+    SyncHookTimeout { kind: String, seconds: u64 },
 }
 
 impl ServiceError {
