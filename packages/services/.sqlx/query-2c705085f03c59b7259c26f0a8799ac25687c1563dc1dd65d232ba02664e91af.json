@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT key AS \"key!: String\", byte_size AS \"byte_size!: i64\"\n           FROM image_cache ORDER BY accessed_at ASC",
+  "describe": {
+    "columns": [
+      {
+        "name": "key!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "image_cache",
+            "name": "key"
+          }
+        }
+      },
+      {
+        "name": "byte_size!: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "image_cache",
+            "name": "byte_size"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "2c705085f03c59b7259c26f0a8799ac25687c1563dc1dd65d232ba02664e91af"
+}

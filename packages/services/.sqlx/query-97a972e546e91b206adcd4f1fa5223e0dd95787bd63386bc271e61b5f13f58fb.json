@@ -1,0 +1,28 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) AS \"file_count!: i64\",\n                  COALESCE(SUM(byte_size), 0) AS \"total_bytes!: i64\"\n           FROM image_cache",
+  "describe": {
+    "columns": [
+      {
+        "name": "file_count!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      },
+      {
+        "name": "total_bytes!: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "97a972e546e91b206adcd4f1fa5223e0dd95787bd63386bc271e61b5f13f58fb"
+}

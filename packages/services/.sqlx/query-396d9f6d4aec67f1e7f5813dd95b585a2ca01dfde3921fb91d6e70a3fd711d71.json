@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT source_id, manga_id, added_at,\n                  cached_total_chapters, last_checked_at, updates_cleared_at\n           FROM library_entry",
+  "describe": {
+    "columns": [
+      {
+        "name": "source_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "source_id"
+          }
+        }
+      },
+      {
+        "name": "manga_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "manga_id"
+          }
+        }
+      },
+      {
+        "name": "added_at",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "added_at"
+          }
+        }
+      },
+      {
+        "name": "cached_total_chapters",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "cached_total_chapters"
+          }
+        }
+      },
+      {
+        "name": "last_checked_at",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "last_checked_at"
+          }
+        }
+      },
+      {
+        "name": "updates_cleared_at",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "updates_cleared_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "396d9f6d4aec67f1e7f5813dd95b585a2ca01dfde3921fb91d6e70a3fd711d71"
+}

@@ -70,6 +70,23 @@ export const commands = {
 	localPages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("local_pages", { sourceId, mangaId, chapterId })),
 	deleteDownload: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("delete_download", { sourceId, mangaId, chapterId })),
 	listDownloads: () => typedError<DownloadedManga[], CommandError>(__TAURI_INVOKE("list_downloads")),
+	exportBackup: (path: string) => typedError<null, CommandError>(__TAURI_INVOKE("export_backup", { path })),
+	importBackup: (path: string, mode: ImportMode) => typedError<ImportReport, CommandError>(__TAURI_INVOKE("import_backup", { path, mode })),
+	restartApp: () => __TAURI_INVOKE<void>("restart_app"),
+	syncStatus: () => typedError<SyncStatus, CommandError>(__TAURI_INVOKE("sync_status")),
+	setSyncFolder: (path: string | null) => typedError<null, CommandError>(__TAURI_INVOKE("set_sync_folder", { path })),
+	syncPush: () => typedError<SyncStatus, CommandError>(__TAURI_INVOKE("sync_push")),
+	syncPull: () => typedError<ImportReport, CommandError>(__TAURI_INVOKE("sync_pull")),
+	setSyncHooks: (postPush: string | null, prePull: string | null) => typedError<null, CommandError>(__TAURI_INVOKE("set_sync_hooks", { postPush, prePull })),
+	debugState: () => typedError<DebugState, CommandError>(__TAURI_INVOKE("debug_state")),
+	debugTable: (name: string, page: number) => typedError<TablePage, CommandError>(__TAURI_INVOKE("debug_table", { name, page })),
+	callLog: () => typedError<CallLogState, CommandError>(__TAURI_INVOKE("call_log")),
+	setCallRecording: (on: boolean) => typedError<null, CommandError>(__TAURI_INVOKE("set_call_recording", { on })),
+	clearCallLog: () => typedError<null, CommandError>(__TAURI_INVOKE("clear_call_log")),
+	exportCallLog: (path: string) => typedError<null, CommandError>(__TAURI_INVOKE("export_call_log", { path })),
+	exportTableRows: (path: string, table: string, columns: string[], rows: ((string | null)[])[]) => typedError<null, CommandError>(__TAURI_INVOKE("export_table_rows", { path, table, columns, rows })),
+	imageCacheStats: () => typedError<ImageCacheStats, CommandError>(__TAURI_INVOKE("image_cache_stats")),
+	clearImageCache: () => typedError<null, CommandError>(__TAURI_INVOKE("clear_image_cache")),
 	takeStartupWarnings: () => typedError<StartupWarning[], CommandError>(__TAURI_INVOKE("take_startup_warnings")),
 };
 
@@ -87,10 +104,28 @@ export type AppearanceSettings = {
 	compact_mode?: boolean,
 	cover_style?: CoverStyle,
 	card_size?: CardSize,
-	/**  How the library screen lays out entries: a cover grid or a compact list. */
 	library_layout?: LibraryLayout,
-	/**  Whether the unread-count badge is drawn on library covers. */
 	show_unread_badge?: boolean,
+};
+
+export type CallEntry = {
+	source_id: string,
+	method: string,
+	url: string,
+	status: number | null,
+	error: string | null,
+	duration_ms: number | null,
+	at: string,
+	request_headers: ([string, string])[],
+	response_headers: ([string, string])[],
+	body: string,
+	body_bytes: number | null,
+	truncated: boolean,
+};
+
+export type CallLogState = {
+	recording: boolean,
+	entries: CallEntry[],
 };
 
 export type CardSize = "Small" | "Medium" | "Large";
@@ -166,6 +201,30 @@ export type ContinueReadingItem = {
 
 export type CoverStyle = "Default" | "Rounded" | "Border" | "Shadow";
 
+export type DebugExtension = {
+	id: string,
+	version: string,
+	abi_version: number,
+	sources: string[],
+};
+
+export type DebugPath = {
+	name: string,
+	path: string,
+	exists: boolean,
+};
+
+export type DebugState = {
+	app_version: string,
+	abi_version: number,
+	device_name: string,
+	paths: DebugPath[],
+	extensions: DebugExtension[],
+	image_cache: ImageCacheStats,
+	tables: TableCount[],
+	settings: Settings,
+};
+
 export type DownloadProgress = {
 	source_id: string,
 	manga_id: string,
@@ -218,6 +277,11 @@ export type ExtensionInfo = {
 	website: string | null,
 };
 
+export type ExtensionRef = {
+	id: string,
+	version: string,
+};
+
 /**
  *  A filter a source exposes on its search screen. Every variant is keyed by an
  *  `id` that ties it to the [`FilterValue`] the user sends back.
@@ -262,6 +326,23 @@ export type HomepageSection = {
 	layout: SectionLayout,
 	items: MangaSimple[],
 	paginable: boolean,
+};
+
+export type ImageCacheLimit = "Off" | "Mb256" | "Mb512" | "Gb1" | "Gb2";
+
+export type ImageCacheStats = {
+	file_count: number,
+	total_bytes: number | null,
+};
+
+export type ImportMode = "Merge" | "Replace";
+
+export type ImportReport = {
+	entries: number,
+	categories: number,
+	read_chapters: number,
+	progress: number,
+	missing_extensions: ExtensionRef[],
 };
 
 export type InstalledExtension = {
@@ -444,11 +525,45 @@ export type StartupWarning = {
 
 export type Status = "Ongoing" | "Completed" | "Hiatus" | "Cancelled" | "Unknown";
 
+export type SyncStatus = {
+	folder: string | null,
+	device_name: string,
+	remote_device_name: string | null,
+	remote_created_at: string | null,
+	remote_is_this_device: boolean,
+	local_activity_at: string | null,
+	last_push_at: string | null,
+	last_pull_at: string | null,
+	/**
+	 *  True when this device has read or added something after the snapshot in
+	 *  the folder was taken — pulling would discard it.
+	 */
+	local_changes_since_remote: boolean,
+	post_push_command: string | null,
+	pre_pull_command: string | null,
+};
+
 export type SystemSettings = {
 	update_on_startup?: boolean,
 	background_updates?: UpdateInterval,
 	confirm_removal?: boolean,
 	enable_notifications?: boolean,
+	image_cache_limit?: ImageCacheLimit,
+	developer_mode?: boolean,
+};
+
+export type TableCount = {
+	name: string,
+	rows: number | null,
+};
+
+export type TablePage = {
+	name: string,
+	columns: string[],
+	rows: ((string | null)[])[],
+	total: number | null,
+	page: number,
+	page_size: number,
 };
 
 export type Tag = {
@@ -460,7 +575,6 @@ export type Theme = "Default" | "Void" | "Havoc" | "Amber" | "Rose" | "Cyberpunk
 
 export type ThemeDarkMode = "System" | "Light" | "Dark";
 
-/**  How often the app checks the library for new chapters in the background. */
 export type UpdateInterval = "Off" | "Every6Hours" | "Every12Hours" | "Every24Hours";
 
 export type WarningKind = "SettingsCorrupt" | "ExtensionFailed";

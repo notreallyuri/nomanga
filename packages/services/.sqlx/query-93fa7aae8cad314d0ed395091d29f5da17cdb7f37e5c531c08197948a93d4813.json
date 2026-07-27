@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO library_entry (source_id, manga_id, added_at,\n                                        cached_total_chapters, last_checked_at, updates_cleared_at)\n             VALUES (?, ?, ?, ?, ?, ?)\n             ON CONFLICT (source_id, manga_id) DO UPDATE SET\n                 cached_total_chapters = excluded.cached_total_chapters,\n                 last_checked_at = excluded.last_checked_at,\n                 updates_cleared_at = excluded.updates_cleared_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "93fa7aae8cad314d0ed395091d29f5da17cdb7f37e5c531c08197948a93d4813"
+}

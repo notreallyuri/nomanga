@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO image_cache (key, url, content_type, byte_size, created_at, accessed_at)\n         VALUES (?, ?, ?, ?, ?, ?)\n         ON CONFLICT (key) DO UPDATE SET\n             content_type = excluded.content_type,\n             byte_size = excluded.byte_size,\n             accessed_at = excluded.accessed_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "6a46caae61a4c085755ea18dfeb66333a4a613073969d2b903bcffc93f6f81b9"
+}

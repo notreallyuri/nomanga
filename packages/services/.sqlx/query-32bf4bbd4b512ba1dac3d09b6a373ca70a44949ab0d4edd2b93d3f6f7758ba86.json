@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO read_progress (source_id, manga_id, last_chapter_id, last_page,\n                                        last_chapter_done, updated_at)\n             VALUES (?, ?, ?, ?, ?, ?)\n             ON CONFLICT (source_id, manga_id) DO UPDATE SET\n                 last_chapter_id = excluded.last_chapter_id,\n                 last_page = excluded.last_page,\n                 last_chapter_done = excluded.last_chapter_done,\n                 updated_at = excluded.updated_at\n             WHERE excluded.updated_at > read_progress.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "32bf4bbd4b512ba1dac3d09b6a373ca70a44949ab0d4edd2b93d3f6f7758ba86"
+}

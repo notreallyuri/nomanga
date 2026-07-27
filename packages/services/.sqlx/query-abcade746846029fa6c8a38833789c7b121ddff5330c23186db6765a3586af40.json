@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT m.source_id, m.manga_id, m.title, m.cover_url, m.description,\n                  m.authors, m.artists, m.tags, m.status, m.cached_at\n           FROM manga m\n           JOIN library_entry e ON e.source_id = m.source_id AND e.manga_id = m.manga_id",
+  "describe": {
+    "columns": [
+      {
+        "name": "source_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "source_id"
+          }
+        }
+      },
+      {
+        "name": "manga_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "manga_id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "cover_url",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "cover_url"
+          }
+        }
+      },
+      {
+        "name": "description",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "name": "authors",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "authors"
+          }
+        }
+      },
+      {
+        "name": "artists",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "artists"
+          }
+        }
+      },
+      {
+        "name": "tags",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "tags"
+          }
+        }
+      },
+      {
+        "name": "status",
+        "ordinal": 8,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "name": "cached_at",
+        "ordinal": 9,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "cached_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "abcade746846029fa6c8a38833789c7b121ddff5330c23186db6765a3586af40"
+}

@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT MAX(ts) AS \"ts: DateTime<Utc>\" FROM (\n               SELECT MAX(added_at)   AS ts FROM library_entry\n               UNION ALL SELECT MAX(updated_at) FROM read_progress\n               UNION ALL SELECT MAX(read_at)    FROM read_chapter\n           )",
+  "describe": {
+    "columns": [
+      {
+        "name": "ts: DateTime<Utc>",
+        "ordinal": 0,
+        "type_info": "Null",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9abc97d7c7037e198ac861950cc6e72c4291c35dc12ed3aad060ef56ab0b5aa0"
+}
