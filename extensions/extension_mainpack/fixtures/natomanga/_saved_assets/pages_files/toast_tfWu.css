@@ -1,0 +1,63 @@
+:root {
+    --color-default: #71717a;
+    --color-error: #ED3849;
+    --color-success: #22c55e;
+    --color-warning: #eab308;
+    --color-text: white;
+}
+
+.comment-toast-notification {
+    min-width: 300px;
+    max-width: 500px;
+    background-color: var(--color-default);
+    display: flex;
+    justify-content: space-between;
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    z-index: 9999999;
+    padding: 12px;
+    border-radius: 16px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    color: var(--color-text);
+}
+
+.comment-toast-notification-message {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 16px;
+    padding: 0 12px;
+    letter-spacing: 0.2px;
+}
+
+.comment-toast-notification-close {
+    font-size: 18px;
+    line-height: 18px;
+    color: var(--color-text);
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    outline: none;
+}
+
+.comment-toast-notification[status="error"] {
+    background-color: var(--color-error);
+}
+
+.comment-toast-notification[status="success"] {
+    background-color: var(--color-success);
+}
+
+.comment-toast-notification[status="warning"] {
+    background-color: var(--color-warning);
+}
+
+/* For mobile */
+@media screen and (max-width: 768px) {
+    .comment-toast-notification {
+        max-width: max-content;
+        min-width: min-content;
+        left: 8px;
+        right: 8px;
+    }
+}

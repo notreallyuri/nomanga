@@ -1,0 +1,109 @@
+/*!
+  QQ Comment Service v1.1.0
+ */
+
+#reportModal * {
+    font-family: 'Nunito', sans-serif;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.modal-overlay.hidden {
+    display: none
+}
+
+.modal-content {
+    background: white;
+    padding: 20px 25px;
+    width: 400px;
+    max-width: 90%;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    font-family: sans-serif;
+    color: black;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+}
+
+.modal-content textarea {
+    width: -webkit-fill-available;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    resize: vertical;
+}
+
+.modal-content div {
+    font-size: 16px;
+}
+
+.report-options {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.report-options li label {
+    background: #F7F7F7;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    color: black;
+}
+
+.report-options label:has(input:checked) {
+    background: color-mix(in srgb, var(--comment-primary-color) 20%, white);
+    border: 1px solid var(--comment-primary-color);
+}
+
+.report-options li label input {
+    margin: 0;
+}
+
+.report-options li {
+    margin-bottom: 8px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.modal-actions .btn {
+    flex: 1;
+    border: none;
+    border-radius: 5px;
+    padding: 12px;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background: #000;
+    color: white !important;
+}
+
+.report-btn {
+    background: var(--comment-primary-color);;
+    color: white;
+}
+
+.radio-input {
+    display: none;
+}
