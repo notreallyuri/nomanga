@@ -9,6 +9,8 @@
   passing as of 2026-07-26, so its selectors can be verified against live
   HTML rather than saved fixtures. Manhwa-heavy.
 - [ ] Hitomi — not started.
+- [ ] MangaPlus - not started.
+- [ ] E-Hentai - not started.
 - [ ] MadaraDex — not started.
 
 ### Cloudflare bypass
@@ -35,6 +37,8 @@
 
 - [ ] Update Behavior customization
 
+#### Keep downloaded media compacted
+
 ### Browse
 
 - [ ] Allow name-searching in all sources (does not include source-specific
@@ -45,19 +49,6 @@
 - [ ] Tray menu implementation.
 
 ### System
-
-A, B and C are done; **D was dropped**; E is what remains.
-
-D (a relocatable data directory) was only ever the *mechanism* for the sync goal
-the original TODO line described — "move the database/settings outside the app
-**and sync between multiple systems**". C delivers that goal without moving
-anything, so relocation buys nothing and costs the riskiest change in the topic:
-closing the pool mid-session, copying a live database, a pointer file outside the
-data dir, and a static `assetProtocol` scope that no longer covers downloads.
-The data stays where the rest of the configuration lives. Not revisiting unless
-a concrete need appears that C cannot serve.
-
-E1 is last because of an open unknown (see below).
 
 #### E. Developer section
 
