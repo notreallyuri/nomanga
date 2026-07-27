@@ -11,8 +11,11 @@ nomanga-core = { path = "../core" }
 
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { version = "1", features = ["rt", "macros"] }
+tokio = { version = "1", features = ["rt", "macros", "fs", "process", "time"] }
 thiserror = "2"
+sha2 = "0.10"
+flate2 = "1"
+gethostname = "1"
 
 chrono = { version = "0.4", features = ["serde"]}
 uuid = { version = "1", features = ["v4"] }
