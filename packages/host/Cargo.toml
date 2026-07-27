@@ -8,3 +8,4 @@ nomanga-core = { path = "../core" }
 extism = "1.30"
 serde = { workspace = true }
 thiserror = "2"
+chrono = { version = "0.4", features = ["serde"] }

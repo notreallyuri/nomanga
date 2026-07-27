@@ -91,7 +91,7 @@ export function MangaCard({
 				titleVisible={titleVisible}
 				// Proxied so covers on hotlink-protected CDNs (NatoManga) load;
 				// a pass-through for every other source.
-				url={sourceImageUrl(sourceId, coverUrl)}
+				url={sourceImageUrl(sourceId, coverUrl, { cache: true })}
 			/>
 
 			{titleVisible && (

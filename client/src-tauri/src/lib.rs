@@ -12,6 +12,7 @@ pub mod commands;
 pub mod downloads;
 pub mod error;
 pub mod image_proxy;
+pub mod transport;
 
 pub struct AppState {
     pub pool: sqlx::SqlitePool,
@@ -24,6 +25,10 @@ pub struct AppState {
     pub startup_warnings: Arc<RwLock<Vec<nomanga_services::StartupWarning>>>,
     pub downloads: downloads::DownloadManager,
     pub downloads_dir: PathBuf,
+    pub image_cache_dir: PathBuf,
+    pub sync: Arc<RwLock<nomanga_services::sync::SyncState>>,
+    pub sync_path: PathBuf,
+    pub transport: nomanga_host::transport::TransportShared,
 }
 
 pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
@@ -97,6 +102,27 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::downloads::local_pages,
             commands::downloads::delete_download,
             commands::downloads::list_downloads,
+            // backup
+            commands::backup::export_backup,
+            commands::backup::import_backup,
+            commands::backup::restart_app,
+            // sync
+            commands::sync::sync_status,
+            commands::sync::set_sync_folder,
+            commands::sync::sync_push,
+            commands::sync::sync_pull,
+            commands::sync::set_sync_hooks,
+            // debug
+            commands::debug::debug_state,
+            commands::debug::debug_table,
+            commands::debug::call_log,
+            commands::debug::set_call_recording,
+            commands::debug::clear_call_log,
+            commands::debug::export_call_log,
+            commands::debug::export_table_rows,
+            // cache
+            commands::cache::image_cache_stats,
+            commands::cache::clear_image_cache,
             //startup
             startup::take_startup_warnings
         ])
@@ -136,17 +162,33 @@ pub fn run() {
 
             let mut warnings = Vec::new();
 
-            let registry =
-                match nomanga_host::registry::Registry::scan(dir.join("extensions"), &configs) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        warnings.push(StartupWarning {
-                            kind: WarningKind::ExtensionFailed,
-                            message: format!("Could not load extensions: {e}"),
-                        });
-                        nomanga_host::registry::Registry::empty(dir.join("extensions"))
-                    }
-                };
+            let http = reqwest::Client::builder()
+                .user_agent(
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 \
+                     (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+                )
+                .build()
+                .expect("failed to build http client");
+
+            let transport = transport::shared(http.clone());
+
+            let registry = match nomanga_host::registry::Registry::scan(
+                dir.join("extensions"),
+                &configs,
+                transport.clone(),
+            ) {
+                Ok(r) => r,
+                Err(e) => {
+                    warnings.push(StartupWarning {
+                        kind: WarningKind::ExtensionFailed,
+                        message: format!("Could not load extensions: {e}"),
+                    });
+                    nomanga_host::registry::Registry::empty(
+                        dir.join("extensions"),
+                        transport.clone(),
+                    )
+                }
+            };
 
             let settings_path = dir.join("settings.json");
 
@@ -170,20 +212,35 @@ pub fn run() {
             std::fs::create_dir_all(&downloads_dir).ok();
             let downloads = downloads::DownloadManager::new(handle.clone(), downloads_dir.clone());
 
+            let sync_path = dir.join("sync.json");
+            let mut sync = nomanga_services::sync::load(&sync_path).unwrap_or_default();
+
+            // Only matters as a destination when the folder itself is the
+            // shared medium; with upload/download commands it is staging, so
+            // default it rather than making the user choose one.
+            if sync.folder.is_none() {
+                sync.folder = Some(dir.join("sync"));
+            }
+
+            let image_cache_dir = handle
+                .path()
+                .app_cache_dir()
+                .unwrap_or_else(|_| dir.clone())
+                .join("images");
+            std::fs::create_dir_all(&image_cache_dir).ok();
+
             app.manage(AppState {
                 pool,
-                http: reqwest::Client::builder()
-                    .user_agent(
-                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 \
-                         (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
-                    )
-                    .build()
-                    .expect("failed to build http client"),
+                http,
                 registry: Arc::new(RwLock::new(registry)),
                 settings: Arc::new(RwLock::new(settings)),
                 settings_path,
                 startup_warnings: Arc::new(RwLock::new(warnings)),
                 downloads,
+                image_cache_dir,
+                sync: Arc::new(RwLock::new(sync)),
+                sync_path,
+                transport,
                 downloads_dir,
             });
 

@@ -20,6 +20,7 @@ use std::collections::HashMap;
 
 pub mod error;
 pub mod rate_limit;
+pub mod transport;
 pub mod registry;
 
 pub struct ExtensionMetadata {
@@ -38,7 +39,8 @@ impl ExtensionMetadata {
         })?;
 
         let manifest = Manifest::new([Wasm::data(bytes)]);
-        let mut plugin = Plugin::new(&manifest, [], true)?;
+        let (function, _) = crate::transport::function(crate::transport::denied().context(Vec::new()));
+        let mut plugin = Plugin::new(&manifest, [function], true)?;
 
         let Json(extension): Json<ExtensionInfo> = plugin.call("get_extension", ())?;
 
@@ -71,6 +73,7 @@ impl ExtensionMetadata {
         &self,
         allowed_hosts: Vec<String>,
         config: HashMap<String, String>,
+        transport: crate::transport::TransportContext,
     ) -> HostResult<LoadedExtension> {
         let bytes = std::fs::read(&self.wasm_path).map_err(|source| HostError::WasmRead {
             path: self.wasm_path.clone(),
@@ -84,10 +87,12 @@ impl ExtensionMetadata {
             manifest = manifest.with_config_key(&k, v);
         }
 
-        let plugin = Plugin::new(&manifest, [], true)?;
+        let (function, transport_data) = crate::transport::function(transport);
+        let plugin = Plugin::new(&manifest, [function], true)?;
 
         Ok(LoadedExtension {
             plugin,
+            transport_data,
             source_ids: self.sources.iter().map(|s| s.id.clone()).collect(),
         })
     }
@@ -95,6 +100,7 @@ impl ExtensionMetadata {
 
 pub struct LoadedExtension {
     plugin: Plugin,
+    transport_data: extism::UserData<crate::transport::TransportContext>,
     source_ids: Vec<String>,
 }
 
@@ -113,6 +119,7 @@ impl LoadedExtension {
         T: serde::de::DeserializeOwned,
     {
         self.ensure_source(source_id)?;
+        crate::transport::set_source(&self.transport_data, source_id);
         let input = Sourced {
             source_id: source_id.to_owned(),
             payload,

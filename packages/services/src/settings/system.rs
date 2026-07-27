@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-/// How often the app checks the library for new chapters in the background.
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UpdateInterval {
@@ -13,7 +12,6 @@ pub enum UpdateInterval {
 }
 
 impl UpdateInterval {
-    /// The interval between background checks, or `None` when disabled.
     pub fn duration(self) -> Option<Duration> {
         let hours = match self {
             UpdateInterval::Off => return None,
@@ -26,6 +24,30 @@ impl UpdateInterval {
 }
 
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ImageCacheLimit {
+    Off,
+    Mb256,
+    #[default]
+    Mb512,
+    Gb1,
+    Gb2,
+}
+
+impl ImageCacheLimit {
+    pub fn bytes(self) -> Option<u64> {
+        let megabytes = match self {
+            ImageCacheLimit::Off => return None,
+            ImageCacheLimit::Mb256 => 256,
+            ImageCacheLimit::Mb512 => 512,
+            ImageCacheLimit::Gb1 => 1024,
+            ImageCacheLimit::Gb2 => 2048,
+        };
+        Some(megabytes * 1024 * 1024)
+    }
+}
+
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SystemSettings {
@@ -33,6 +55,8 @@ pub struct SystemSettings {
     pub background_updates: UpdateInterval,
     pub confirm_removal: bool,
     pub enable_notifications: bool,
+    pub image_cache_limit: ImageCacheLimit,
+    pub developer_mode: bool,
 }
 
 impl Default for SystemSettings {
@@ -42,6 +66,8 @@ impl Default for SystemSettings {
             background_updates: UpdateInterval::Off,
             confirm_removal: true,
             enable_notifications: true,
+            image_cache_limit: ImageCacheLimit::default(),
+            developer_mode: false,
         }
     }
 }

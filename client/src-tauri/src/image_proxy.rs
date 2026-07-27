@@ -12,6 +12,7 @@
 //! the source id is what resolves the referer, via the registry's `base_url`.
 
 use crate::AppState;
+use nomanga_services::cache::image as image_cache;
 use tauri::{
     http::{Request, Response, StatusCode},
     Manager, Runtime, UriSchemeContext, UriSchemeResponder,
@@ -26,7 +27,7 @@ pub fn handle<R: Runtime>(
 ) {
     let app = ctx.app_handle().clone();
 
-    let Some((source_id, image_url)) = parse_request(request.uri()) else {
+    let Some((source_id, image_url, cacheable)) = parse_request(request.uri()) else {
         responder.respond(error(StatusCode::BAD_REQUEST));
         return;
     };
@@ -40,6 +41,23 @@ pub fn handle<R: Runtime>(
 
     tauri::async_runtime::spawn(async move {
         let state = app.state::<AppState>();
+
+        let limit = state
+            .settings
+            .read()
+            .ok()
+            .and_then(|s| s.system.image_cache_limit.bytes())
+            .filter(|_| cacheable);
+
+        if limit.is_some() {
+            if let Ok(Some((bytes, content_type))) =
+                image_cache::read(&state.pool, &state.image_cache_dir, &image_url).await
+            {
+                responder.respond(image(bytes, content_type));
+                return;
+            }
+        }
+
         let referer = crate::downloads::source_base_url(&state.registry, &source_id);
         let client = state.http.clone();
 
@@ -72,27 +90,50 @@ pub fn handle<R: Runtime>(
             .unwrap_or("image/jpeg")
             .to_owned();
 
-        match response.bytes().await {
-            Ok(bytes) => responder.respond(
-                Response::builder()
-                    .status(StatusCode::OK)
-                    .header("Content-Type", content_type)
-                    .header("Access-Control-Allow-Origin", "*")
-                    // Source images are content-addressed and effectively
-                    // immutable, so let the webview keep them.
-                    .header("Cache-Control", "public, max-age=86400")
-                    .body(bytes.to_vec())
-                    .unwrap_or_else(|_| error(StatusCode::INTERNAL_SERVER_ERROR)),
-            ),
-            Err(_) => responder.respond(error(StatusCode::BAD_GATEWAY)),
+        let Ok(bytes) = response.bytes().await else {
+            responder.respond(error(StatusCode::BAD_GATEWAY));
+            return;
+        };
+
+        responder.respond(image(bytes.to_vec(), content_type.clone()));
+
+        // Persisting is deliberately after the response so a slow disk never
+        // delays first paint.
+        if let Some(max_bytes) = limit {
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move {
+                let state = app.state::<AppState>();
+                image_cache::write(
+                    &state.pool,
+                    &state.image_cache_dir,
+                    &image_url,
+                    &content_type,
+                    &bytes,
+                    max_bytes,
+                )
+                .await
+                .ok();
+            });
         }
     });
+}
+
+fn image(bytes: Vec<u8>, content_type: String) -> Response<Vec<u8>> {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", content_type)
+        .header("Access-Control-Allow-Origin", "*")
+        // Source images are content-addressed and effectively immutable, so let
+        // the webview keep them.
+        .header("Cache-Control", "public, max-age=86400")
+        .body(bytes)
+        .unwrap_or_else(|_| error(StatusCode::INTERNAL_SERVER_ERROR))
 }
 
 /// `srcimg://localhost/<source_id>?url=…` on Linux and macOS,
 /// `http://srcimg.localhost/<source_id>?url=…` on Windows — parsing the whole
 /// URI rather than the path alone keeps both shapes working.
-fn parse_request(uri: &tauri::http::Uri) -> Option<(String, String)> {
+fn parse_request(uri: &tauri::http::Uri) -> Option<(String, String, bool)> {
     let parsed = tauri::Url::parse(&uri.to_string()).ok()?;
 
     let source_id = parsed
@@ -107,7 +148,13 @@ fn parse_request(uri: &tauri::http::Uri) -> Option<(String, String)> {
         .map(|(_, value)| value.into_owned())
         .filter(|s| !s.is_empty())?;
 
-    Some((source_id, image_url))
+    // Opt-in per call site: only covers are worth keeping on disk, and reader
+    // pages would swamp the cache within a single chapter.
+    let cacheable = parsed
+        .query_pairs()
+        .any(|(key, value)| key == "cache" && value == "1");
+
+    Some((source_id, image_url, cacheable))
 }
 
 fn percent_decode(value: &str) -> String {

@@ -8,7 +8,7 @@ use crate::extension::query::{ChapterRef, MangaPage, MangaRef, SearchQuery, Sect
 use crate::extension::rate_limit::RateLimit;
 use serde::{Deserialize, Serialize};
 
-pub const ABI_VERSION: u32 = 3;
+pub const ABI_VERSION: u32 = 4;
 
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Serialize, Deserialize, Debug, Clone)]

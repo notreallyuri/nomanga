@@ -8,7 +8,8 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { SETTINGS_SECTIONS, type SettingsItem } from "./nav";
+import { useSettings } from "@/hooks/services/use-settings";
+import { DEVELOPER_ONLY, SETTINGS_SECTIONS, type SettingsItem } from "./nav";
 
 interface Props {
 	current: SettingsItem;
@@ -16,10 +17,20 @@ interface Props {
 }
 
 export function SettingsSidebar({ current, onChange }: Props) {
+	const { data: settings } = useSettings();
+	const showDeveloper = settings?.system?.developer_mode ?? false;
+
+	const sections = SETTINGS_SECTIONS.map((section) => ({
+		...section,
+		items: section.items.filter(
+			(item) => showDeveloper || !DEVELOPER_ONLY.includes(item.name),
+		),
+	})).filter((section) => section.items.length > 0);
+
 	return (
 		<Sidebar className="border-r" collapsible="none">
 			<SidebarContent>
-				{SETTINGS_SECTIONS.map((section) => (
+				{sections.map((section) => (
 					<SidebarGroup key={section.title}>
 						<SidebarGroupLabel className="font-semibold text-muted-foreground text-xs uppercase">
 							{section.title}

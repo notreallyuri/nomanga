@@ -269,8 +269,6 @@ async fn updates_exclude_hidden_categories() {
         .unwrap();
     add_to_library(&pool, "src", "m1").await.unwrap();
 
-    // Push added_at into the past so the second sync's new chapter is seen as
-    // an update (updates require first_seen_at > added_at).
     let past = "2000-01-01T00:00:00Z".parse::<DateTime<Utc>>().unwrap();
     sqlx::query!(
         "UPDATE library_entry SET added_at = ? WHERE source_id = ? AND manga_id = ?",
@@ -282,7 +280,6 @@ async fn updates_exclude_hidden_categories() {
     .await
     .unwrap();
 
-    // First sync seeds the existing chapter; the second brings a genuinely new one.
     sync_chapters(&pool, "src", "m1", &[sample_chapter("c1", 1.0)])
         .await
         .unwrap();
@@ -297,7 +294,6 @@ async fn updates_exclude_hidden_categories() {
 
     assert_eq!(library_updates(&pool, 30).await.unwrap().len(), 1);
 
-    // Filing the series under a hidden category removes it from the feed.
     let secret = create_category(&pool, "Secret").await.unwrap();
     update_category_options(
         &pool,

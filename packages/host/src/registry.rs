@@ -48,12 +48,14 @@ pub struct Registry {
     dir: PathBuf,
     extensions: Vec<ExtensionInfo>,
     sources: HashMap<String, SourceHandle>,
+    transport: crate::transport::TransportShared,
 }
 
 impl Registry {
     pub fn scan(
         dir: impl AsRef<Path>,
         configs: &HashMap<String, HashMap<String, String>>,
+        transport: crate::transport::TransportShared,
     ) -> HostResult<Self> {
         let dir = dir.as_ref().to_path_buf();
         std::fs::create_dir_all(&dir).ok();
@@ -62,6 +64,7 @@ impl Registry {
             dir,
             extensions: Vec::new(),
             sources: HashMap::new(),
+            transport,
         };
 
         let Ok(entries) = std::fs::read_dir(&registry.dir) else {
@@ -119,7 +122,11 @@ impl Registry {
             .find(|s| s.id == source_id)
             .ok_or_else(|| HostError::UnknownSource(source_id.into()))?;
 
-        let mut plugin = meta.activate(source.hosts.clone(), config)?;
+        let mut plugin = meta.activate(
+            source.hosts.clone(),
+            config,
+            self.transport.context(source.hosts.clone()),
+        )?;
         let limits = plugin.rate_limits(source_id).unwrap_or_default();
 
         if let Some(h) = self.sources.get_mut(source_id) {
@@ -140,7 +147,11 @@ impl Registry {
 
         for source in &meta.sources {
             let config = configs.get(&source.id).cloned().unwrap_or_default();
-            let mut plugin = meta.activate(source.hosts.clone(), config)?;
+            let mut plugin = meta.activate(
+            source.hosts.clone(),
+            config,
+            self.transport.context(source.hosts.clone()),
+        )?;
             let limits = plugin.rate_limits(&source.id).unwrap_or_default();
 
             self.sources.insert(
@@ -174,12 +185,21 @@ impl Registry {
         &self.extensions
     }
 
-    pub fn empty(dir: impl Into<PathBuf>) -> Self {
+    pub fn empty(dir: impl Into<PathBuf>, transport: crate::transport::TransportShared) -> Self {
         Self {
             dir: dir.into(),
             extensions: Vec::new(),
             sources: HashMap::new(),
+            transport,
         }
+    }
+
+    pub fn call_log(&self) -> &std::sync::Arc<crate::transport::CallLog> {
+        &self.transport.log
+    }
+
+    pub fn recording(&self) -> &std::sync::Arc<std::sync::atomic::AtomicBool> {
+        &self.transport.recording
     }
 
     pub fn sources_of(&self, extension_id: &str) -> Vec<SourceInfo> {

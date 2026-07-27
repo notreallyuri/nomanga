@@ -5,8 +5,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::path::{Path, PathBuf};
 
-/// Source/manga/chapter ids can be arbitrary strings (often URLs), so every
-/// path component is reduced to a filesystem-safe, traversal-proof encoding.
 fn safe(component: &str) -> String {
     let mut out = String::with_capacity(component.len());
     for b in component.bytes() {
@@ -129,8 +127,6 @@ pub async fn downloaded_chapter_ids(
     Ok(ids)
 }
 
-/// Downloaded pages as [`Page`]s whose `image_url` is the absolute path on
-/// disk. Callers convert those to an asset URL for the webview.
 pub async fn local_pages(
     pool: &SqlitePool,
     root: &Path,
@@ -200,8 +196,6 @@ pub struct DownloadedManga {
     pub chapters: Vec<DownloadedChapter>,
 }
 
-/// Every downloaded chapter, grouped by series (with the cached cover/title),
-/// for the downloads management screen.
 pub async fn list_downloads(pool: &SqlitePool) -> ServiceResult<Vec<DownloadedManga>> {
     let rows = sqlx::query!(
         r#"SELECT

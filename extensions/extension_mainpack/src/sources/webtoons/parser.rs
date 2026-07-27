@@ -5,17 +5,27 @@ use nomanga_sdk::data::chapter::Chapter;
 use nomanga_sdk::parse::{document, selector, text_opt};
 use nomanga_sdk::prelude::*;
 
-/// The site ships two card shapes and this covers both, because a source that
-/// only handled one would silently return an empty Canvas listing:
+/// The site ships several card shapes and this covers all of them, because a
+/// source that only handled one would silently return an empty Canvas listing:
 ///
 /// - Originals / genre / search wrap `.info_text` with `.title` + `.author`,
 ///   cover in `.image_wrap img` (the anchor class differs per page —
 ///   `_card_item`, `_genre_title_a`, `_originals_title_a` — so it is not used).
 /// - Canvas (`a.challenge_item`) puts `p.subj` + `p.author` directly in the
-///   anchor with the cover in `.img_area img`.
+///   anchor with the cover in `.img_area img`, or in `.pic_area img` for titles
+///   flagged `data-title-unsuitable-for-children` with `harmful_black_skin2`.
 ///
 /// Requiring a title is what separates real cards from the bare `title_no`
 /// links in navigation and "you may also like" strips.
+/// Canvas thumbnails ship as small squares (`a92`, `f164_164`) that look poor
+/// blown up into a cover card; `q90` is the same image at full size.
+fn poster_rendition(src: &str) -> String {
+    match src.split_once("?type=") {
+        Some((base, _)) => format!("{base}?type=q90"),
+        None => src.to_owned(),
+    }
+}
+
 pub fn parse_cards(html: &str) -> SourceResult<Vec<MangaSimple>> {
     let doc = document(html);
 
@@ -27,7 +37,7 @@ pub fn parse_cards(html: &str) -> SourceResult<Vec<MangaSimple>> {
     // rather than one selector list because `select` yields document order,
     // which would pick genre over author on Canvas cards that carry both.
     let genre_sel = selector(".info_text .genre, p.genre")?;
-    let img_sel = selector("div.image_wrap img, span.img_area img")?;
+    let img_sel = selector("div.image_wrap img, span.img_area img, div.pic_area img")?;
 
     let mut items = Vec::new();
     let mut seen = std::collections::BTreeSet::new();
@@ -61,8 +71,8 @@ pub fn parse_cards(html: &str) -> SourceResult<Vec<MangaSimple>> {
                 .next()
                 .and_then(|img| img.value().attr("src"))
                 .filter(|src| src.starts_with("http"))
-                .unwrap_or_default()
-                .to_owned(),
+                .map(poster_rendition)
+                .unwrap_or_default(),
         });
     }
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -58,6 +59,33 @@ export function SettingRow({
 			</div>
 			<div className="shrink-0">{children}</div>
 		</div>
+	);
+}
+
+export function SettingAction({
+	label,
+	description,
+	actionLabel,
+	onAction,
+	disabled,
+}: {
+	label: string;
+	description?: string;
+	actionLabel: string;
+	onAction: () => void;
+	disabled?: boolean;
+}) {
+	return (
+		<SettingRow description={description} label={label}>
+			<Button
+				disabled={disabled}
+				onClick={onAction}
+				size="sm"
+				variant="outline"
+			>
+				{actionLabel}
+			</Button>
+		</SettingRow>
 	);
 }
 

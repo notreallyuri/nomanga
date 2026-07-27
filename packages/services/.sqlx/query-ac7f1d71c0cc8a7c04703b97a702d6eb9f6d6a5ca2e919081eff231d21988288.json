@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT content_type FROM image_cache WHERE key = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "content_type",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "image_cache",
+            "name": "content_type"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ac7f1d71c0cc8a7c04703b97a702d6eb9f6d6a5ca2e919081eff231d21988288"
+}

@@ -5,6 +5,7 @@ import {
 	type Icon,
 	PaletteIcon,
 	PlugsIcon,
+	TerminalWindowIcon,
 } from "@phosphor-icons/react";
 
 export type SettingsRoute =
@@ -13,7 +14,8 @@ export type SettingsRoute =
 	| "Sources"
 	| "Extensions"
 	| "Downloads"
-	| "System";
+	| "System"
+	| "Developer";
 
 export interface SettingsItem {
 	name: SettingsRoute;
@@ -67,6 +69,20 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 			},
 		],
 	},
+	{
+		title: "Advanced",
+		items: [
+			{
+				name: "Developer",
+				icon: TerminalWindowIcon,
+				description: "Inspect app state, paths, and database tables",
+			},
+		],
+	},
 ];
+
+/// Hidden unless developer mode is on — the section is diagnostic, not a
+/// setting anyone needs by default.
+export const DEVELOPER_ONLY: SettingsRoute[] = ["Developer"];
 
 export const DEFAULT_SETTINGS_ROUTE = SETTINGS_SECTIONS[0].items[0];

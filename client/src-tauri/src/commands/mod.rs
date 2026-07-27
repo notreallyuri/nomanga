@@ -1,3 +1,6 @@
+pub mod backup;
+pub mod cache;
+pub mod debug;
 pub mod downloads;
 pub mod extension;
 pub mod history;
@@ -5,6 +8,7 @@ pub mod library;
 pub mod settings;
 pub mod source;
 pub mod startup;
+pub mod sync;
 
 use serde::{Deserialize, Serialize};
 

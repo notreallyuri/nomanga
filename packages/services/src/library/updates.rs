@@ -167,9 +167,6 @@ pub async fn mark_checked(pool: &SqlitePool, source_id: &str, manga_id: &str) ->
     Ok(())
 }
 
-/// Dismisses every currently-surfaced update by stamping each library entry's
-/// `updates_cleared_at`. Chapters seen up to now stop counting as updates; newly
-/// discovered ones (a later `first_seen_at`) surface again on the next check.
 pub async fn clear_updates(pool: &SqlitePool) -> ServiceResult<()> {
     let now = now();
     sqlx::query!("UPDATE library_entry SET updates_cleared_at = ?", now)
