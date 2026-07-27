@@ -65,3 +65,39 @@ fn reads_status_from_the_schedule_line() {
     assert!(matches!(status("HIATUS"), Status::Hiatus));
     assert!(matches!(status(""), Status::Unknown));
 }
+
+#[test]
+fn finds_covers_in_every_card_shape() {
+    // Canvas renders flagged titles with a different skin — `harmful_black_skin2`
+    // swaps `span.img_area` for `div.pic_area`, which silently cost those cards
+    // their cover until the selector covered it.
+    let html = r#"
+      <a href="/en/fantasy/tower-of-god/list?title_no=95">
+        <div class="image_wrap"><img src="https://cdn/o.jpg?type=q90"></div>
+        <div class="info_text"><p class="title">Originals Card</p></div>
+      </a>
+      <a href="/en/canvas/a/list?title_no=1">
+        <span class="img_area"><span class="thum_skin"></span><img src="https://cdn/c1.png?type=f164_164"></span>
+        <p class="subj">Canvas Skin One</p>
+      </a>
+      <a href="/en/canvas/b/list?title_no=2">
+        <div class="pic_area"><img src="https://cdn/c2.jpg?type=a92"></div>
+        <p class="subj">Canvas Skin Two</p>
+      </a>
+    "#;
+
+    let cards = super::parser::parse_cards(html).unwrap();
+    let covers: Vec<_> = cards.iter().map(|c| c.cover_url.as_str()).collect();
+
+    assert_eq!(cards.len(), 3);
+    assert!(covers.iter().all(|c| !c.is_empty()), "{covers:?}");
+    // Square thumbnails are upgraded to the full-size rendition.
+    assert_eq!(
+        covers,
+        vec![
+            "https://cdn/o.jpg?type=q90",
+            "https://cdn/c1.png?type=q90",
+            "https://cdn/c2.jpg?type=q90",
+        ]
+    );
+}
