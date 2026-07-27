@@ -1,0 +1,100 @@
+use nomanga_core::extension::common::{HostRequest, HostResponse};
+use nomanga_host::transport::{CallLog, TransportShared};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    mpsc, Arc,
+};
+
+/// Bridges the extension host's synchronous transport onto the app's async
+/// reqwest client.
+///
+/// Extism host functions are called from inside the wasm invocation, which
+/// already runs on a `spawn_blocking` thread — so blocking here is safe, but
+/// driving an async client from it is not. Requests are handed to a task on the
+/// tokio runtime and the calling thread waits for the reply.
+pub fn shared(client: reqwest::Client) -> TransportShared {
+    let (tx, rx) = mpsc::channel::<(HostRequest, mpsc::Sender<HostResponse>)>();
+
+    // One long-lived receiver task; the channel is the only synchronisation
+    // point between the wasm thread and the runtime.
+    tauri::async_runtime::spawn(async move {
+        while let Ok((request, reply)) = rx.recv() {
+            let response = perform(&client, request).await;
+            let _ = reply.send(response);
+        }
+    });
+
+    let sender = Arc::new(std::sync::Mutex::new(tx));
+
+    TransportShared {
+        fetch: Arc::new(move |request| {
+            let (reply_tx, reply_rx) = mpsc::channel();
+
+            let queued = sender
+                .lock()
+                .map_err(|_| "transport is poisoned".to_owned())
+                .and_then(|tx| {
+                    tx.send((request, reply_tx))
+                        .map_err(|_| "transport has shut down".to_owned())
+                });
+
+            match queued {
+                Ok(()) => reply_rx.recv().unwrap_or_else(|_| failed("no reply")),
+                Err(message) => failed(&message),
+            }
+        }),
+        log: Arc::new(CallLog::default()),
+        recording: Arc::new(AtomicBool::new(false)),
+    }
+}
+
+async fn perform(client: &reqwest::Client, request: HostRequest) -> HostResponse {
+    let mut builder = match request.method.as_str() {
+        "POST" => client.post(&request.url),
+        "PUT" => client.put(&request.url),
+        "DELETE" => client.delete(&request.url),
+        _ => client.get(&request.url),
+    };
+
+    for (key, value) in &request.headers {
+        builder = builder.header(key, value);
+    }
+    if let Some(body) = request.body {
+        builder = builder.body(body);
+    }
+
+    let response = match builder.send().await {
+        Ok(response) => response,
+        Err(e) => return failed(&e.to_string()),
+    };
+
+    let status = response.status().as_u16();
+    let headers = response
+        .headers()
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or_default().to_owned()))
+        .collect();
+
+    match response.bytes().await {
+        Ok(body) => HostResponse {
+            status,
+            headers,
+            body: body.to_vec(),
+            transport_error: None,
+        },
+        Err(e) => failed(&e.to_string()),
+    }
+}
+
+fn failed(message: &str) -> HostResponse {
+    HostResponse {
+        status: 0,
+        headers: Vec::new(),
+        body: Vec::new(),
+        transport_error: Some(message.to_owned()),
+    }
+}
+
+pub fn set_recording(shared: &TransportShared, on: bool) {
+    shared.recording.store(on, Ordering::Relaxed);
+}

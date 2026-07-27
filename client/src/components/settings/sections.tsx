@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { SettingsRoute } from "./nav";
 import { AppearanceSection } from "./sections/appearance";
+import { DeveloperSection } from "./sections/developer";
 import { DownloadsSection } from "./sections/downloads";
 import { ExtensionSection } from "./sections/extensions";
 import { ReaderSection } from "./sections/reader";
@@ -14,4 +15,5 @@ export const SECTIONS: Record<SettingsRoute, ComponentType> = {
 	Extensions: ExtensionSection,
 	Downloads: DownloadsSection,
 	System: SystemSection,
+	Developer: DeveloperSection,
 };

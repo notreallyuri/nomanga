@@ -30,7 +30,10 @@ export function SettingsDialog({ open, onOpenChange }: Props) {
 				<SidebarProvider className="min-h-0 flex-1">
 					<SettingsSidebar current={active} onChange={setActive} />
 
-					<main className="relative flex min-h-0 flex-1 flex-col bg-background">
+					{/* min-w-0: without it this flex child refuses to shrink below its
+					    content, so wide sections push the dialog out instead of
+					    scrolling inside their own container. */}
+					<main className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
 						<header className="shrink-0 border-border border-b px-8 py-4">
 							<h1 className="font-bold font-heading text-2xl">{active.name}</h1>
 							<p className="text-muted-foreground text-sm">
