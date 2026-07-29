@@ -8,7 +8,15 @@ use crate::extension::query::{ChapterRef, MangaPage, MangaRef, SearchQuery, Sect
 use crate::extension::rate_limit::RateLimit;
 use serde::{Deserialize, Serialize};
 
+// Bump on any change to the guest-facing surface: exported functions, host
+// functions the guest imports, or the shape of the types crossing the boundary.
 pub const ABI_VERSION: u32 = 5;
+
+// Raise to ABI_VERSION only when a change breaks extensions built against the
+// older ABI; leave it alone for additive ones. Adding a struct field is additive
+// only if it carries #[serde(default)] — without that, deserializing an older
+// extension's payload fails and the change is breaking.
+pub const ABI_MIN_SUPPORTED: u32 = 5;
 
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Serialize, Deserialize, Debug, Clone)]

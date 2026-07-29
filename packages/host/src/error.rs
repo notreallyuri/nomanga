@@ -3,8 +3,10 @@ use nomanga_core::extension::error::SourceError;
 pub enum HostError {
     #[error("extism error: {0}")]
     Extism(#[from] extism::Error),
-    #[error("abi mismatch: extension is abi {found}, host supports {supported}")]
-    AbiMismatch { found: u32, supported: u32 },
+    #[error("extension targets abi {found}, which this version dropped (oldest supported is {min}) — update the extension")]
+    AbiTooOld { found: u32, min: u32 },
+    #[error("extension targets abi {found}, newer than this version supports ({max}) — update nomanga")]
+    AbiTooNew { found: u32, max: u32 },
     #[error("unknown source id: {0}")]
     UnknownSource(String),
     #[error("host lock poisoned")]

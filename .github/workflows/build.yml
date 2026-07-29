@@ -1,10 +1,31 @@
 name: Build
 
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
+  # Made up front so the three build jobs have something to upload into; letting
+  # them each create-or-update races when they finish close together.
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   build:
+    needs: [create-release]
+    # create-release is skipped on a manual run, which would otherwise skip this
+    # job too.
+    if: always() && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -76,6 +97,7 @@ jobs:
         run: pnpm tauri build ${{ matrix.args }}
         working-directory: client
 
+      # Kept for manual runs, which have no release to upload into.
       - uses: actions/upload-artifact@v4
         with:
           name: nomanga-${{ matrix.name }}
@@ -87,3 +109,22 @@ jobs:
             ${{ matrix.bundle }}/nsis/*.exe
             ${{ matrix.bundle }}/msi/*.msi
           if-no-files-found: error
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(
+            "$BUNDLE"/deb/*.deb
+            "$BUNDLE"/rpm/*.rpm
+            "$BUNDLE"/appimage/*.AppImage
+            "$BUNDLE"/dmg/*.dmg
+            "$BUNDLE"/nsis/*.exe
+            "$BUNDLE"/msi/*.msi
+          )
+          [[ ${#files[@]} -gt 0 ]] || { echo "no bundles found under $BUNDLE" >&2; exit 1; }
+          gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE: ${{ matrix.bundle }}

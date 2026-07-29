@@ -13,7 +13,7 @@ use nomanga_core::{
         info::ExtensionInfo,
         query::{ChapterRef, MangaPage, MangaRef, SearchQuery, SectionRef},
         rate_limit::RateLimit,
-        source::{ABI_VERSION, SourceInfo, Sourced},
+        source::{ABI_MIN_SUPPORTED, ABI_VERSION, SourceInfo, Sourced},
     },
 };
 use std::collections::HashMap;
@@ -45,10 +45,16 @@ impl ExtensionMetadata {
 
         let Json(extension): Json<ExtensionInfo> = plugin.call("get_extension", ())?;
 
-        if extension.abi_version != ABI_VERSION {
-            return Err(HostError::AbiMismatch {
+        if extension.abi_version < ABI_MIN_SUPPORTED {
+            return Err(HostError::AbiTooOld {
                 found: extension.abi_version,
-                supported: ABI_VERSION,
+                min: ABI_MIN_SUPPORTED,
+            });
+        }
+        if extension.abi_version > ABI_VERSION {
+            return Err(HostError::AbiTooNew {
+                found: extension.abi_version,
+                max: ABI_VERSION,
             });
         }
 
