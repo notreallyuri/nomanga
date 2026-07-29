@@ -12,18 +12,6 @@
 
 ### Extension distribution
 
-- [ ] Reinstalling an extension that is already installed lists it twice until
-  the app is fully restarted. `Registry::load_from` keys sources by id in a
-  `HashMap`, so those replace correctly, but it ends with
-  `self.extensions.push(meta.extension)` on a `Vec<ExtensionInfo>` with no
-  check for an existing entry of the same id — so the second install appends a
-  duplicate. A restart hides it because `Registry::scan` rebuilds from an empty
-  `Vec` and `install` writes to `{extension_id}.wasm`, overwriting rather than
-  adding a file. Replacing the matching entry in place would also drop stale
-  sources when an update removes one, which `push` cannot do.
-  - Worth fixing before the repository-install work below, which will reinstall
-    on every update and make this constant rather than occasional.
-
 - [ ] Install extensions from a repository URL, the way Paperback and Aidoku
   do, instead of making the user find and download a `.wasm` by hand. The
   user adds a repo link once; the app lists what it offers and installs,
@@ -101,6 +89,22 @@ default.
     the topic with a real security surface.
 
 ## Done
+
+### Extension distribution
+
+- [x] Reinstalling an installed extension no longer lists it twice.
+  `Registry::load_from` ended with `self.extensions.push(meta.extension)` on a
+  `Vec<ExtensionInfo>` with no check for an existing id, so a second install
+  appended a duplicate; a restart hid it because `scan` rebuilds from an empty
+  `Vec` and `install` overwrites `{extension_id}.wasm` rather than adding a
+  file. It now replaces the matching entry in place, and drops the sources the
+  extension previously owned before inserting the new set — `push` could not do
+  that, so a source removed by an update used to linger with a stale plugin.
+  Activation moved ahead of every mutation of `self`, so a failure part-way
+  through leaves the previous version loaded instead of half-removed.
+  `packages/host/tests/reinstall.rs` covers it; it needs a real `.wasm`, so it
+  takes one from `TEST_WASM` and skips when that is unset (no pack lives in this
+  repo any more, and the smallest is ~1 MB).
 
 ### System
 
