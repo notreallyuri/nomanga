@@ -20,6 +20,11 @@ import { SearchableMultiSelect, SearchableSelect } from "./searchable-select";
  */
 const SEARCH_THRESHOLD = 12;
 
+// The closed trigger resolves its text through this map; without it the option
+// id ("originals", "az") shows instead of the source's own label.
+const optionLabels = (options: { id: string; label: string }[]) =>
+	Object.fromEntries(options.map((option) => [option.id, option.label]));
+
 interface Props {
 	filters: Filter[];
 	values: FilterValue[];
@@ -79,6 +84,7 @@ function FilterControl({
 					<Label className="mb-1.5 block text-sm">{filter.label}</Label>
 					<div className="flex gap-2">
 						<Select
+							items={optionLabels(filter.options)}
 							onValueChange={(v) =>
 								setValue({
 									type: "Sort",
@@ -146,6 +152,7 @@ function FilterControl({
 				<div>
 					<Label className="mb-1.5 block text-sm">{filter.label}</Label>
 					<Select
+						items={optionLabels(filter.options)}
 						onValueChange={(v) =>
 							setValue({ type: "Select", id: filter.id, value: v ?? "" })
 						}

@@ -29,14 +29,21 @@ export function LibraryAction({
 	sourceId,
 	mangaId,
 	manga,
+	chapterCount,
 }: {
 	sourceId: string;
 	mangaId: string;
 	manga?: Manga | MangaSimple;
+	chapterCount?: number;
 }) {
 	const inLibrary = useIsInLibrary(sourceId, mangaId);
 	const categories = useCategories();
-	const { add, remove } = useToggleLibrary(sourceId, mangaId, manga);
+	const { add, remove } = useToggleLibrary(
+		sourceId,
+		mangaId,
+		manga,
+		chapterCount,
+	);
 
 	const saved = inLibrary.data === true;
 	const hasCategories = (categories.data?.length ?? 0) > 0;
@@ -81,16 +88,18 @@ function CategoryPicker({
 	mangaId,
 	saved,
 	onQuickAdd,
+	chapterCount,
 }: {
 	sourceId: string;
 	mangaId: string;
 	saved: boolean;
 	onQuickAdd: () => void;
+	chapterCount?: number;
 }) {
 	const [open, setOpen] = useState(false);
 	const categories = useCategories();
 	const assigned = useEntryCategories(sourceId, mangaId);
-	const { add } = useToggleLibrary(sourceId, mangaId);
+	const { add } = useToggleLibrary(sourceId, mangaId, undefined, chapterCount);
 	const save = useSetEntryCategories(sourceId, mangaId);
 
 	const [selected, setSelected] = useState<Set<string>>(new Set());

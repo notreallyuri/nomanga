@@ -33,6 +33,9 @@ function decodeList(raw: string | undefined): string[] {
 
 const encodeList = (values: string[]) => JSON.stringify(values);
 
+const CONTROL_WIDTH = "w-64 shrink-0";
+const STACKED_KINDS: SettingKind["type"][] = ["MultiSelect", "TextList"];
+
 function defaultValue(kind: SettingKind): string {
 	switch (kind.type) {
 		case "Text":
@@ -150,7 +153,7 @@ function SettingField({
 }) {
 	const { kind } = setting;
 
-	const inline = kind.type === "Toggle";
+	const inline = !STACKED_KINDS.includes(kind.type);
 
 	return (
 		<div className={cn(inline && "flex items-center justify-between gap-6")}>
@@ -177,10 +180,21 @@ function Control({
 	value: string;
 	onChange: (value: string) => void;
 }) {
+	// Select resolves the trigger label from this map; without it the raw option
+	// id is what shows on the closed trigger.
+	const selectItems = useMemo(
+		() =>
+			kind.type === "Select"
+				? Object.fromEntries(kind.options.map((o) => [o.id, o.label]))
+				: undefined,
+		[kind],
+	);
+
 	switch (kind.type) {
 		case "Text":
 			return (
 				<Input
+					className={CONTROL_WIDTH}
 					onChange={(e) => onChange(e.target.value)}
 					placeholder={kind.placeholder ?? ""}
 					type={kind.secret ? "password" : "text"}
@@ -199,6 +213,7 @@ function Control({
 		case "Number":
 			return (
 				<Input
+					className={CONTROL_WIDTH}
 					max={kind.max ?? undefined}
 					min={kind.min ?? undefined}
 					onChange={(e) => onChange(e.target.value)}
@@ -209,8 +224,12 @@ function Control({
 
 		case "Select":
 			return (
-				<Select onValueChange={(v) => onChange(v ?? "")} value={value}>
-					<SelectTrigger>
+				<Select
+					items={selectItems}
+					onValueChange={(v) => onChange(v ?? "")}
+					value={value}
+				>
+					<SelectTrigger className={CONTROL_WIDTH}>
 						<SelectValue placeholder="Not set" />
 					</SelectTrigger>
 					<SelectContent>
@@ -269,7 +288,7 @@ function MultiSelectControl({
 	};
 
 	return (
-		<div className="rounded-md border border-border">
+		<div className="max-w-md rounded-md border border-border">
 			{options.length > 8 && (
 				<div className="relative border-border border-b">
 					<MagnifyingGlassIcon
@@ -348,7 +367,7 @@ function TextListControl({
 	};
 
 	return (
-		<div className="space-y-2">
+		<div className="max-w-md space-y-2">
 			<Input
 				onChange={(e) => setEntry(e.target.value)}
 				onKeyDown={(e) => {

@@ -25,6 +25,10 @@ import type { Chapter } from "@/types/bindings";
 
 const PAGE_SIZES = [25, 50, 100, 200] as const;
 
+const PAGE_SIZE_LABELS = Object.fromEntries(
+	PAGE_SIZES.map((size) => [String(size), `${size} rows`]),
+);
+
 interface Props {
 	table: Table<Chapter>;
 	filter: string;
@@ -78,6 +82,7 @@ export function ChapterTableToolbar({
 				</Button>
 
 				<Select
+					items={PAGE_SIZE_LABELS}
 					onValueChange={(v) => table.setPageSize(Number(v))}
 					value={String(pageSize)}
 				>

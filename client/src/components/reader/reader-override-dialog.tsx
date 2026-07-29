@@ -57,6 +57,18 @@ const FIELDS = [
 	},
 ] as const;
 
+// The trigger renders whatever this map returns for the current value; without
+// it the stored enum variant ("SinglePage", "inherit") is what shows.
+const FIELD_ITEMS: Record<string, Record<string, string>> = Object.fromEntries(
+	FIELDS.map((field) => [
+		field.key,
+		{
+			[INHERIT]: "Inherit",
+			...Object.fromEntries(field.options.map((o) => [o.value, o.label])),
+		},
+	]),
+);
+
 export function ReaderOverrideDialog({
 	sourceId,
 	mangaId,
@@ -176,6 +188,7 @@ function Form({
 				>
 					<Label>{field.label}</Label>
 					<Select
+						items={FIELD_ITEMS[field.key]}
 						onValueChange={(v) => set(field.key, (v as string) ?? INHERIT)}
 						value={over[field.key] ?? INHERIT}
 					>

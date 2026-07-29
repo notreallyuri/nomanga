@@ -24,6 +24,8 @@ export function NavDownloads() {
 	const [open, setOpen] = useState(false);
 
 	const current = items.find((i) => i.state === "Downloading");
+	// The count lives in the badge, so the button keeps a stable label; the
+	// tooltip is the collapsed rail's only text, so it carries the state.
 	const label = active > 0 ? `Downloading ${active}` : "Downloads";
 
 	const percent =
@@ -43,9 +45,19 @@ export function NavDownloads() {
 						<DownloadSimpleIcon
 							className={active > 0 ? "animate-pulse" : undefined}
 						/>
-						<span>{label}</span>
+						<span>Downloads</span>
 					</SidebarMenuButton>
-					{active > 0 && <SidebarMenuBadge>{active}</SidebarMenuBadge>}
+					{active > 0 && (
+						<>
+							<SidebarMenuBadge>{active}</SidebarMenuBadge>
+							{/* The badge is hidden in the collapsed rail, where a pulsing
+							    icon alone reads as decoration rather than activity. */}
+							<span
+								aria-hidden
+								className="pointer-events-none absolute top-1 right-1 hidden size-2 rounded-full bg-primary ring-2 ring-sidebar group-data-[collapsible=icon]:block"
+							/>
+						</>
+					)}
 				</SidebarMenuItem>
 			</SidebarMenu>
 
