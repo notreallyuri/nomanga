@@ -5,6 +5,7 @@ pub mod filter;
 pub mod info;
 pub mod query;
 pub mod rate_limit;
+pub mod repository;
 pub mod source;
 
 pub mod prelude {

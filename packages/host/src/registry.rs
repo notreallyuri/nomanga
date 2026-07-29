@@ -137,6 +137,11 @@ impl Registry {
         Ok(())
     }
 
+    /// Replaces any already-loaded extension of the same id rather than adding
+    /// to it, so a reinstall does not list the extension twice and a source the
+    /// new build dropped does not linger. Every source is activated before
+    /// `self` is touched, so a failure part-way through leaves the previous
+    /// version in place rather than half-removed.
     fn load_from(
         &mut self,
         path: &Path,
@@ -145,28 +150,36 @@ impl Registry {
         let meta = ExtensionMetadata::inspect(path.to_string_lossy().as_ref())?;
         let extension_id = meta.extension.id.clone();
 
+        let mut loaded = Vec::with_capacity(meta.sources.len());
+
         for source in &meta.sources {
             let config = configs.get(&source.id).cloned().unwrap_or_default();
             let mut plugin = meta.activate(
-            source.hosts.clone(),
-            config,
-            self.transport.context(source.hosts.clone()),
-        )?;
+                source.hosts.clone(),
+                config,
+                self.transport.context(source.hosts.clone()),
+            )?;
             let limits = plugin.rate_limits(&source.id).unwrap_or_default();
 
-            self.sources.insert(
-                source.id.clone(),
-                SourceHandle {
-                    info: source.clone(),
-                    extension_id: extension_id.clone(),
-                    plugin: Arc::new(Mutex::new(plugin)),
-                    limiter: Arc::new(Mutex::new(RateLimiter::new(&limits))),
-                    wasm_path: path.to_path_buf(),
-                },
-            );
+            loaded.push(SourceHandle {
+                info: source.clone(),
+                extension_id: extension_id.clone(),
+                plugin: Arc::new(Mutex::new(plugin)),
+                limiter: Arc::new(Mutex::new(RateLimiter::new(&limits))),
+                wasm_path: path.to_path_buf(),
+            });
         }
 
-        self.extensions.push(meta.extension);
+        self.sources.retain(|_, h| h.extension_id != extension_id);
+        for handle in loaded {
+            self.sources.insert(handle.info.id.clone(), handle);
+        }
+
+        match self.extensions.iter_mut().find(|e| e.id == extension_id) {
+            Some(existing) => *existing = meta.extension,
+            None => self.extensions.push(meta.extension),
+        }
+
         Ok(())
     }
 

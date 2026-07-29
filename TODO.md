@@ -12,40 +12,10 @@
 
 ### Extension distribution
 
-- [ ] Reinstalling an extension that is already installed lists it twice until
-  the app is fully restarted. `Registry::load_from` keys sources by id in a
-  `HashMap`, so those replace correctly, but it ends with
-  `self.extensions.push(meta.extension)` on a `Vec<ExtensionInfo>` with no
-  check for an existing entry of the same id — so the second install appends a
-  duplicate. A restart hides it because `Registry::scan` rebuilds from an empty
-  `Vec` and `install` writes to `{extension_id}.wasm`, overwriting rather than
-  adding a file. Replacing the matching entry in place would also drop stale
-  sources when an update removes one, which `push` cannot do.
-  - Worth fixing before the repository-install work below, which will reinstall
-    on every update and make this constant rather than occasional.
-
-- [ ] Install extensions from a repository URL, the way Paperback and Aidoku
-  do, instead of making the user find and download a `.wasm` by hand. The
-  user adds a repo link once; the app lists what it offers and installs,
-  updates, and removes from there.
-  - Now that the packs live in their own repositories
-    (`nomanga-extension-mainpack`, `nomanga-extension-nsfw`), there is nothing
-    in-tree to install from, so this is the only path that does not involve
-    hand-managed files.
-  - Needs an index format the app fetches and the repo publishes: for each
-    extension, its id, version, `abi_version`, and a download URL, plus enough
-    per-source metadata (name, language, `nsfw`) to render a browsable list
-    before anything is downloaded.
-  - The `abi_version` in the index is what lets the app hide or flag entries
-    it cannot load, rather than downloading a `.wasm` and failing at
-    `ExtensionMetadata::inspect`. It should agree with the host's
-    `[ABI_MIN_SUPPORTED, ABI_VERSION]` range.
-  - Publishing side: a release workflow in each extension repo that builds the
-    `.wasm` and writes the index. `Registry::install` already handles the local
-    half once a file is in hand.
-  - Trust is the open question. A repo URL is arbitrary code from a stranger,
-    and the WASM sandbox plus the declared host allow-list are what contain it
-    — worth surfacing the allow-list at install time rather than burying it.
+- [ ] Check for extension updates in the background, the way library updates
+  already do, instead of only on a visit to Settings → Extensions. The catalog
+  fetch and the version comparison both exist; what is missing is a schedule
+  and somewhere to surface "3 extensions have updates".
 
 ### Cloudflare bypass
 
@@ -89,6 +59,26 @@
 
 - [ ] Tray menu implementation.
 
+### Downloads and updates
+
+- [ ] Pause and cancel, for both the download queue and a library update run,
+  each in the dialog that already shows its progress (the downloads queue
+  dialog and the updates progress dialog) rather than a new surface.
+  - Neither is interruptible today. `DownloadManager` is a
+    `mpsc::UnboundedSender<Job>` into a detached `worker`, with no handle back
+    into a job once sent; `refresh_library` is a plain loop emitting
+    `LibraryRefreshProgress`. Both run to completion whatever the user does.
+  - Cancel needs two scopes and they are not the same: dropping a *queued* job
+    is just removing it from the channel, but stopping the *in-flight* one means
+    aborting a chapter mid-fetch and deciding what happens to the partial
+    directory on disk — either finish the current page and stop, or delete what
+    landed. Leaving half a chapter that reads as downloaded is the failure to
+    avoid.
+  - Pause is the easier half and probably worth doing first: a flag the worker
+    checks between jobs, no abort semantics, no cleanup question.
+  - `queued` is a `HashSet<Key>` behind a `Mutex`, so it already has the identity
+    a cancel would key off; the missing piece is a way to reach the running job.
+
 ### System
 
 #### E. Developer section
@@ -101,6 +91,96 @@ default.
     the topic with a real security surface.
 
 ## Done
+
+### Extension distribution
+
+- [x] Install extensions from a repository URL rather than a hand-downloaded
+  `.wasm`. Settings → Extensions takes a link; the app fetches an index, lists
+  what it offers, and installs, updates or reinstalls from there.
+  `RepositoryIndex`/`RepositoryExtension` in core carry each extension's
+  `ExtensionInfo`, a `download_url` and the full `SourceInfo` list — enough to
+  render a browsable list and show the host allow-list before anything is
+  downloaded.
+  `download_url` may be **relative to the index**, which is what makes a
+  repository publishable as a plain served directory: index and `.wasm` side by
+  side, no absolute URL baked in at build time, no CI. This is the shape
+  Aidoku's source lists use, and it is why `publish.sh` in each extension repo
+  only has to write `docs/` for GitHub Pages. `nomanga-cli index` builds the
+  index from the binaries' own metadata, so the published `abi_version` and
+  source lists cannot drift from what shipped.
+  Three consequences of the URL being user-pasted, all load-bearing:
+  `install_from_repository` takes an extension *id*, not a download URL, so the
+  app only ever fetches a binary a registered repository's own index points at;
+  both fetches are size-bounded (4 MB index, 64 MB wasm) against a server that
+  streams forever; and the index's `abi_version` is checked against
+  `[ABI_MIN_SUPPORTED, ABI_VERSION]` before downloading, with
+  `ExtensionMetadata::inspect` still authoritative on install — a repository
+  that publishes a wrong ABI is caught either way.
+  `browse_repositories` resolves the unsupported ids host-side so the frontend
+  carries no second copy of the range, and reports per-repository failures in
+  the row rather than as an error, so one dead link does not blank the list.
+  Trust is handled the only way it can be: the sandbox and the declared
+  allow-list contain the extension, and the allow-list is shown in a
+  confirmation before the download rather than buried in source settings after.
+  Adult sources staying in their own repository means they are invisible to
+  anyone who has not added that second URL — no NSFW gate needed on the
+  repository itself.
+  Verified end to end over HTTP: `publish.sh` → served `docs/` → index fetched,
+  relative `download_url` resolved, `.wasm` downloaded and loaded at ABI 5.
+  Published live at `notreallyuri.github.io/nomanga-extension-mainpack`. Pages
+  needed the GitHub Actions source, not "deploy from a branch": the latter runs
+  Jekyll over `docs/` *even with a `.nojekyll` in it* and then dies converting
+  the default theme's `style.scss`. `pages.yml` uploads the directory verbatim
+  and compiles nothing.
+
+- [x] `nomanga://add-repo?url=…` deep link, so the generated landing page can
+  hand a repository straight to the app. `tauri-plugin-deep-link` registers the
+  scheme; `DeepLinkProvider` parses the link, rejects anything that is not
+  http(s) (the backend's `normalize_url` checks again), focuses the window,
+  opens Settings → Extensions and raises a confirmation.
+  The link *adds*, never installs — it is untrusted input from any page on the
+  internet, so it can at most put a URL in front of the user, and installing
+  stays a separate step behind the host allow-list dialog.
+  On Linux this rides on `MimeType=x-scheme-handler/nomanga` in the `.desktop`
+  file, so it comes from the PKGBUILD or `install-local.sh`; dev builds call
+  `register_all()` at runtime since they have neither.
+  Worth remembering: the page is one big `format!` raw string and
+  `href="#"` contains `"#`, which closed `r#"…"#` early. It is `r##"…"##` now,
+  with a test asserting the document still ends in `</html>`.
+
+- [x] Source icons are `data:` URIs baked into the extension, not links to each
+  site's favicon. The app renders `SourceInfo.icon_url` straight into an `<img>`,
+  so every Browse and Sources render was one request per source to that site —
+  announcing to each which extensions a user has installed, on a screen they
+  open constantly.
+  They live in the `.wasm` rather than the published index deliberately: an
+  installed extension's `SourceInfo` comes from the binary, so index-only
+  embedding would have fixed the pre-install list and left Browse still
+  hotlinking. The index gets them anyway, since it is built from the binaries'
+  own metadata.
+  `nomanga-cli icon <url|file> --out <path>` normalises to a 64×64 PNG data URI
+  (favicons are often `.ico`, MangaPill's was a 180px touch icon), and the
+  source does `include_str!`. It accepts a local file because fetching is not
+  always possible: two of nine were already broken in the app before this —
+  WeebCentral 403s a plain fetch and NatoManga's favicon is behind Cloudflare —
+  and MadaraDex 404s `/favicon.ico`, serving its logo from `wp-content`.
+  Cost: +4% wasm, and the mainpack index went 1.6 KB → 43 KB. Worth watching if
+  a repository ever carries many packs; the format still allows a relative
+  `icons/` path the way Aidoku does.
+
+- [x] Reinstalling an installed extension no longer lists it twice.
+  `Registry::load_from` ended with `self.extensions.push(meta.extension)` on a
+  `Vec<ExtensionInfo>` with no check for an existing id, so a second install
+  appended a duplicate; a restart hid it because `scan` rebuilds from an empty
+  `Vec` and `install` overwrites `{extension_id}.wasm` rather than adding a
+  file. It now replaces the matching entry in place, and drops the sources the
+  extension previously owned before inserting the new set — `push` could not do
+  that, so a source removed by an update used to linger with a stale plugin.
+  Activation moved ahead of every mutation of `self`, so a failure part-way
+  through leaves the previous version loaded instead of half-removed.
+  `packages/host/tests/reinstall.rs` covers it; it needs a real `.wasm`, so it
+  takes one from `TEST_WASM` and skips when that is unset (no pack lives in this
+  repo any more, and the smallest is ~1 MB).
 
 ### System
 

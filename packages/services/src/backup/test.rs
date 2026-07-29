@@ -234,6 +234,53 @@ async fn replace_drops_local_entries_absent_from_the_backup() {
 }
 
 #[tokio::test]
+async fn carries_repositories_and_leaves_local_ones_alone_on_merge() {
+    let source = open_in_memory().await.unwrap();
+    crate::extension::repository::add(&source, "https://a.example/index.json", "A")
+        .await
+        .unwrap();
+    let backup = snapshot(&source).await;
+    assert_eq!(backup.repositories.len(), 1);
+
+    let target = open_in_memory().await.unwrap();
+    crate::extension::repository::add(&target, "https://b.example/index.json", "B")
+        .await
+        .unwrap();
+
+    import(&target, &backup, ImportMode::Merge, &[])
+        .await
+        .unwrap();
+
+    let merged = crate::extension::repository::list(&target).await.unwrap();
+    let mut urls: Vec<&str> = merged.iter().map(|r| r.url.as_str()).collect();
+    urls.sort_unstable();
+    assert_eq!(
+        urls,
+        vec!["https://a.example/index.json", "https://b.example/index.json"]
+    );
+
+    import(&target, &backup, ImportMode::Replace, &[])
+        .await
+        .unwrap();
+
+    let replaced = crate::extension::repository::list(&target).await.unwrap();
+    assert_eq!(replaced.len(), 1);
+    assert_eq!(replaced[0].url, "https://a.example/index.json");
+}
+
+#[tokio::test]
+async fn reads_a_backup_written_before_repositories_existed() {
+    let pool = open_in_memory().await.unwrap();
+    let backup = snapshot(&pool).await;
+
+    let mut json = serde_json::to_value(&backup).unwrap();
+    json.as_object_mut().unwrap().remove("repositories");
+
+    let older: Backup = serde_json::from_value(json).unwrap();
+    assert!(older.repositories.is_empty());
+}
+
+#[tokio::test]
 async fn reports_extensions_the_backup_needs_but_this_device_lacks() {
     let pool = open_in_memory().await.unwrap();
     let mut backup = snapshot(&pool).await;

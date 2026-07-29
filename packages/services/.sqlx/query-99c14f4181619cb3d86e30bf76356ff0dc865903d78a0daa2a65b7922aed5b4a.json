@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT url, name, added_at FROM extension_repository",
+  "describe": {
+    "columns": [
+      {
+        "name": "url",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "extension_repository",
+            "name": "url"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "extension_repository",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "added_at",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "extension_repository",
+            "name": "added_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "99c14f4181619cb3d86e30bf76356ff0dc865903d78a0daa2a65b7922aed5b4a"
+}

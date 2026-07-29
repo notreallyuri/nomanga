@@ -130,15 +130,27 @@ the AppImage locally: linuxdeploy's GTK plugin copies
 PKGBUILD does) or `--bundles deb`. `packaging/install-local.sh` registers a dev
 build with your desktop environment without packaging it.
 
+### Installing extensions
+
+Settings → Extensions takes a **repository URL** — a link to a JSON index that
+lists what a publisher offers. The app shows each extension's sources and the
+domains it declares, then downloads and activates it on confirm. The two packs
+built here are:
+
+| Repository | Index URL | Sources |
+|---|---|---|
+| [nomanga-extension-mainpack](https://github.com/notreallyuri/nomanga-extension-mainpack) | `https://notreallyuri.github.io/nomanga-extension-mainpack/index.min.json` | WeebCentral, MangaDex, MangaPill, NatoManga, WEBTOON |
+| [nomanga-extension-nsfw](https://github.com/notreallyuri/nomanga-extension-nsfw) | `https://notreallyuri.github.io/nomanga-extension-nsfw/index.min.json` | nHentai, Hitomi.la, MadaraDex, E-Hentai |
+
+Adult sources living in a separate repository is deliberate: they are not
+visible at all to anyone who has not added that second URL.
+
+*Install from file…* remains for a `.wasm` you built yourself.
+
 ### Building an extension
 
 Extensions live in their own repositories and depend on `nomanga-sdk` from this
 one:
-
-| Repository | Sources |
-|---|---|
-| [nomanga-extension-mainpack](https://github.com/notreallyuri/nomanga-extension-mainpack) | WeebCentral, MangaDex, MangaPill, NatoManga, WEBTOON |
-| [nomanga-extension-nsfw](https://github.com/notreallyuri/nomanga-extension-nsfw) | nHentai, Hitomi.la, MadaraDex, E-Hentai |
 
 ```toml
 nomanga-sdk = { git = "https://github.com/notreallyuri/nomanga", branch = "main" }
@@ -150,6 +162,100 @@ nomanga-sdk = { git = "https://github.com/notreallyuri/nomanga", branch = "main"
 
 The app loads `.wasm` files from its extensions directory (under the platform
 app-data dir); `Registry::install` copies an extension in and activates it.
+
+### Publishing a repository
+
+A repository is a static directory: an index next to the `.wasm` files it
+describes. Committing that directory and pointing GitHub Pages at it (*Settings
+→ Pages → Deploy from a branch: main, folder /docs*) is enough — no CI is
+involved.
+
+The index is plain JSON and nothing stops you writing it by hand:
+
+```json
+{
+  "index_version": 1,
+  "name": "My pack",
+  "description": "Optional.",
+  "website": "https://github.com/you/my-pack",
+  "extensions": [
+    {
+      "info": {
+        "id": "dev.you.mypack", "name": "My Pack", "version": "0.1.0",
+        "abi_version": 5, "author": "you", "website": null
+      },
+      "download_url": "my_pack.wasm",
+      "sources": [
+        {
+          "id": "com.example.en", "name": "Example", "version": "1.0",
+          "language": "en", "base_url": "https://example.org",
+          "icon_url": null, "hosts": ["example.org"], "nsfw": false
+        }
+      ]
+    }
+  ]
+}
+```
+
+`download_url` may be a bare file name, resolved against wherever the index was
+fetched from, so the same directory works served from anywhere. Use an absolute
+URL only when the `.wasm` lives elsewhere, such as a release asset.
+
+Nothing in the index is trusted: the app re-reads the `.wasm` through
+`ExtensionMetadata::inspect` on install, so a wrong `abi_version` or an invented
+source is caught there. The index exists so the app can *show* a list before
+downloading, not to vouch for it.
+
+`nomanga-cli` is the ergonomic path rather than a requirement — it reads the
+metadata out of the built binaries, so what you publish cannot drift from what
+shipped, and writes a browsable landing page beside it:
+
+```sh
+nomanga-cli index --name "My pack" \
+  --out docs/index.min.json --json --html docs/index.html docs/*.wasm
+```
+
+`index.html` is self-contained and derives the repository URL from `location`
+at view time, so opening the Pages URL in a browser gives a copyable link, the
+source list, and each extension's declared hosts. Its *Open in nomanga* button
+is a `nomanga://add-repo?url=…` link — the app registers that scheme, focuses
+itself, jumps to Settings → Extensions and asks the user to confirm the URL.
+A link can only ever *add* a repository; installing is still a separate,
+explicit step with its own host allow-list confirmation.
+
+On Linux the handler comes from the `.desktop` file's
+`MimeType=x-scheme-handler/nomanga`, so it is registered by the PKGBUILD or by
+`packaging/install-local.sh`; a `pnpm tauri dev` build registers it at runtime
+instead. Windows registers it from the NSIS installer, macOS from the bundle.
+
+Grab a prebuilt binary from [Releases](https://github.com/notreallyuri/nomanga/releases)
+(`nomanga-cli-linux`, `-macos`, `-windows.exe`), or build it with
+`cargo install --git https://github.com/notreallyuri/nomanga nomanga-cli` — the
+latter compiles wasmtime, so it takes a few minutes. Both extension repos carry
+a `publish.sh` wrapping the whole build-and-write step.
+
+### Source icons
+
+`SourceInfo.icon_url` should be a `data:` URI baked into the extension, not a
+link to the site's favicon — the app renders it directly, so a remote URL means
+a request to that source on every Browse or Sources screen, whether or not the
+user is using it. `nomanga-cli` normalises one to a 64×64 PNG:
+
+```sh
+nomanga-cli icon https://example.org/favicon.ico --out icons/example.txt
+```
+
+Then in the source, with no trailing newline to worry about:
+
+```rust
+icon_url: Some(include_str!("../../../icons/example.txt").into()),
+```
+
+The argument may also be a local file, which is what several sources need — a
+favicon behind Cloudflare cannot be fetched at all, and some sites serve their
+real logo from somewhere other than `/favicon.ico`. Keeping icons in the `.wasm`
+rather than the published index means installed extensions get them too, and the
+index picks them up anyway since it is built from the binaries' own metadata.
 
 ### Inspecting / testing with the CLI
 

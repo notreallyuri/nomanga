@@ -11,3 +11,5 @@ clap = { version = "4.5", features = ["derive"]}
 serde = { workspace = true }
 serde_json = { workspace = true }
 ureq = "3"
+base64 = "0.23.0"
+image = { version = "0.25.10", default-features = false, features = ["ico", "png", "jpeg", "webp"] }

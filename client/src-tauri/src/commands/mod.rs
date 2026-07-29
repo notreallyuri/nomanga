@@ -5,6 +5,7 @@ pub mod downloads;
 pub mod extension;
 pub mod history;
 pub mod library;
+pub mod repository;
 pub mod settings;
 pub mod source;
 pub mod startup;

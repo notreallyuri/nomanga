@@ -97,6 +97,21 @@ jobs:
         run: pnpm tauri build ${{ matrix.args }}
         working-directory: client
 
+      # Attached to the release so publishing an extension repository does not
+      # start with a several-minute compile of wasmtime.
+      - name: Build the CLI
+        shell: bash
+        run: |
+          cargo build -p nomanga-cli --release
+          mkdir -p dist
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cp target/release/nomanga-cli.exe "dist/nomanga-cli-${{ matrix.name }}.exe"
+          else
+            cp target/release/nomanga-cli "dist/nomanga-cli-${{ matrix.name }}"
+          fi
+        env:
+          SQLX_OFFLINE: true
+
       # Kept for manual runs, which have no release to upload into.
       - uses: actions/upload-artifact@v4
         with:
@@ -108,6 +123,7 @@ jobs:
             ${{ matrix.bundle }}/dmg/*.dmg
             ${{ matrix.bundle }}/nsis/*.exe
             ${{ matrix.bundle }}/msi/*.msi
+            dist/nomanga-cli-*
           if-no-files-found: error
 
       - name: Attach to release
@@ -122,6 +138,7 @@ jobs:
             "$BUNDLE"/dmg/*.dmg
             "$BUNDLE"/nsis/*.exe
             "$BUNDLE"/msi/*.msi
+            dist/nomanga-cli-*
           )
           [[ ${#files[@]} -gt 0 ]] || { echo "no bundles found under $BUNDLE" >&2; exit 1; }
           gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber

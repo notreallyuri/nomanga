@@ -77,6 +77,20 @@ export const commands = {
 	setSourcePreference: (preference: SourcePreference) => typedError<null, CommandError>(__TAURI_INVOKE("set_source_preference", { preference })),
 	getSourceSettings: (sourceId: string) => typedError<SourceSettings, CommandError>(__TAURI_INVOKE("get_source_settings", { sourceId })),
 	saveSourceSettings: (sourceId: string, values: { [key in string]: string }) => typedError<null, CommandError>(__TAURI_INVOKE("save_source_settings", { sourceId, values })),
+	listRepositories: () => typedError<Repository[], CommandError>(__TAURI_INVOKE("list_repositories")),
+	addRepository: (url: string) => typedError<RepositoryIndex, CommandError>(__TAURI_INVOKE("add_repository", { url })),
+	removeRepository: (url: string) => typedError<null, CommandError>(__TAURI_INVOKE("remove_repository", { url })),
+	/**
+	 *  Fetches every repository, reporting per-repository failures in the row
+	 *  rather than as an error, so one unreachable link does not blank the list.
+	 */
+	browseRepositories: () => typedError<RepositoryCatalog[], CommandError>(__TAURI_INVOKE("browse_repositories")),
+	/**
+	 *  Takes the extension's id rather than a download URL so the app only ever
+	 *  fetches a binary a registered repository's own index points at — the
+	 *  frontend cannot name an arbitrary URL to install from.
+	 */
+	installFromRepository: (url: string, extensionId: string) => typedError<string, CommandError>(__TAURI_INVOKE("install_from_repository", { url, extensionId })),
 	queueDownloads: (sourceId: string, mangaId: string, mangaTitle: string, targets: DownloadTarget[]) => typedError<null, CommandError>(__TAURI_INVOKE("queue_downloads", { sourceId, mangaId, mangaTitle, targets })),
 	downloadedChapterIds: (sourceId: string, mangaId: string) => typedError<string[], CommandError>(__TAURI_INVOKE("downloaded_chapter_ids", { sourceId, mangaId })),
 	localPages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("local_pages", { sourceId, mangaId, chapterId })),
@@ -471,6 +485,38 @@ export type RefreshScope = { type: "All" } | { type: "Category"; id: string } | 
 export type RefreshSummary = {
 	checked: number,
 	new_chapters: number,
+};
+
+export type Repository = {
+	url: string,
+	name: string,
+	added_at: string,
+	last_fetched_at: string | null,
+};
+
+export type RepositoryCatalog = {
+	repository: Repository,
+	index: RepositoryIndex | null,
+	error: string | null,
+	/**
+	 *  Ids from this index whose ABI this app cannot load, resolved here so the
+	 *  frontend never has to carry a copy of the supported range.
+	 */
+	unsupported: string[],
+};
+
+export type RepositoryExtension = {
+	info: ExtensionInfo,
+	download_url: string,
+	sources: SourceInfo[],
+};
+
+export type RepositoryIndex = {
+	index_version: number,
+	name: string,
+	description?: string | null,
+	website?: string | null,
+	extensions: RepositoryExtension[],
 };
 
 export type SearchQuery = {

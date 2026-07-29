@@ -29,6 +29,13 @@
       }
     }
   },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["nomanga"]
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
