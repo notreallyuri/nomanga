@@ -12,6 +12,18 @@
 
 ### Extension distribution
 
+- [ ] Reinstalling an extension that is already installed lists it twice until
+  the app is fully restarted. `Registry::load_from` keys sources by id in a
+  `HashMap`, so those replace correctly, but it ends with
+  `self.extensions.push(meta.extension)` on a `Vec<ExtensionInfo>` with no
+  check for an existing entry of the same id — so the second install appends a
+  duplicate. A restart hides it because `Registry::scan` rebuilds from an empty
+  `Vec` and `install` writes to `{extension_id}.wasm`, overwriting rather than
+  adding a file. Replacing the matching entry in place would also drop stale
+  sources when an update removes one, which `push` cannot do.
+  - Worth fixing before the repository-install work below, which will reinstall
+    on every update and make this constant rather than occasional.
+
 - [ ] Install extensions from a repository URL, the way Paperback and Aidoku
   do, instead of making the user find and download a `.wasm` by hand. The
   user adds a repo link once; the app lists what it offers and installs,
