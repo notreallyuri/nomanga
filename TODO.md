@@ -10,6 +10,31 @@
   HTML rather than saved fixtures. Manhwa-heavy.
 - [ ] MangaPlus - not started.
 
+### Extension distribution
+
+- [ ] Install extensions from a repository URL, the way Paperback and Aidoku
+  do, instead of making the user find and download a `.wasm` by hand. The
+  user adds a repo link once; the app lists what it offers and installs,
+  updates, and removes from there.
+  - Now that the packs live in their own repositories
+    (`nomanga-extension-mainpack`, `nomanga-extension-nsfw`), there is nothing
+    in-tree to install from, so this is the only path that does not involve
+    hand-managed files.
+  - Needs an index format the app fetches and the repo publishes: for each
+    extension, its id, version, `abi_version`, and a download URL, plus enough
+    per-source metadata (name, language, `nsfw`) to render a browsable list
+    before anything is downloaded.
+  - The `abi_version` in the index is what lets the app hide or flag entries
+    it cannot load, rather than downloading a `.wasm` and failing at
+    `ExtensionMetadata::inspect`. It should agree with the host's
+    `[ABI_MIN_SUPPORTED, ABI_VERSION]` range.
+  - Publishing side: a release workflow in each extension repo that builds the
+    `.wasm` and writes the index. `Registry::install` already handles the local
+    half once a file is in hand.
+  - Trust is the open question. A repo URL is arbitrary code from a stranger,
+    and the WASM sandbox plus the declared host allow-list are what contain it
+    — worth surfacing the allow-list at install time rather than burying it.
+
 ### Cloudflare bypass
 
 - [ ] Add a simple Cloudflare bypass:
