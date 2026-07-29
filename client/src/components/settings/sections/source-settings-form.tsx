@@ -52,11 +52,6 @@ function defaultValue(kind: SettingKind): string {
 	}
 }
 
-/**
- * The extension-declared settings for a source — API keys, tag filters, and so
- * on. This is only the schema-driven body; the surrounding header and the
- * app-side source policy toggles live in the unified source detail view.
- */
 export function ExtensionSettings({ sourceId }: { sourceId: string }) {
 	const { data, isPending, error } = useSourceSettings(sourceId);
 	const { mutate: save, isPending: isSaving } = useSaveSourceSettings(sourceId);
@@ -180,8 +175,6 @@ function Control({
 	value: string;
 	onChange: (value: string) => void;
 }) {
-	// Select resolves the trigger label from this map; without it the raw option
-	// id is what shows on the closed trigger.
 	const selectItems = useMemo(
 		() =>
 			kind.type === "Select"

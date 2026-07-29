@@ -110,11 +110,6 @@ function SourceListRow({
 	);
 }
 
-/**
- * One cohesive view for a single source: the app's own policy toggles and the
- * extension-declared settings side by side, rather than split between an
- * expanding row and a separate screen.
- */
 function SourceDetail({
 	info,
 	onBack,
@@ -206,10 +201,6 @@ function SourceDetail({
 
 const LIBRARY_DEFAULT = "library-default";
 
-/**
- * Where titles added from this source get filed. Unset falls back to the
- * category flagged as default for the whole library.
- */
 function DefaultCategoryRow({
 	value,
 	onChange,
@@ -265,11 +256,6 @@ function SourceName({ name, nsfw }: { name: string; nsfw: boolean }) {
 	);
 }
 
-/**
- * Icons come from the source's own site and can fail or be absent, so a
- * fallback is required rather than optional — a broken image in a list of
- * eight sources is more distracting than a neutral glyph.
- */
 function SourceIcon({ url, name }: { url?: string; name: string }) {
 	const [failed, setFailed] = useState(false);
 

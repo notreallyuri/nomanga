@@ -10,12 +10,6 @@ import { cn } from "@/lib/utils";
 
 const appWindow = getCurrentWindow();
 
-/**
- * Custom window title bar replacing the native OS decoration
- * (`decorations: false` in tauri.conf.json). The bar itself is the drag region;
- * the controls call the window API directly rather than relying on chrome we no
- * longer render.
- */
 export function Titlebar() {
 	const [maximized, setMaximized] = useState(false);
 
