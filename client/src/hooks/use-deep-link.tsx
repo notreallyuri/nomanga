@@ -6,6 +6,7 @@ import {
 	useContext,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import { toast } from "sonner";
@@ -53,10 +54,17 @@ export function DeepLinkProvider({ children }: { children: ReactNode }) {
 		null,
 	);
 
+	// Held in a ref so the subscription below can run once. openSettings is
+	// rebuilt whenever the settings dialog opens or closes, and re-running the
+	// effect would re-read getCurrent(), which keeps returning the last URL
+	// forever — closing settings would raise the same prompt again.
+	const openSettingsRef = useRef(openSettings);
+	openSettingsRef.current = openSettings;
+
 	useEffect(() => {
 		let disposed = false;
 
-		function handle(urls: string[] | null, fromLaunch: boolean) {
+		function handle(urls: string[] | null) {
 			if (disposed || !urls?.length) return;
 
 			const repository = urls.map(parseAddRepo).find(Boolean);
@@ -66,27 +74,25 @@ export function DeepLinkProvider({ children }: { children: ReactNode }) {
 			}
 
 			setPendingRepository(repository);
-			openSettings("Extensions");
-			if (!fromLaunch) {
-				getCurrentWindow()
-					.setFocus()
-					.catch(() => {});
-			}
+			openSettingsRef.current("Extensions");
+			getCurrentWindow()
+				.setFocus()
+				.catch(() => {});
 		}
 
 		// onOpenUrl only fires while the app is already running, so a link that
-		// started the app cold has to be read back from getCurrent.
+		// started the app cold has to be read back from getCurrent — once.
 		getCurrent()
-			.then((urls) => handle(urls, true))
+			.then(handle)
 			.catch(() => {});
 
-		const unlisten = onOpenUrl((urls) => handle(urls, false));
+		const unlisten = onOpenUrl(handle);
 
 		return () => {
 			disposed = true;
 			unlisten.then((stop) => stop()).catch(() => {});
 		};
-	}, [openSettings]);
+	}, []);
 
 	const value = useMemo<DeepLinkUI>(
 		() => ({
