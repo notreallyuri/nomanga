@@ -12,28 +12,14 @@
 
 ### Extension distribution
 
-- [ ] Install extensions from a repository URL, the way Paperback and Aidoku
-  do, instead of making the user find and download a `.wasm` by hand. The
-  user adds a repo link once; the app lists what it offers and installs,
-  updates, and removes from there.
-  - Now that the packs live in their own repositories
-    (`nomanga-extension-mainpack`, `nomanga-extension-nsfw`), there is nothing
-    in-tree to install from, so this is the only path that does not involve
-    hand-managed files.
-  - Needs an index format the app fetches and the repo publishes: for each
-    extension, its id, version, `abi_version`, and a download URL, plus enough
-    per-source metadata (name, language, `nsfw`) to render a browsable list
-    before anything is downloaded.
-  - The `abi_version` in the index is what lets the app hide or flag entries
-    it cannot load, rather than downloading a `.wasm` and failing at
-    `ExtensionMetadata::inspect`. It should agree with the host's
-    `[ABI_MIN_SUPPORTED, ABI_VERSION]` range.
-  - Publishing side: a release workflow in each extension repo that builds the
-    `.wasm` and writes the index. `Registry::install` already handles the local
-    half once a file is in hand.
-  - Trust is the open question. A repo URL is arbitrary code from a stranger,
-    and the WASM sandbox plus the declared host allow-list are what contain it
-    — worth surfacing the allow-list at install time rather than burying it.
+- [ ] Check for extension updates in the background, the way library updates
+  already do, instead of only on a visit to Settings → Extensions. The catalog
+  fetch and the version comparison both exist; what is missing is a schedule
+  and somewhere to surface "3 extensions have updates".
+- [ ] Per-source icons in the repository index. `SourceInfo.icon_url` points at
+  each site's own favicon today, which means the Available list hotlinks five
+  different origins before anything is installed. Aidoku publishes icons
+  beside the index (`icons/en.aquamanga-v2.png`) for exactly this reason.
 
 ### Cloudflare bypass
 
@@ -91,6 +77,40 @@ default.
 ## Done
 
 ### Extension distribution
+
+- [x] Install extensions from a repository URL rather than a hand-downloaded
+  `.wasm`. Settings → Extensions takes a link; the app fetches an index, lists
+  what it offers, and installs, updates or reinstalls from there.
+  `RepositoryIndex`/`RepositoryExtension` in core carry each extension's
+  `ExtensionInfo`, a `download_url` and the full `SourceInfo` list — enough to
+  render a browsable list and show the host allow-list before anything is
+  downloaded.
+  `download_url` may be **relative to the index**, which is what makes a
+  repository publishable as a plain served directory: index and `.wasm` side by
+  side, no absolute URL baked in at build time, no CI. This is the shape
+  Aidoku's source lists use, and it is why `publish.sh` in each extension repo
+  only has to write `docs/` for GitHub Pages. `nomanga-cli index` builds the
+  index from the binaries' own metadata, so the published `abi_version` and
+  source lists cannot drift from what shipped.
+  Three consequences of the URL being user-pasted, all load-bearing:
+  `install_from_repository` takes an extension *id*, not a download URL, so the
+  app only ever fetches a binary a registered repository's own index points at;
+  both fetches are size-bounded (4 MB index, 64 MB wasm) against a server that
+  streams forever; and the index's `abi_version` is checked against
+  `[ABI_MIN_SUPPORTED, ABI_VERSION]` before downloading, with
+  `ExtensionMetadata::inspect` still authoritative on install — a repository
+  that publishes a wrong ABI is caught either way.
+  `browse_repositories` resolves the unsupported ids host-side so the frontend
+  carries no second copy of the range, and reports per-repository failures in
+  the row rather than as an error, so one dead link does not blank the list.
+  Trust is handled the only way it can be: the sandbox and the declared
+  allow-list contain the extension, and the allow-list is shown in a
+  confirmation before the download rather than buried in source settings after.
+  Adult sources staying in their own repository means they are invisible to
+  anyone who has not added that second URL — no NSFW gate needed on the
+  repository itself.
+  Verified end to end over HTTP: `publish.sh` → served `docs/` → index fetched,
+  relative `download_url` resolved, `.wasm` downloaded and loaded at ABI 5.
 
 - [x] Reinstalling an installed extension no longer lists it twice.
   `Registry::load_from` ended with `self.extensions.push(meta.extension)` on a

@@ -130,15 +130,27 @@ the AppImage locally: linuxdeploy's GTK plugin copies
 PKGBUILD does) or `--bundles deb`. `packaging/install-local.sh` registers a dev
 build with your desktop environment without packaging it.
 
+### Installing extensions
+
+Settings → Extensions takes a **repository URL** — a link to a JSON index that
+lists what a publisher offers. The app shows each extension's sources and the
+domains it declares, then downloads and activates it on confirm. The two packs
+built here are:
+
+| Repository | Index URL | Sources |
+|---|---|---|
+| [nomanga-extension-mainpack](https://github.com/notreallyuri/nomanga-extension-mainpack) | `https://notreallyuri.github.io/nomanga-extension-mainpack/index.min.json` | WeebCentral, MangaDex, MangaPill, NatoManga, WEBTOON |
+| [nomanga-extension-nsfw](https://github.com/notreallyuri/nomanga-extension-nsfw) | `https://notreallyuri.github.io/nomanga-extension-nsfw/index.min.json` | nHentai, Hitomi.la, MadaraDex, E-Hentai |
+
+Adult sources living in a separate repository is deliberate: they are not
+visible at all to anyone who has not added that second URL.
+
+*Install from file…* remains for a `.wasm` you built yourself.
+
 ### Building an extension
 
 Extensions live in their own repositories and depend on `nomanga-sdk` from this
 one:
-
-| Repository | Sources |
-|---|---|
-| [nomanga-extension-mainpack](https://github.com/notreallyuri/nomanga-extension-mainpack) | WeebCentral, MangaDex, MangaPill, NatoManga, WEBTOON |
-| [nomanga-extension-nsfw](https://github.com/notreallyuri/nomanga-extension-nsfw) | nHentai, Hitomi.la, MadaraDex, E-Hentai |
 
 ```toml
 nomanga-sdk = { git = "https://github.com/notreallyuri/nomanga", branch = "main" }
@@ -150,6 +162,26 @@ nomanga-sdk = { git = "https://github.com/notreallyuri/nomanga", branch = "main"
 
 The app loads `.wasm` files from its extensions directory (under the platform
 app-data dir); `Registry::install` copies an extension in and activates it.
+
+### Publishing a repository
+
+A repository is a static directory: an index next to the `.wasm` files it
+describes. `nomanga-cli` writes the index from the binaries' own metadata, so
+the published `abi_version` and source lists cannot drift from what shipped:
+
+```sh
+cargo install --git https://github.com/notreallyuri/nomanga nomanga-cli
+nomanga-cli index --name "My pack" --out docs/index.min.json --json docs/*.wasm
+```
+
+Each `download_url` is then just a file name, resolved against wherever the
+index was fetched from — so the same directory works served from anywhere.
+Committing `docs/` and pointing GitHub Pages at it (*Settings → Pages → Deploy
+from a branch: main, folder /docs*) is enough; no CI is involved. Both extension
+repos carry a `publish.sh` that does the whole build-and-write step.
+
+Pass `--base-url` only when the `.wasm` files live somewhere other than beside
+the index, such as a release asset.
 
 ### Inspecting / testing with the CLI
 
