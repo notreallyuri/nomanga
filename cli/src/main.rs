@@ -53,7 +53,7 @@ enum Command {
         #[arg(long)]
         name: String,
         #[arg(long)]
-        base_url: String,
+        base_url: Option<String>,
         #[arg(long)]
         description: Option<String>,
         #[arg(long)]
@@ -161,12 +161,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Builds a repository index from the extensions' own metadata rather than a
 /// hand-written manifest, so the published `abi_version` and source list cannot
-/// drift from the `.wasm` they describe. `base_url` is joined with each file's
-/// name to form its download URL.
+/// drift from the `.wasm` they describe. Without `base_url` each download URL
+/// is just the file name, which the app resolves against wherever it fetched
+/// the index — publish by dropping the index and the `.wasm` files in one
+/// directory and serving it. Pass `base_url` only when the binaries live
+/// somewhere else, such as a release asset.
 fn build_index(
     wasm: &[String],
     name: &str,
-    base_url: &str,
+    base_url: &Option<String>,
     description: &Option<String>,
     website: &Option<String>,
 ) -> Result<RepositoryIndex, Box<dyn std::error::Error>> {
@@ -184,9 +187,14 @@ fn build_index(
             .to_string_lossy()
             .into_owned();
 
+        let download_url = match base_url {
+            Some(base) => format!("{}/{file}", base.trim_end_matches('/')),
+            None => file,
+        };
+
         extensions.push(RepositoryExtension {
             info: meta.extension.clone(),
-            download_url: format!("{}/{file}", base_url.trim_end_matches('/')),
+            download_url,
             sources: meta.sources.clone(),
         });
     }

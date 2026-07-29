@@ -32,7 +32,8 @@ sqlx = { version = "0.9", features = ["runtime-tokio", "sqlite", "macros", "migr
 tokio = { version = "1", features = ["full"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "cookies"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "cookies", "stream"] }
 percent-encoding = "2"
 chrono = "0.4"
 getrandom = "0.3"
+futures-util = { version = "0.3.33", default-features = false, features = ["std"] }

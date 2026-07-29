@@ -101,6 +101,12 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             extension::set_source_preference,
             extension::get_source_settings,
             extension::save_source_settings,
+            // repositories
+            commands::repository::list_repositories,
+            commands::repository::add_repository,
+            commands::repository::remove_repository,
+            commands::repository::browse_repositories,
+            commands::repository::install_from_repository,
             // downloads
             commands::downloads::queue_downloads,
             commands::downloads::downloaded_chapter_ids,
