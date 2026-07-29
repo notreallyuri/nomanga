@@ -498,6 +498,11 @@ export type RepositoryCatalog = {
 	repository: Repository,
 	index: RepositoryIndex | null,
 	error: string | null,
+	/**
+	 *  Ids from this index whose ABI this app cannot load, resolved here so the
+	 *  frontend never has to carry a copy of the supported range.
+	 */
+	unsupported: string[],
 };
 
 export type RepositoryExtension = {

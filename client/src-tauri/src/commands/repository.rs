@@ -18,6 +18,9 @@ pub struct RepositoryCatalog {
     pub repository: Repository,
     pub index: Option<RepositoryIndex>,
     pub error: Option<String>,
+    /// Ids from this index whose ABI this app cannot load, resolved here so the
+    /// frontend never has to carry a copy of the supported range.
+    pub unsupported: Vec<String>,
 }
 
 #[tauri::command]
@@ -62,16 +65,26 @@ pub async fn browse_repositories(
         match fetch_index(&state.http, &row.url).await {
             Ok(index) => {
                 repository::mark_fetched(&state.pool, &row.url, &index.name).await?;
+
+                let unsupported = index
+                    .extensions
+                    .iter()
+                    .filter(|e| !e.abi_supported())
+                    .map(|e| e.info.id.clone())
+                    .collect();
+
                 catalogs.push(RepositoryCatalog {
                     repository: row,
                     index: Some(index),
                     error: None,
+                    unsupported,
                 });
             }
             Err(e) => catalogs.push(RepositoryCatalog {
                 repository: row,
                 index: None,
                 error: Some(e.to_string()),
+                unsupported: Vec::new(),
             }),
         }
     }
@@ -211,6 +224,84 @@ async fn fetch_bounded(http: &reqwest::Client, url: &str, limit: usize) -> Comma
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+
+    /// Serves `body` once at `/index.min.json` and returns the URL. Kept to a
+    /// raw socket so the test exercises the real reqwest path without pulling
+    /// in an HTTP server just for it.
+    fn serve_once(body: Vec<u8>) -> String {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut scratch = [0_u8; 1024];
+            stream.read(&mut scratch).ok();
+
+            let header = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            stream.write_all(header.as_bytes()).ok();
+            stream.write_all(&body).ok();
+            stream.flush().ok();
+        });
+
+        format!("http://127.0.0.1:{port}/index.min.json")
+    }
+
+    fn sample_index() -> String {
+        serde_json::json!({
+            "index_version": 1,
+            "name": "Test pack",
+            "extensions": [{
+                "info": {
+                    "id": "dev.test.pack",
+                    "name": "Test Pack",
+                    "version": "0.1.0",
+                    "abi_version": nomanga_core::extension::source::ABI_VERSION,
+                    "author": "test",
+                    "website": null
+                },
+                "download_url": "extension_test.wasm",
+                "sources": []
+            }]
+        })
+        .to_string()
+    }
+
+    #[tokio::test]
+    async fn fetches_and_parses_an_index_over_http() {
+        let url = serve_once(sample_index().into_bytes());
+        let index = fetch_index(&reqwest::Client::new(), &url).await.unwrap();
+
+        assert_eq!(index.name, "Test pack");
+        assert!(index.extensions[0].abi_supported());
+        assert_eq!(
+            resolve_url(&url, &index.extensions[0].download_url).unwrap(),
+            url.replace("index.min.json", "extension_test.wasm")
+        );
+    }
+
+    #[tokio::test]
+    async fn refuses_a_body_over_the_limit() {
+        let url = serve_once(vec![b'x'; 4096]);
+        let err = fetch_bounded(&reqwest::Client::new(), &url, 1024)
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("larger than"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn reports_a_body_that_is_not_an_index() {
+        let url = serve_once(b"<html>not json</html>".to_vec());
+        let err = fetch_index(&reqwest::Client::new(), &url)
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("repository index"), "{err}");
+    }
 
     #[test]
     fn rejects_a_url_that_is_not_http() {

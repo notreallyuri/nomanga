@@ -10,6 +10,7 @@ import {
 	useInstallExtension,
 	useUninstallExtension,
 } from "@/hooks/services/use-extensions";
+import { RepositorySection } from "./repositories";
 
 export function ExtensionSection() {
 	const { data: extensions, isPending, error } = useExtensions();
@@ -89,7 +90,9 @@ export function ExtensionSection() {
 				</div>
 			</SettingGroup>
 
-			<SettingGroup title="Add">
+			<RepositorySection />
+
+			<SettingGroup title="Add manually">
 				<div className="py-4">
 					<Button
 						disabled={install.isPending}
@@ -100,8 +103,8 @@ export function ExtensionSection() {
 						Install from file…
 					</Button>
 					<p className="mt-2 text-muted-foreground text-xs">
-						Extensions are sandboxed and can only reach the domains they
-						declare.
+						For a `.wasm` you built yourself. Extensions are sandboxed and can
+						only reach the domains they declare.
 					</p>
 				</div>
 			</SettingGroup>
