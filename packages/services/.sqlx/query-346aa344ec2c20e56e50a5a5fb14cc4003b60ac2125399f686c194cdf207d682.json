@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT manga_id FROM library_entry",
+  "describe": {
+    "columns": [
+      {
+        "name": "manga_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "library_entry",
+            "name": "manga_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "346aa344ec2c20e56e50a5a5fb14cc4003b60ac2125399f686c194cdf207d682"
+}

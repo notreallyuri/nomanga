@@ -84,6 +84,20 @@ Rust command signatures and types are exported to `client/src/types/bindings.ts`
 automatically (via `tauri-specta` / `specta`) on every debug build, so the
 frontend stays type-safe against the backend.
 
+Queries are checked at compile time, so building without a database relies on
+the committed cache in `packages/services/.sqlx`. After changing any `sqlx::query*!`
+macro, regenerate it:
+
+```sh
+cd packages/services
+cargo sqlx prepare -- --all-targets   # needs DATABASE_URL (see .env.example)
+```
+
+`--all-targets` is what includes queries that only appear in tests; without it
+the app still builds but `SQLX_OFFLINE=true cargo test` fails on the missing
+entries. Commit the resulting `.sqlx` changes — CI has no database and sets
+`SQLX_OFFLINE=true`.
+
 ## Building & running
 
 Prerequisites: a Rust toolchain (edition 2024), `pnpm`, and the
@@ -97,6 +111,25 @@ pnpm install
 pnpm tauri dev        # run the app
 pnpm tauri build      # production bundle
 ```
+
+### Packaged builds
+
+The `Build` workflow (Actions → Build → Run workflow) builds on Linux, macOS,
+and Windows, and uploads the bundles as artifacts.
+
+| Platform | Artifact | Notes |
+|---|---|---|
+| Windows | `.exe` (NSIS), `.msi` | Unsigned — SmartScreen shows a dismissible warning. |
+| macOS | `.dmg` (universal) | Unsigned — Gatekeeper **refuses** to open it. Right-click → Open, or `xattr -dr com.apple.quarantine /Applications/nomanga.app`. |
+| Linux | `.deb`, `.AppImage` | Built on Ubuntu 24.04, so glibc 2.39 or newer. |
+| Linux | `.rpm` | ⚠️ **Untested.** Built on Ubuntu, not Fedora — the file is produced, but its dependency names come from Tauri's list rather than Fedora's, so it may not resolve on install. |
+
+On Arch, use `packaging/arch/PKGBUILD` instead of any of the above. Do not build
+the AppImage locally: linuxdeploy's GTK plugin copies
+`/usr/lib/gdk-pixbuf-2.0/2.10.0`, which `gdk-pixbuf2` 2.44 no longer ships, so
+`pnpm tauri build` fails at the bundling step. Pass `--no-bundle` (as the
+PKGBUILD does) or `--bundles deb`. `packaging/install-local.sh` registers a dev
+build with your desktop environment without packaging it.
 
 ### Building an extension
 

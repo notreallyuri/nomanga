@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO library_entry (source_id, manga_id, added_at)\n         VALUES ('src', ?, '2026-01-01T00:00:00Z')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "421ad9cb1fa581a2fd527f4e2acf3edad098f82389981818b59ac77fa803b4c2"
+}

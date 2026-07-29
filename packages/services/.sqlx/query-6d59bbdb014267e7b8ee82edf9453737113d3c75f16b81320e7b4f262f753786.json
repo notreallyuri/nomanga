@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO manga (source_id, manga_id, title, cover_url, cached_at)\n         VALUES ('src', ?, 'Title', 'https://c/x.jpg', ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "6d59bbdb014267e7b8ee82edf9453737113d3c75f16b81320e7b4f262f753786"
+}

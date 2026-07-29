@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO category (id, name) VALUES ('local-id', 'Reading')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "665ae26da1ffa41146c3ddf41e5d238b1e44651c272511969d01ca7f184959e0"
+}

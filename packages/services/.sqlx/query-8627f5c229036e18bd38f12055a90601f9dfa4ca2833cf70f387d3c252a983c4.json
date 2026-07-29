@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT last_page FROM read_progress",
+  "describe": {
+    "columns": [
+      {
+        "name": "last_page",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "read_progress",
+            "name": "last_page"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8627f5c229036e18bd38f12055a90601f9dfa4ca2833cf70f387d3c252a983c4"
+}
