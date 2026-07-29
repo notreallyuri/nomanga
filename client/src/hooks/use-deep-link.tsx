@@ -1,5 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
+import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import {
 	createContext,
 	type ReactNode,
@@ -56,8 +56,8 @@ export function DeepLinkProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		let disposed = false;
 
-		const unlisten = onOpenUrl((urls) => {
-			if (disposed) return;
+		function handle(urls: string[] | null, fromLaunch: boolean) {
+			if (disposed || !urls?.length) return;
 
 			const repository = urls.map(parseAddRepo).find(Boolean);
 			if (!repository) {
@@ -67,10 +67,20 @@ export function DeepLinkProvider({ children }: { children: ReactNode }) {
 
 			setPendingRepository(repository);
 			openSettings("Extensions");
-			getCurrentWindow()
-				.setFocus()
-				.catch(() => {});
-		});
+			if (!fromLaunch) {
+				getCurrentWindow()
+					.setFocus()
+					.catch(() => {});
+			}
+		}
+
+		// onOpenUrl only fires while the app is already running, so a link that
+		// started the app cold has to be read back from getCurrent.
+		getCurrent()
+			.then((urls) => handle(urls, true))
+			.catch(() => {});
+
+		const unlisten = onOpenUrl((urls) => handle(urls, false));
 
 		return () => {
 			disposed = true;

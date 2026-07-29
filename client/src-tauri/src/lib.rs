@@ -149,6 +149,16 @@ pub fn run() {
         .expect("failed to export typescript bindings");
 
     tauri::Builder::default()
+        // Must stay first, and must come before deep-link: on Linux and Windows
+        // a nomanga:// link launches a fresh process with the URL in argv, so
+        // without this the running app never sees it and a second copy opens on
+        // the same database. The plugin's deep-link feature forwards that argv
+        // to the running instance as an open-url event.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_deep_link::init())
