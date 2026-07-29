@@ -46,45 +46,47 @@ export function ExtensionSection() {
 					</div>
 				)}
 
-				{extensions?.map((ext) => (
-					<Card
-						className="flex flex-row items-start gap-4 p-4"
-						key={ext.info.id}
-					>
-						<div className="min-w-0 flex-1">
-							<div className="flex items-baseline gap-2">
-								<p className="truncate font-medium">{ext.info.name}</p>
-								<span className="text-muted-foreground text-xs">
-									v{ext.info.version}
-								</span>
-							</div>
-							<p className="text-muted-foreground text-xs">
-								by {ext.info.author}
-							</p>
-							<p className="mt-2 text-xs">
-								{ext.sources.length}{" "}
-								{ext.sources.length === 1 ? "source" : "sources"}:{" "}
-								<span className="text-muted-foreground">
-									{ext.sources.map((s) => s.name).join(", ")}
-								</span>
-							</p>
-						</div>
-
-						<Button
-							disabled={uninstall.isPending}
-							onClick={() =>
-								uninstall.mutate(ext.info.id, {
-									onSuccess: () => toast.success(`Removed ${ext.info.name}`),
-									onError: (e) => toast.error(e.message),
-								})
-							}
-							size="icon"
-							variant="destructive"
+				<div className="flex flex-col gap-3 py-2">
+					{extensions?.map((ext) => (
+						<Card
+							className="flex flex-row items-start gap-4 p-4"
+							key={ext.info.id}
 						>
-							<TrashIcon />
-						</Button>
-					</Card>
-				))}
+							<div className="min-w-0 flex-1">
+								<div className="flex items-baseline gap-2">
+									<p className="truncate font-medium">{ext.info.name}</p>
+									<span className="text-muted-foreground text-xs">
+										v{ext.info.version}
+									</span>
+								</div>
+								<p className="text-muted-foreground text-xs">
+									by {ext.info.author}
+								</p>
+								<p className="mt-2 text-xs">
+									{ext.sources.length}{" "}
+									{ext.sources.length === 1 ? "source" : "sources"}:{" "}
+									<span className="text-muted-foreground">
+										{ext.sources.map((s) => s.name).join(", ")}
+									</span>
+								</p>
+							</div>
+
+							<Button
+								disabled={uninstall.isPending}
+								onClick={() =>
+									uninstall.mutate(ext.info.id, {
+										onSuccess: () => toast.success(`Removed ${ext.info.name}`),
+										onError: (e) => toast.error(e.message),
+									})
+								}
+								size="icon"
+								variant="destructive"
+							>
+								<TrashIcon />
+							</Button>
+						</Card>
+					))}
+				</div>
 			</SettingGroup>
 
 			<SettingGroup title="Add">

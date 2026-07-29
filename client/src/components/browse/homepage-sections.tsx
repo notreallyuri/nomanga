@@ -193,7 +193,7 @@ function ScrollRow({
 	};
 
 	return (
-		<div className="group/row relative min-w-0">
+		<div className="group/row relative isolate min-w-0">
 			<EdgeFade shown={edges.left} side="left" />
 			<EdgeFade shown={edges.right} side="right" />
 			<ScrollArrow onClick={() => page(-1)} shown={edges.left} side="left" />

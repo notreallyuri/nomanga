@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO library_entry_category (source_id, manga_id, category_id)\n         SELECT ?, ?, c.id FROM category c\n          WHERE c.id = COALESCE(\n                    (SELECT sp.default_category_id FROM source_preference sp\n                      WHERE sp.source_id = ?\n                        AND sp.default_category_id IN (SELECT id FROM category)),\n                    (SELECT id FROM category WHERE is_default = 1))\n         ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "17999bb0644e23efcb6e5521bf1017481259c8538b7747dd47d470d77414efae"
+}

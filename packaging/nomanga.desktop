@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=nomanga
+GenericName=Manga Reader
+Comment=A manga reader with pluggable sources
+Exec=nomanga
+Icon=nomanga
+Terminal=false
+Categories=Graphics;Viewer;
+StartupWMClass=nomanga

@@ -1,14 +1,23 @@
 use extism::{Function, PTR, UserData, convert::Json, host_fn};
-use nomanga_core::extension::common::{HostRequest, HostResponse};
+use nomanga_core::extension::common::{HostCookie, HostRequest, HostResponse};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 pub const EXPORT: &str = "nomanga_fetch";
+pub const EXPORT_SET_COOKIE: &str = "nomanga_set_cookie";
+pub const EXPORT_RANDOM_HEX: &str = "nomanga_random_hex";
 
 /// Performs a request on the extension's behalf. Supplied by the application so
 /// the host stays free of an HTTP stack and the app can reuse its own client,
 /// connection pool and cookie jar.
 pub type Fetcher = Arc<dyn Fn(HostRequest) -> HostResponse + Send + Sync>;
+
+/// Writes a cookie into the jar the fetcher reads from.
+pub type CookieWriter = Arc<dyn Fn(&str, &str) + Send + Sync>;
+
+/// Extensions build for `wasm32-unknown-unknown`, which has no entropy source,
+/// so nonces have to come from here.
+pub type RandomHex = Arc<dyn Fn(usize) -> String + Send + Sync>;
 
 #[derive(Debug, Clone)]
 pub struct CallRecord {
@@ -88,6 +97,8 @@ pub fn denied() -> TransportShared {
             body: Vec::new(),
             transport_error: Some("network is not available while inspecting".to_owned()),
         }),
+        set_cookie: Arc::new(|_, _| {}),
+        random_hex: Arc::new(|bytes| "0".repeat(bytes * 2)),
         log: Arc::new(CallLog::default()),
         recording: Arc::new(std::sync::atomic::AtomicBool::new(false)),
     }
@@ -97,6 +108,8 @@ pub fn denied() -> TransportShared {
 #[derive(Clone)]
 pub struct TransportShared {
     pub fetch: Fetcher,
+    pub set_cookie: CookieWriter,
+    pub random_hex: RandomHex,
     pub log: Arc<CallLog>,
     pub recording: Arc<std::sync::atomic::AtomicBool>,
 }
@@ -105,6 +118,8 @@ impl TransportShared {
     pub fn context(&self, allowed_hosts: Vec<String>) -> TransportContext {
         TransportContext {
             fetch: self.fetch.clone(),
+            set_cookie: self.set_cookie.clone(),
+            random_hex: self.random_hex.clone(),
             log: self.log.clone(),
             recording: self.recording.clone(),
             allowed_hosts,
@@ -115,6 +130,8 @@ impl TransportShared {
 
 pub struct TransportContext {
     pub fetch: Fetcher,
+    pub set_cookie: CookieWriter,
+    pub random_hex: RandomHex,
     pub log: Arc<CallLog>,
     /// Mirrors what Extism's built-in HTTP enforced before the transport moved
     /// host-side. Without this an extension could reach any host it liked.
@@ -200,13 +217,52 @@ host_fn!(fetch_impl(user_data: TransportContext; req: Json<HostRequest>) -> Json
     Ok(Json(response))
 });
 
+host_fn!(set_cookie_impl(user_data: TransportContext; req: Json<HostCookie>) -> Json<bool> {
+    let ctx = user_data.get()?;
+    let ctx = ctx.lock().unwrap();
+
+    let Json(cookie) = req;
+
+    // Same gate as a fetch: a source may only touch jars for hosts it declared,
+    // or it could plant a cookie against any site the app later requests.
+    if !ctx.is_allowed(&cookie.url) {
+        return Ok(Json(false));
+    }
+
+    (ctx.set_cookie)(&cookie.url, &cookie.cookie);
+    Ok(Json(true))
+});
+
+host_fn!(random_hex_impl(user_data: TransportContext; bytes: u64) -> String {
+    let ctx = user_data.get()?;
+    let ctx = ctx.lock().unwrap();
+
+    Ok((ctx.random_hex)(bytes.clamp(1, 64) as usize))
+});
+
 /// The returned handle lets the caller retarget `source_id` before each call —
 /// one extension can serve several sources, and the log is only useful if a
 /// record says which one made the request.
-pub fn function(ctx: TransportContext) -> (Function, UserData<TransportContext>) {
+pub fn functions(ctx: TransportContext) -> (Vec<Function>, UserData<TransportContext>) {
     let data = UserData::new(ctx);
-    let function = Function::new(EXPORT, [PTR], [PTR], data.clone(), fetch_impl);
-    (function, data)
+    let functions = vec![
+        Function::new(EXPORT, [PTR], [PTR], data.clone(), fetch_impl),
+        Function::new(
+            EXPORT_SET_COOKIE,
+            [PTR],
+            [PTR],
+            data.clone(),
+            set_cookie_impl,
+        ),
+        Function::new(
+            EXPORT_RANDOM_HEX,
+            [extism::ValType::I64],
+            [PTR],
+            data.clone(),
+            random_hex_impl,
+        ),
+    ];
+    (functions, data)
 }
 
 pub fn set_source(data: &UserData<TransportContext>, source_id: &str) {

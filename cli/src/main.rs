@@ -160,13 +160,25 @@ fn print_info(meta: &ExtensionMetadata) {
 /// The CLI has no async runtime, so extension requests go out through a plain
 /// blocking client rather than the app's reqwest bridge.
 fn blocking_transport() -> TransportShared {
+    let jar: Jar = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let fetch_jar = jar.clone();
+
     TransportShared {
-        fetch: Arc::new(|request: HostRequest| {
+        fetch: Arc::new(move |request: HostRequest| {
             let mut builder = ureq::http::Request::builder()
                 .method(request.method.as_str())
                 .uri(&request.url);
             for (key, value) in &request.headers {
                 builder = builder.header(key, value);
+            }
+
+            if !request
+                .headers
+                .iter()
+                .any(|(k, _)| k.eq_ignore_ascii_case("cookie"))
+                && let Some(header) = cookie_header(&fetch_jar, &request.url)
+            {
+                builder = builder.header("Cookie", header);
             }
 
             let built = builder.body(request.body.unwrap_or_default());
@@ -181,11 +193,17 @@ fn blocking_transport() -> TransportShared {
             };
 
             let status = response.status().as_u16();
-            let headers = response
+            let headers: Vec<(String, String)> = response
                 .headers()
                 .iter()
                 .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or_default().to_owned()))
                 .collect();
+
+            for (key, value) in &headers {
+                if key.eq_ignore_ascii_case("set-cookie") {
+                    store_cookie(&fetch_jar, &request.url, value);
+                }
+            }
 
             match response.body_mut().read_to_vec() {
                 Ok(body) => HostResponse {
@@ -197,9 +215,63 @@ fn blocking_transport() -> TransportShared {
                 Err(e) => transport_failure(&e.to_string()),
             }
         }),
+        set_cookie: Arc::new(move |url, cookie| store_cookie(&jar, url, cookie)),
+        random_hex: Arc::new(|bytes| {
+            // No rand dependency here; the CLI only needs a nonce that differs
+            // between runs, not an unpredictable one.
+            let seed = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or_default();
+            (0..bytes)
+                .map(|i| format!("{:02x}", (seed >> (i % 16 * 8)) as u8 ^ i as u8))
+                .collect()
+        }),
         log: Arc::new(CallLog::default()),
         recording: Arc::new(AtomicBool::new(false)),
     }
+}
+
+fn host_of(url: &str) -> &str {
+    url.split("://")
+        .nth(1)
+        .and_then(|rest| rest.split('/').next())
+        .unwrap_or(url)
+}
+
+type Jar = Arc<std::sync::Mutex<Vec<(String, String, String)>>>;
+
+/// Stores one `Set-Cookie` value, keyed by its `Domain` attribute or, without
+/// one, the host it came from.
+fn store_cookie(jar: &Jar, url: &str, cookie: &str) {
+    let mut parts = cookie.split(';');
+    let Some((name, value)) = parts.next().and_then(|pair| pair.trim().split_once('=')) else {
+        return;
+    };
+
+    let domain = parts
+        .filter_map(|attr| attr.trim().split_once('='))
+        .find(|(k, _)| k.eq_ignore_ascii_case("domain"))
+        .map(|(_, v)| v.trim().trim_start_matches('.').to_owned())
+        .unwrap_or_else(|| host_of(url).to_owned());
+
+    let Ok(mut jar) = jar.lock() else { return };
+    jar.retain(|(d, n, _)| !(d == &domain && n == name));
+    jar.push((domain, name.to_owned(), value.to_owned()));
+}
+
+fn cookie_header(jar: &Jar, url: &str) -> Option<String> {
+    let host = host_of(url);
+    let jar = jar.lock().ok()?;
+
+    let header = jar
+        .iter()
+        .filter(|(domain, _, _)| host == domain || host.ends_with(&format!(".{domain}")))
+        .map(|(_, name, value)| format!("{name}={value}"))
+        .collect::<Vec<_>>()
+        .join("; ");
+
+    (!header.is_empty()).then_some(header)
 }
 
 fn transport_failure(message: &str) -> HostResponse {

@@ -5,6 +5,8 @@ import {
 	CheckSquareIcon,
 	FolderSimpleIcon,
 	type Icon,
+	LockKeyIcon,
+	MagnifyingGlassIcon,
 	RowsIcon,
 	SlidersHorizontalIcon,
 	SquaresFourIcon,
@@ -15,12 +17,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BulkCategoriesDialog } from "@/components/library/bulk-categories-dialog";
+import { CategoryLockGate } from "@/components/library/category-lock-gate";
 import { EditCategoriesDialog } from "@/components/library/edit-categories-dialog";
 import { LibraryCard } from "@/components/library/library-card";
 import { LibraryList } from "@/components/library/library-list";
 import { ManageCategoriesDialog } from "@/components/library/manage-categories-dialog";
 import { MangaGrid, MangaGridSkeleton } from "@/components/manga/manga-grid";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Popover,
 	PopoverContent,
@@ -41,14 +45,17 @@ import {
 	useBulkRemove,
 	useCategories,
 	useLibrary,
+	useLibraryLockIsSet,
 	useLibraryRefresh,
 } from "@/hooks/services/use-library";
 import {
 	useAppearance,
 	useUpdateSettings,
 } from "@/hooks/services/use-settings";
+import { useLockSession } from "@/hooks/use-lock-session";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { categoryIcon } from "@/lib/category-visuals";
+import { useIsUnlocked } from "@/lib/library-lock";
 import { cn } from "@/lib/utils";
 import type {
 	CategoryFilter,
@@ -56,6 +63,7 @@ import type {
 	EntryRef,
 	LibraryItem,
 	LibraryLayout,
+	LibrarySearchField,
 	RefreshScope,
 } from "@/types/bindings";
 
@@ -74,6 +82,20 @@ const UNCATEGORIZED_FILTER: CategoryFilter = { type: "Uncategorized" };
 const LAST_TAB_KEY = "library.last-tab";
 const SORT_KEY = "library.sort";
 const QUICK_FILTER_KEY = "library.quick-filter";
+const SEARCH_FIELD_KEY = "library.search-field";
+
+const SEARCH_FIELD_LABELS: Record<LibrarySearchField, string> = {
+	title: "Title",
+	author: "Author",
+	artist: "Artist",
+	tag: "Tag",
+	description: "Description",
+};
+
+const isSearchField = (value: unknown): value is LibrarySearchField =>
+	typeof value === "string" && value in SEARCH_FIELD_LABELS;
+
+const SEARCH_DEBOUNCE_MS = 250;
 
 const SORT_LABELS: Record<CategorySort, string> = {
 	added: "Recently added",
@@ -170,6 +192,24 @@ function LibraryPage() {
 	);
 	const [editing, setEditing] = useState<LibraryItem | null>(null);
 
+	const [searchField, setSearchField] = usePersistentState<LibrarySearchField>(
+		SEARCH_FIELD_KEY,
+		"title",
+		isSearchField,
+	);
+	const [draft, setDraft] = useState("");
+	const [query, setQuery] = useState("");
+
+	useEffect(() => {
+		if (draft === query) return;
+		const timer = setTimeout(() => setQuery(draft), SEARCH_DEBOUNCE_MS);
+		return () => clearTimeout(timer);
+	}, [draft, query]);
+
+	const search = query.trim()
+		? { field: searchField, query: query.trim() }
+		: null;
+
 	const [selectionMode, setSelectionMode] = useState(false);
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [bulkOpen, setBulkOpen] = useState(false);
@@ -179,7 +219,21 @@ function LibraryPage() {
 	const setLayout = (layout: LibraryLayout) =>
 		updateSettings("appearance", { library_layout: layout });
 	const categories = useCategories();
-	const library = useLibrary(filter);
+	const lockIsSet = useLibraryLockIsSet();
+
+	const activeCategory =
+		filter.type === "Category"
+			? categories.data?.find((c) => c.id === filter.id)
+			: undefined;
+	// A locked flag only gates while a password exists to open it with; a
+	// backup restored without one would otherwise strand the category.
+	const gated = Boolean(activeCategory?.locked) && lockIsSet.data === true;
+	const unlocked = useIsUnlocked(activeCategory?.id);
+	const locked = gated && !unlocked;
+
+	useLockSession(filter);
+
+	const library = useLibrary(filter, !locked, search);
 	const bulkRemove = useBulkRemove();
 	const refresh = useLibraryRefresh();
 
@@ -201,12 +255,12 @@ function LibraryPage() {
 		(uncategorized.data?.length ?? 0) > 0 || filter.type === "Uncategorized";
 
 	const items = useMemo(() => {
-		const base = library.data ?? [];
+		const base = locked ? [] : (library.data ?? []);
 		const sorted = filter.type === "Category" ? base : sortItems(base, sort);
 		return quickFilter === "all"
 			? sorted
 			: sorted.filter((item) => matchesQuickFilter(item, quickFilter));
-	}, [library.data, filter.type, sort, quickFilter]);
+	}, [library.data, filter.type, sort, quickFilter, locked]);
 
 	const selectedItems = useMemo(
 		() => items.filter((item) => selected.has(keyOf(item))),
@@ -262,6 +316,120 @@ function LibraryPage() {
 				<h1 className="font-heading font-semibold text-2xl">Library</h1>
 
 				<div className="flex items-center gap-1">
+					<Button
+						disabled={refresh.isRefreshing}
+						onClick={() => refresh.refresh(tabScope())}
+						variant="ghost"
+					>
+						<ArrowClockwiseIcon
+							className={refresh.isRefreshing ? "animate-spin" : undefined}
+						/>
+						{filter.type === "Category" ? "Update category" : "Check updates"}
+					</Button>
+					<Button
+						onClick={() =>
+							selectionMode ? exitSelection() : setSelectionMode(true)
+						}
+						variant="ghost"
+					>
+						<CheckSquareIcon />
+						{selectionMode ? "Done" : "Select"}
+					</Button>
+					<ManageCategoriesDialog
+						trigger={
+							<Button size="lg" variant="ghost">
+								<SlidersHorizontalIcon />
+								Manage categories
+							</Button>
+						}
+					/>
+				</div>
+			</div>
+
+			<div className="px-6 pt-4">
+				<Tabs
+					onValueChange={(value) => setFilter(toFilter(value as string))}
+					value={toTabValue(filter)}
+				>
+					<TabsList
+						className="no-scrollbar h-auto max-w-full items-center overflow-x-auto pb-2"
+						variant="line"
+					>
+						<TabsTrigger value={ALL}>All</TabsTrigger>
+						{categories.data?.map((category) => {
+							const Icon = categoryIcon(category.icon);
+							const showLock = category.locked && lockIsSet.data === true;
+							return (
+								<TabsTrigger key={category.id} value={category.id}>
+									{showLock ? (
+										<LockKeyIcon size={15} weight="fill" />
+									) : (
+										Icon && (
+											<Icon
+												size={15}
+												style={{ color: category.color ?? undefined }}
+												weight="fill"
+											/>
+										)
+									)}
+									{category.name}
+								</TabsTrigger>
+							);
+						})}
+						{showUncategorized && (
+							<TabsTrigger value={UNCATEGORIZED}>Uncategorized</TabsTrigger>
+						)}
+					</TabsList>
+				</Tabs>
+			</div>
+
+			<div className="flex items-center gap-2 px-6 pt-3">
+				<div className="relative min-w-0 max-w-sm flex-1">
+					<MagnifyingGlassIcon
+						className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+						size={16}
+					/>
+					<Input
+						aria-label={`Search library by ${SEARCH_FIELD_LABELS[searchField].toLowerCase()}`}
+						className="pl-9"
+						onChange={(e) => setDraft(e.target.value)}
+						placeholder={`Search ${SEARCH_FIELD_LABELS[searchField].toLowerCase()}…`}
+						value={draft}
+					/>
+					{draft && (
+						<button
+							aria-label="Clear search"
+							className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+							onClick={() => {
+								setDraft("");
+								setQuery("");
+							}}
+							type="button"
+						>
+							<XIcon size={14} />
+						</button>
+					)}
+				</div>
+
+				<Select
+					items={SEARCH_FIELD_LABELS}
+					onValueChange={(value) => setSearchField(value as LibrarySearchField)}
+					value={searchField}
+				>
+					<SelectTrigger aria-label="Search field" className="h-8 w-36">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{(Object.keys(SEARCH_FIELD_LABELS) as LibrarySearchField[]).map(
+							(field) => (
+								<SelectItem key={field} value={field}>
+									{SEARCH_FIELD_LABELS[field]}
+								</SelectItem>
+							),
+						)}
+					</SelectContent>
+				</Select>
+				<div className="ml-auto flex items-center gap-1">
 					{filter.type !== "Category" && (
 						<Select
 							onValueChange={(value) => setSort(value as CategorySort)}
@@ -269,7 +437,7 @@ function LibraryPage() {
 						>
 							<SelectTrigger
 								aria-label="Sort library"
-								className="h-9 w-auto gap-1.5 border-0 bg-transparent px-2 text-sm shadow-none hover:bg-muted"
+								className="h-8 w-auto gap-1.5 border-0 bg-transparent px-2 shadow-none hover:bg-muted"
 							>
 								<ArrowsDownUpIcon />
 								<SelectValue>{SORT_LABELS[sort]}</SelectValue>
@@ -329,69 +497,10 @@ function LibraryPage() {
 							</div>
 						</PopoverContent>
 					</Popover>
-					<Button
-						disabled={refresh.isRefreshing}
-						onClick={() => refresh.refresh(tabScope())}
-						variant="ghost"
-					>
-						<ArrowClockwiseIcon
-							className={refresh.isRefreshing ? "animate-spin" : undefined}
-						/>
-						{filter.type === "Category" ? "Update category" : "Check updates"}
-					</Button>
-					<Button
-						onClick={() =>
-							selectionMode ? exitSelection() : setSelectionMode(true)
-						}
-						variant="ghost"
-					>
-						<CheckSquareIcon />
-						{selectionMode ? "Done" : "Select"}
-					</Button>
-					<ManageCategoriesDialog
-						trigger={
-							<Button size="lg" variant="ghost">
-								<SlidersHorizontalIcon />
-								Manage categories
-							</Button>
-						}
-					/>
 				</div>
 			</div>
 
-			<div className="px-6 pt-4">
-				<Tabs
-					onValueChange={(value) => setFilter(toFilter(value as string))}
-					value={toTabValue(filter)}
-				>
-					<TabsList
-						className="no-scrollbar h-auto max-w-full items-center overflow-x-auto pb-2"
-						variant="line"
-					>
-						<TabsTrigger value={ALL}>All</TabsTrigger>
-						{categories.data?.map((category) => {
-							const Icon = categoryIcon(category.icon);
-							return (
-								<TabsTrigger key={category.id} value={category.id}>
-									{Icon && (
-										<Icon
-											size={15}
-											style={{ color: category.color ?? undefined }}
-											weight="fill"
-										/>
-									)}
-									{category.name}
-								</TabsTrigger>
-							);
-						})}
-						{showUncategorized && (
-							<TabsTrigger value={UNCATEGORIZED}>Uncategorized</TabsTrigger>
-						)}
-					</TabsList>
-				</Tabs>
-			</div>
-
-			<div className="no-scrollbar flex gap-1.5 overflow-x-auto px-6 pt-3 pb-2">
+			<div className="no-scrollbar flex gap-1.5 overflow-x-auto px-6 pt-2.5 pb-1">
 				{QUICK_FILTERS.map(({ value, label }) => (
 					<button
 						className={cn(
@@ -480,13 +589,17 @@ function LibraryPage() {
 			)}
 
 			<div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-6">
-				{library.isPending ? (
+				{locked && activeCategory ? (
+					<CategoryLockGate category={activeCategory} />
+				) : library.isPending ? (
 					<MangaGridSkeleton size={card_size} />
 				) : library.error ? (
 					<p className="text-destructive text-sm">{library.error.message}</p>
 				) : items.length === 0 ? (
 					<EmptyState
-						hasFilter={filter.type !== "All" || quickFilter !== "all"}
+						hasFilter={
+							filter.type !== "All" || quickFilter !== "all" || search !== null
+						}
 					/>
 				) : library_layout === "List" ? (
 					<LibraryList

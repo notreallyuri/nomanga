@@ -1,13 +1,30 @@
-import { BookmarkSimpleIcon, CheckIcon, PlusIcon } from "@phosphor-icons/react";
+import {
+	BookmarkSimpleIcon,
+	CheckIcon,
+	FolderSimpleIcon,
+	PlusIcon,
+} from "@phosphor-icons/react";
 import { toast } from "sonner";
-import { useIsInLibrary, useToggleLibrary } from "@/hooks/services/use-library";
+import {
+	useCategories,
+	useEntryCategories,
+	useIsInLibrary,
+	useSetEntryCategories,
+	useToggleLibrary,
+} from "@/hooks/services/use-library";
+import { categoryIcon } from "@/lib/category-visuals";
 import { cn } from "@/lib/utils";
 import type { MangaSimple } from "@/types/bindings";
 import { MangaCard } from "../manga/manga-card";
 import {
 	ContextMenu,
+	ContextMenuCheckboxItem,
 	ContextMenuContent,
 	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuSub,
+	ContextMenuSubContent,
+	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 } from "../ui/context-menu";
 
@@ -43,7 +60,9 @@ export function BrowseCard({
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger>
-				<div className="group/card relative">
+				{/* isolate keeps the badge's z-10 inside the card, below the sticky
+				    search bar rather than punching through it while scrolling. */}
+				<div className="group/card relative isolate">
 					<MangaCard
 						compactTitle={compactTitle}
 						coverUrl={item.cover_url}
@@ -84,7 +103,83 @@ export function BrowseCard({
 						Add to library
 					</ContextMenuItem>
 				)}
+
+				<CategorySubmenu item={item} saved={saved} sourceId={sourceId} />
 			</ContextMenuContent>
 		</ContextMenu>
+	);
+}
+
+/**
+ * Lives inside the popup so its queries only run while the menu is open —
+ * a browse grid holds dozens of these cards.
+ */
+function CategorySubmenu({
+	sourceId,
+	item,
+	saved,
+}: {
+	sourceId: string;
+	item: MangaSimple;
+	saved: boolean;
+}) {
+	const categories = useCategories();
+	const assigned = useEntryCategories(sourceId, item.id, saved);
+	const { add } = useToggleLibrary(sourceId, item.id, item);
+	const save = useSetEntryCategories(sourceId, item.id);
+
+	if (!categories.data?.length) return null;
+
+	const current = saved ? (assigned.data ?? []) : [];
+	// An unsaved entry has to land in the library before it can be filed.
+	const busy =
+		add.isPending || save.isPending || (saved && !assigned.isSuccess);
+
+	const toggle = async (categoryId: string, name: string, on: boolean) => {
+		const next = new Set(current);
+		if (on) next.add(categoryId);
+		else next.delete(categoryId);
+
+		try {
+			if (!saved) await add.mutateAsync(undefined);
+			await save.mutateAsync([...next]);
+			toast.success(on ? `Added to ${name}` : `Removed from ${name}`);
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : "Something went wrong");
+		}
+	};
+
+	return (
+		<>
+			<ContextMenuSeparator />
+			<ContextMenuSub>
+				<ContextMenuSubTrigger>
+					<FolderSimpleIcon />
+					Add to category
+				</ContextMenuSubTrigger>
+				<ContextMenuSubContent>
+					{categories.data.map((category) => {
+						const Icon = categoryIcon(category.icon);
+						return (
+							<ContextMenuCheckboxItem
+								checked={current.includes(category.id)}
+								closeOnClick={false}
+								disabled={busy}
+								key={category.id}
+								onCheckedChange={(on) => toggle(category.id, category.name, on)}
+							>
+								{Icon && (
+									<Icon
+										style={{ color: category.color ?? undefined }}
+										weight="fill"
+									/>
+								)}
+								<span className="truncate">{category.name}</span>
+							</ContextMenuCheckboxItem>
+						);
+					})}
+				</ContextMenuSubContent>
+			</ContextMenuSub>
+		</>
 	);
 }

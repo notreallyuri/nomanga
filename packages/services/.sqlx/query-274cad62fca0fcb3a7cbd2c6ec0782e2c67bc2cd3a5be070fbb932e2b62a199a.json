@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT cc.source_id, cc.manga_id, m.title, m.cover_url,\n                  cc.chapter_id, cc.title AS chapter_title,\n                  cc.number AS \"number: f64\",\n                  cc.first_seen_at AS \"first_seen_at: DateTime<Utc>\"\n             FROM cached_chapter cc\n             JOIN library_entry le\n               ON le.source_id = cc.source_id AND le.manga_id = cc.manga_id\n             JOIN manga m\n               ON m.source_id = cc.source_id AND m.manga_id = cc.manga_id\n            WHERE cc.first_seen_at > le.added_at\n              AND (le.updates_cleared_at IS NULL\n                   OR cc.first_seen_at > le.updates_cleared_at)\n              AND NOT EXISTS (\n                  SELECT 1 FROM read_chapter rc\n                   WHERE rc.source_id = cc.source_id\n                     AND rc.manga_id = cc.manga_id\n                     AND rc.chapter_id = cc.chapter_id)\n              AND NOT EXISTS (\n                  SELECT 1 FROM library_entry_category lec\n                    JOIN category c ON c.id = lec.category_id\n                   WHERE lec.source_id = cc.source_id\n                     AND lec.manga_id = cc.manga_id\n                     AND c.hidden = 1)\n            ORDER BY cc.first_seen_at DESC, cc.number DESC",
+  "query": "SELECT cc.source_id, cc.manga_id, m.title, m.cover_url,\n                  cc.chapter_id, cc.title AS chapter_title,\n                  cc.number AS \"number: f64\",\n                  cc.first_seen_at AS \"first_seen_at: DateTime<Utc>\"\n             FROM cached_chapter cc\n             JOIN library_entry le\n               ON le.source_id = cc.source_id AND le.manga_id = cc.manga_id\n             JOIN manga m\n               ON m.source_id = cc.source_id AND m.manga_id = cc.manga_id\n            WHERE cc.first_seen_at > le.added_at\n              AND (le.updates_cleared_at IS NULL\n                   OR cc.first_seen_at > le.updates_cleared_at)\n              AND NOT EXISTS (\n                  SELECT 1 FROM read_chapter rc\n                   WHERE rc.source_id = cc.source_id\n                     AND rc.manga_id = cc.manga_id\n                     AND rc.chapter_id = cc.chapter_id)\n              AND NOT EXISTS (\n                  SELECT 1 FROM library_entry_category lec\n                    JOIN category c ON c.id = lec.category_id\n                   WHERE lec.source_id = cc.source_id\n                     AND lec.manga_id = cc.manga_id\n                     AND (c.hidden = 1 OR c.locked = 1))\n            ORDER BY cc.first_seen_at DESC, cc.number DESC",
   "describe": {
     "columns": [
       {
@@ -106,5 +106,5 @@
       false
     ]
   },
-  "hash": "72f181aa30ae6ea222c7f58d63801cf276e4b15cb1dfade0d016f7b6b78f5f45"
+  "hash": "274cad62fca0fcb3a7cbd2c6ec0782e2c67bc2cd3a5be070fbb932e2b62a199a"
 }

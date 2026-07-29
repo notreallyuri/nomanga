@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT source_id, enabled, private, blur_covers, skip_updates\n         FROM source_preference\n         WHERE source_id = ?",
+  "query": "SELECT source_id, enabled, private, blur_covers, skip_updates, default_category_id\n         FROM source_preference",
   "describe": {
     "columns": [
       {
@@ -57,18 +57,30 @@
             "name": "skip_updates"
           }
         }
+      },
+      {
+        "name": "default_category_id",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "source_preference",
+            "name": "default_category_id"
+          }
+        }
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 0
     },
     "nullable": [
       false,
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "4205b7957ebe25bb7529a650c2bf7044f7dd4210fb30f3ff520ab3fca1f2078f"
+  "hash": "87b9912b2f6d99019fc5ed5e0c5f12a182304cc423c544277b4cd9d7b890d15e"
 }

@@ -2,10 +2,14 @@ import {
 	Sidebar as ShadSidebar,
 	SidebarContent,
 	SidebarFooter,
+	SidebarHeader,
 	SidebarRail,
+	SidebarTrigger,
+	useSidebar,
 } from "../ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { NavDownloads } from "./downloads";
-import { NavMain } from "./main";
+import { NavMain, NavSettings } from "./main";
 import { NavUpdates } from "./updates";
 
 interface SidebarProps {
@@ -19,18 +23,74 @@ export function Sidebar({
 	...props
 }: React.ComponentProps<typeof ShadSidebar> & SidebarProps) {
 	return (
-		<ShadSidebar className="" collapsible="icon" {...props}>
+		<ShadSidebar collapsible="icon" {...props}>
+			<SidebarHeader className="flex flex-row items-center justify-between group-data-[collapsible=icon]:justify-center">
+				<h1 className="font-black group-data-[collapsible=icon]:hidden">
+					<span className="mr-1 rounded bg-accent p-0.5 px-1.5">no</span>manga
+				</h1>
+
+				<BrandToggle />
+
+				<Tooltip>
+					<TooltipTrigger
+						render={
+							<SidebarTrigger
+								aria-label="Collapse sidebar"
+								className="group-data-[collapsible=icon]:hidden"
+							/>
+						}
+					/>
+					<TooltipContent align="center" side="right">
+						Collapse sidebar ({MODIFIER}B)
+					</TooltipContent>
+				</Tooltip>
+			</SidebarHeader>
 			<SidebarContent>
-				<NavMain
+				<NavMain />
+			</SidebarContent>
+			{/* Each child is a SidebarGroup, which brings its own p-2 — the footer's
+			    own padding would double it and knock the icons off-centre in the
+			    collapsed rail. SidebarContent leaves the padding to its groups too. */}
+			<SidebarFooter className="gap-0 p-0">
+				<NavSettings
 					onSettingsOpenChange={onSettingsOpenChange}
 					settingsOpen={settingsOpen}
 				/>
-			</SidebarContent>
-			<SidebarFooter>
 				<NavDownloads />
 				<NavUpdates />
 			</SidebarFooter>
 			<SidebarRail />
 		</ShadSidebar>
+	);
+}
+
+const MODIFIER = navigator.userAgent.includes("Mac") ? "⌘" : "Ctrl+";
+
+/**
+ * Collapsed to icons there is only room for one control, so the mark doubles as
+ * the expand button — the rail and the keyboard shortcut still work for anyone
+ * who never tries it.
+ */
+function BrandToggle() {
+	const { toggleSidebar } = useSidebar();
+
+	return (
+		<Tooltip>
+			<TooltipTrigger
+				render={
+					<button
+						aria-label="Expand sidebar"
+						className="hidden size-8 items-center justify-center rounded bg-accent font-black text-sm transition-colors hover:bg-accent/80 group-data-[collapsible=icon]:flex"
+						onClick={toggleSidebar}
+						type="button"
+					>
+						no
+					</button>
+				}
+			/>
+			<TooltipContent align="center" side="right">
+				Expand sidebar ({MODIFIER}B)
+			</TooltipContent>
+		</Tooltip>
 	);
 }

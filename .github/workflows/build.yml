@@ -1,0 +1,89 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Pinned rather than ubuntu-latest: the glibc the deb and AppImage are
+          # linked against is the oldest system they will run on, so it should
+          # move when we decide to, not when the label is repointed.
+          - platform: ubuntu-24.04
+            name: linux
+            args: ""
+            bundle: target/release/bundle
+          - platform: macos-latest
+            name: macos
+            args: --target universal-apple-darwin
+            bundle: target/universal-apple-darwin/release/bundle
+          - platform: windows-latest
+            name: windows
+            args: ""
+            bundle: target/release/bundle
+
+    runs-on: ${{ matrix.platform }}
+
+    env:
+      # packages/services uses sqlx's compile-time-checked macros. There is no
+      # database in CI, so the macros must expand from the committed .sqlx cache.
+      SQLX_OFFLINE: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libssl-dev \
+            libgtk-3-dev \
+            patchelf \
+            rpm
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+          key: ${{ matrix.name }}
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: client
+
+      - name: Build
+        run: pnpm tauri build ${{ matrix.args }}
+        working-directory: client
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nomanga-${{ matrix.name }}
+          path: |
+            ${{ matrix.bundle }}/deb/*.deb
+            ${{ matrix.bundle }}/rpm/*.rpm
+            ${{ matrix.bundle }}/appimage/*.AppImage
+            ${{ matrix.bundle }}/dmg/*.dmg
+            ${{ matrix.bundle }}/nsis/*.exe
+            ${{ matrix.bundle }}/msi/*.msi
+          if-no-files-found: error

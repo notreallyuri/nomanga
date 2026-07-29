@@ -283,7 +283,7 @@ pub async fn library_updates(pool: &SqlitePool, limit: i64) -> ServiceResult<Vec
                     JOIN category c ON c.id = lec.category_id
                    WHERE lec.source_id = cc.source_id
                      AND lec.manga_id = cc.manga_id
-                     AND c.hidden = 1)
+                     AND (c.hidden = 1 OR c.locked = 1))
             ORDER BY cc.first_seen_at DESC, cc.number DESC"#
     )
     .fetch_all(pool)

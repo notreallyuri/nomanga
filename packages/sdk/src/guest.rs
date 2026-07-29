@@ -1,5 +1,5 @@
 use extism_pdk::{Json, host_fn};
-use nomanga_core::extension::common::{HostRequest, HostResponse};
+use nomanga_core::extension::common::{HostCookie, HostRequest, HostResponse};
 use nomanga_core::extension::error::{SourceError, SourceResult};
 use serde::{Serialize, de::DeserializeOwned};
 use std::collections::BTreeMap;
@@ -7,10 +7,10 @@ use std::collections::BTreeMap;
 #[host_fn]
 unsafe extern "ExtismHost" {
     fn nomanga_fetch(request: Json<HostRequest>) -> Json<HostResponse>;
+    fn nomanga_set_cookie(cookie: Json<HostCookie>) -> Json<bool>;
+    fn nomanga_random_hex(bytes: u64) -> String;
 }
 
-/// Every extension request goes through the host: it owns the HTTP client, the
-/// allowed-host check, and the cookies a challenge-protected source needs.
 fn send(request: HostRequest) -> SourceResult<HostResponse> {
     let Json(response) =
         unsafe { nomanga_fetch(Json(request)) }.map_err(|e| SourceError::Network {
@@ -20,8 +20,7 @@ fn send(request: HostRequest) -> SourceResult<HostResponse> {
     Ok(response)
 }
 
-pub const USER_AGENT: &str =
-    "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0";
+pub use nomanga_core::extension::common::USER_AGENT;
 
 pub struct Request {
     url: String,
@@ -64,6 +63,11 @@ impl Request {
         self.header("Referer", url)
     }
 
+    pub fn body(mut self, body: impl Into<Vec<u8>>) -> Self {
+        self.body = Some(body.into());
+        self
+    }
+
     pub fn json_body<T: Serialize>(mut self, body: &T) -> SourceResult<Self> {
         let encoded = serde_json::to_vec(body).map_err(|e| SourceError::Parse {
             message: format!("could not encode request body: {e}"),
@@ -73,7 +77,7 @@ impl Request {
         Ok(self.header("Content-Type", "application/json"))
     }
 
-    pub fn text(self) -> SourceResult<String> {
+    pub fn bytes(self) -> SourceResult<Vec<u8>> {
         let host = host_of(&self.url).to_owned();
 
         let res = send(HostRequest {
@@ -90,9 +94,7 @@ impl Request {
         }
 
         match res.status {
-            200..=299 => String::from_utf8(res.body.clone()).map_err(|e| SourceError::Parse {
-                message: format!("response was not utf-8: {e}"),
-            }),
+            200..=299 => Ok(res.body),
             404 => Err(SourceError::NotFound {
                 message: format!("{host} has no such entry"),
             }),
@@ -103,6 +105,14 @@ impl Request {
             }),
             status => Err(SourceError::Http { status }),
         }
+    }
+
+    pub fn text(self) -> SourceResult<String> {
+        let raw_bytes = self.bytes()?;
+
+        String::from_utf8(raw_bytes).map_err(|e| SourceError::Parse {
+            message: format!("response was not utf-8: {e}"),
+        })
     }
 
     pub fn json<T: DeserializeOwned>(self) -> SourceResult<T> {
@@ -135,6 +145,25 @@ pub fn get_text(url: &str) -> SourceResult<String> {
 
 pub fn get_json<T: DeserializeOwned>(url: &str) -> SourceResult<T> {
     Request::get(url).json()
+}
+
+/// Stores a cookie in the host jar, so fetches the app makes on the source's
+/// behalf — reader pages, downloads — carry it too. `cookie` is a raw
+/// `Set-Cookie` value; `url` must be a host the source declared.
+pub fn set_cookie(url: &str, cookie: &str) -> bool {
+    let request = HostCookie {
+        url: url.to_owned(),
+        cookie: cookie.to_owned(),
+    };
+
+    unsafe { nomanga_set_cookie(Json(request)) }
+        .map(|Json(ok)| ok)
+        .unwrap_or(false)
+}
+
+/// Extensions have no entropy of their own on `wasm32-unknown-unknown`.
+pub fn random_hex(bytes: u32) -> String {
+    unsafe { nomanga_random_hex(bytes as u64) }.unwrap_or_default()
 }
 
 pub fn setting(id: &str) -> Option<String> {

@@ -1,0 +1,50 @@
+# Maintainer: notreallyuri <yuriovgr@gmail.com>
+pkgname=nomanga-git
+_pkgname=nomanga
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="A manga reader with pluggable sources"
+arch=('x86_64')
+url="https://github.com/notreallyuri/nomanga"
+license=('unknown')
+depends=('webkit2gtk-4.1' 'gtk3' 'openssl')
+makedepends=('git' 'rust' 'nodejs' 'pnpm' 'pkgconf')
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+source=("git+https://github.com/notreallyuri/nomanga.git")
+sha256sums=('SKIP')
+
+pkgver() {
+	cd "$srcdir/$_pkgname"
+	printf "0.1.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+	cd "$srcdir/$_pkgname/client"
+	pnpm install --frozen-lockfile
+}
+
+build() {
+	cd "$srcdir/$_pkgname/client"
+	# --no-bundle stops after the binary. The deb/rpm bundlers produce nothing
+	# pacman can use, and the AppImage one cannot run on Arch at all: its GTK
+	# plugin cp's /usr/lib/gdk-pixbuf-2.0/2.10.0, which gdk-pixbuf2 2.44 dropped.
+	SQLX_OFFLINE=true pnpm tauri build --no-bundle
+}
+
+package() {
+	cd "$srcdir/$_pkgname"
+
+	# cargo names the binary after the crate (client); productName only renames
+	# it inside a bundle, which --no-bundle skips.
+	install -Dm755 "target/release/client" "$pkgdir/usr/bin/$_pkgname"
+	install -Dm644 "packaging/$_pkgname.desktop" \
+		"$pkgdir/usr/share/applications/$_pkgname.desktop"
+
+	for size in 32 128; do
+		install -Dm644 "client/src-tauri/icons/${size}x${size}.png" \
+			"$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/$_pkgname.png"
+	done
+	install -Dm644 "client/src-tauri/icons/128x128@2x.png" \
+		"$pkgdir/usr/share/icons/hicolor/256x256/apps/$_pkgname.png"
+}

@@ -23,6 +23,7 @@ import {
 	CheckIcon,
 	DotsSixVerticalIcon,
 	EyeSlashIcon,
+	LockKeyIcon,
 	PencilSimpleIcon,
 	PlusIcon,
 	SlidersHorizontalIcon,
@@ -60,6 +61,7 @@ import {
 	useCategories,
 	useCreateCategory,
 	useDeleteCategory,
+	useLibraryLockIsSet,
 	useRenameCategory,
 	useReorderCategories,
 	useUpdateCategoryOptions,
@@ -251,6 +253,9 @@ function CategoryRow({ category }: { category: Category }) {
 			{category.hidden && (
 				<EyeSlashIcon className="shrink-0 text-muted-foreground" size={14} />
 			)}
+			{category.locked && (
+				<LockKeyIcon className="shrink-0 text-muted-foreground" size={14} />
+			)}
 
 			<CategoryOptionsPopover category={category} />
 			<Button onClick={() => setEditing(true)} size="icon-sm" variant="ghost">
@@ -298,11 +303,45 @@ function CategoryBadge({ category }: { category: Category }) {
 function optionsOf(c: Category): CategoryOptions {
 	return {
 		hidden: c.hidden,
+		locked: c.locked,
 		is_default: c.is_default,
 		sort_mode: c.sort_mode,
 		color: c.color,
 		icon: c.icon,
 	};
+}
+
+/**
+ * Locking is only offered once a library password exists — without one there
+ * would be nothing to unlock with.
+ */
+function LockRow({
+	category,
+	onApply,
+}: {
+	category: Category;
+	onApply: (patch: Partial<CategoryOptions>) => void;
+}) {
+	const lockIsSet = useLibraryLockIsSet();
+	const hasPassword = lockIsSet.data === true;
+
+	return (
+		<div className="flex items-center justify-between gap-4">
+			<Label className="flex flex-col gap-0.5">
+				<span>Locked</span>
+				<span className="font-normal text-muted-foreground text-xs">
+					{hasPassword
+						? "Ask for the library password before opening it."
+						: "Set a library password in Settings → System first."}
+				</span>
+			</Label>
+			<Switch
+				checked={category.locked}
+				disabled={!hasPassword}
+				onCheckedChange={(locked) => onApply({ locked })}
+			/>
+		</div>
+	);
 }
 
 function CategoryOptionsPopover({ category }: { category: Category }) {
@@ -340,6 +379,8 @@ function CategoryOptionsPopover({ category }: { category: Category }) {
 						onCheckedChange={(hidden) => apply({ hidden })}
 					/>
 				</div>
+
+				<LockRow category={category} onApply={apply} />
 
 				<div className="flex items-center justify-between gap-4">
 					<Label className="flex flex-col gap-0.5">

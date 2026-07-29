@@ -123,6 +123,7 @@ function MangaDetails() {
 					</Button>
 
 					<LibraryAction
+						chapterCount={list.length}
 						manga={manga.data}
 						mangaId={mangaId}
 						sourceId={sourceId}

@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT description, authors FROM manga WHERE source_id = ? AND manga_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "description",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "name": "authors",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "manga",
+            "name": "authors"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "bae0c2d3969cb88b1c7545c0530aa4a74e9ede0ecbf2018345f3060fa83dbb86"
+}

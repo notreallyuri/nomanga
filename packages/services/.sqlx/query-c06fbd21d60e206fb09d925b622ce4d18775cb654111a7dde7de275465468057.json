@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE category SET locked = 0 WHERE locked = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "c06fbd21d60e206fb09d925b622ce4d18775cb654111a7dde7de275465468057"
+}

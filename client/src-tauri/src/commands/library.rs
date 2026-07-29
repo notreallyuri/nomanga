@@ -7,7 +7,7 @@ use nomanga_core::extension::rate_limit::SourceMethod;
 use nomanga_host::registry::Registry;
 use nomanga_services::library::{
     self, Category, CategoryCount, CategoryFilter, CategoryOptions, EntryRef, LibraryItem,
-    LibraryUpdate, RefreshScope,
+    LibrarySearch, LibraryUpdate, RefreshScope,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
@@ -121,8 +121,9 @@ pub async fn clear_library_updates(state: State<'_, AppState>) -> CommandResult<
 pub async fn list_library(
     state: State<'_, AppState>,
     filter: CategoryFilter,
+    search: Option<LibrarySearch>,
 ) -> CommandResult<Vec<LibraryItem>> {
-    let res = library::list_library(&state.pool, &filter).await?;
+    let res = library::list_library(&state.pool, &filter, search.as_ref()).await?;
 
     Ok(res)
 }
@@ -133,8 +134,9 @@ pub async fn add_to_library(
     state: State<'_, AppState>,
     source_id: String,
     manga_id: String,
+    total_chapters: Option<i32>,
 ) -> CommandResult<()> {
-    library::add_to_library(&state.pool, &source_id, &manga_id).await?;
+    library::add_to_library(&state.pool, &source_id, &manga_id, total_chapters).await?;
 
     Ok(())
 }
@@ -157,10 +159,50 @@ pub async fn add_manga_to_library(
     state: State<'_, AppState>,
     source_id: String,
     manga: Manga,
+    total_chapters: Option<i32>,
 ) -> CommandResult<()> {
-    library::add_manga_to_library(&state.pool, &source_id, &manga).await?;
+    library::add_manga_to_library(&state.pool, &source_id, &manga, total_chapters).await?;
 
     Ok(())
+}
+
+/// Fills the chapter cache for one entry without the progress events a full
+/// refresh emits — used right after an add whose caller had no chapter count.
+#[tauri::command]
+#[specta::specta]
+pub async fn cache_entry_chapters(
+    state: State<'_, AppState>,
+    source_id: String,
+    manga_id: String,
+) -> CommandResult<u32> {
+    let handle = {
+        let registry = state.registry.read()?;
+        registry.source(&source_id)?
+    };
+
+    let called_id = source_id.clone();
+    let fetch_id = source_id.clone();
+    let fetch_manga_id = manga_id.clone();
+
+    let chapters = tokio::task::spawn_blocking(move || {
+        handle.throttled(SourceMethod::Chapters, |ext| {
+            ext.chapters(
+                &fetch_id,
+                MangaRef {
+                    manga_id: fetch_manga_id.clone(),
+                },
+            )
+        })
+    })
+    .await
+    .map_err(|e| CommandError::Internal {
+        message: format!("task panicked: {e}"),
+    })?
+    .map_err(|e| CommandError::from(e).with_source_id(&called_id))?;
+
+    let added = library::sync_chapters(&state.pool, &source_id, &manga_id, &chapters).await?;
+
+    Ok(added)
 }
 
 #[tauri::command]
@@ -193,6 +235,45 @@ pub async fn list_categories(state: State<'_, AppState>) -> CommandResult<Vec<Ca
     let res = library::list_categories(&state.pool).await?;
 
     Ok(res)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn library_lock_is_set(state: State<'_, AppState>) -> CommandResult<bool> {
+    let res = library::lock::has_password(&state.pool).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn verify_library_password(
+    state: State<'_, AppState>,
+    password: String,
+) -> CommandResult<bool> {
+    let res = library::lock::verify_password(&state.pool, &password).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_library_password(
+    state: State<'_, AppState>,
+    current: Option<String>,
+    password: String,
+) -> CommandResult<()> {
+    library::lock::set_password(&state.pool, current.as_deref(), &password).await?;
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn clear_library_lock(state: State<'_, AppState>) -> CommandResult<()> {
+    library::lock::clear_password(&state.pool).await?;
+
+    Ok(())
 }
 
 #[tauri::command]

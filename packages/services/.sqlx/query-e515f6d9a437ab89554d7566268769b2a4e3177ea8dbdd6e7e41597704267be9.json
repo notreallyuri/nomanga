@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO read_progress (source_id, manga_id, last_chapter_id, last_page,\n                                    last_chapter_done, updated_at)\n         VALUES ('src', ?, 'c5', 3, 0, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "e515f6d9a437ab89554d7566268769b2a4e3177ea8dbdd6e7e41597704267be9"
+}

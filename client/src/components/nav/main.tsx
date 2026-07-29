@@ -7,6 +7,7 @@ import {
 	SlidersHorizontalIcon,
 } from "@phosphor-icons/react";
 import { Link, useLocation } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 import type { FileRouteTypes } from "@/routeTree.gen";
 import {
 	SidebarGroup,
@@ -29,6 +30,13 @@ interface NavSection {
 	title: string;
 	items: NavItem[];
 }
+
+/**
+ * The current page takes the app accent rather than the sidebar's own
+ * `data-active` tint, which is too subtle against this palette.
+ */
+const ACTIVE_ITEM =
+	"data-[active=true]:bg-primary data-[active=true]:text-primary-foreground";
 
 const NAV_SECTIONS: NavSection[] = [
 	{
@@ -66,24 +74,19 @@ function useNavData() {
 	return { navSections: NAV_SECTIONS, isActive };
 }
 
-interface NavMainProps {
-	onSettingsOpenChange: (value: boolean) => void;
-	settingsOpen: boolean;
-}
-
-export function NavMain({ onSettingsOpenChange, settingsOpen }: NavMainProps) {
+export function NavMain() {
 	const { isActive, navSections } = useNavData();
 
 	return (
 		<>
 			{navSections.map((section) => (
-				<SidebarGroup>
+				<SidebarGroup key={section.title}>
 					<SidebarGroupLabel>{section.title}</SidebarGroupLabel>
 					<SidebarMenu>
 						{section.items.map((item) => (
 							<SidebarMenuItem key={item.name}>
 								<SidebarMenuButton
-									className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+									className={ACTIVE_ITEM}
 									isActive={isActive(item.path)}
 									tooltip={item.name}
 									render={
@@ -97,22 +100,32 @@ export function NavMain({ onSettingsOpenChange, settingsOpen }: NavMainProps) {
 					</SidebarMenu>
 				</SidebarGroup>
 			))}
-			<SidebarGroup>
-				<SidebarGroupLabel>Settings</SidebarGroupLabel>
-				<SidebarMenu>
-					<SidebarMenuItem>
-						<SidebarMenuButton
-							className="cursor-pointer"
-							isActive={settingsOpen}
-							onClick={() => onSettingsOpenChange(true)}
-							tooltip="Settings"
-						>
-							<SlidersHorizontalIcon />
-							Settings
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-				</SidebarMenu>
-			</SidebarGroup>
 		</>
+	);
+}
+
+export function NavSettings({
+	onSettingsOpenChange,
+	settingsOpen,
+}: {
+	onSettingsOpenChange: (value: boolean) => void;
+	settingsOpen: boolean;
+}) {
+	return (
+		<SidebarGroup>
+			<SidebarMenu>
+				<SidebarMenuItem>
+					<SidebarMenuButton
+						className={cn("cursor-pointer", ACTIVE_ITEM)}
+						isActive={settingsOpen}
+						onClick={() => onSettingsOpenChange(true)}
+						tooltip="Settings"
+					>
+						<SlidersHorizontalIcon />
+						Settings
+					</SidebarMenuButton>
+				</SidebarMenuItem>
+			</SidebarMenu>
+		</SidebarGroup>
 	);
 }

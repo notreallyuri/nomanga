@@ -30,6 +30,7 @@ pub struct CategoryRow {
     pub name: String,
     pub sort_order: i64,
     pub hidden: i64,
+    pub locked: i64,
     pub is_default: i64,
     pub sort_mode: String,
     pub color: Option<String>,
@@ -68,6 +69,7 @@ pub struct SourcePreferenceRow {
     pub private: i64,
     pub blur_covers: i64,
     pub skip_updates: i64,
+    pub default_category_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

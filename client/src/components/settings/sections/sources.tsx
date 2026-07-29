@@ -10,6 +10,13 @@ import {
 } from "@/components/settings/components/parts";
 import { ExtensionSettings } from "@/components/settings/sections/source-settings-form";
 import { Button } from "@/components/ui/button";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -17,6 +24,7 @@ import {
 	useSourcePreference,
 	useSourcesWithPreferences,
 } from "@/hooks/services/use-extensions";
+import { useCategories } from "@/hooks/services/use-library";
 import type { SourceInfo } from "@/types/bindings";
 
 export function SourceSection() {
@@ -177,6 +185,10 @@ function SourceDetail({
 						onCheckedChange={(v) => toggle({ skip_updates: v })}
 					/>
 				</SettingRow>
+				<DefaultCategoryRow
+					onChange={(default_category_id) => toggle({ default_category_id })}
+					value={preference.default_category_id}
+				/>
 			</SettingGroup>
 
 			<SettingGroup title="Source settings">
@@ -189,6 +201,54 @@ function SourceDetail({
 				</div>
 			</SettingGroup>
 		</div>
+	);
+}
+
+const LIBRARY_DEFAULT = "library-default";
+
+/**
+ * Where titles added from this source get filed. Unset falls back to the
+ * category flagged as default for the whole library.
+ */
+function DefaultCategoryRow({
+	value,
+	onChange,
+}: {
+	value: string | null;
+	onChange: (categoryId: string | null) => void;
+}) {
+	const categories = useCategories();
+
+	const items = {
+		[LIBRARY_DEFAULT]: "Library default",
+		...Object.fromEntries((categories.data ?? []).map((c) => [c.id, c.name])),
+	};
+
+	return (
+		<SettingRow
+			description="Where titles added from this source are filed"
+			label="Default category"
+		>
+			<Select
+				items={items}
+				onValueChange={(next) =>
+					onChange(!next || next === LIBRARY_DEFAULT ? null : next)
+				}
+				value={value ?? LIBRARY_DEFAULT}
+			>
+				<SelectTrigger className="w-56">
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value={LIBRARY_DEFAULT}>Library default</SelectItem>
+					{categories.data?.map((category) => (
+						<SelectItem key={category.id} value={category.id}>
+							{category.name}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+		</SettingRow>
 	);
 }
 

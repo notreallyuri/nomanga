@@ -1,5 +1,6 @@
 pub mod categories;
 pub mod entries;
+pub mod lock;
 pub mod updates;
 
 #[cfg(test)]

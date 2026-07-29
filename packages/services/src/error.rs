@@ -26,6 +26,10 @@ pub enum ServiceError {
     SyncHookFailed { kind: String, detail: String },
     #[error("{kind} command did not finish within {seconds}s")]
     SyncHookTimeout { kind: String, seconds: u64 },
+    #[error("the current library password is incorrect")]
+    LibraryLockPassword,
+    #[error("could not hash the library password: {0}")]
+    LibraryLockHash(String),
 }
 
 impl ServiceError {

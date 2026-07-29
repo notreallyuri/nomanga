@@ -93,7 +93,7 @@ async fn continue_reading_excludes_hidden_categories() {
 
     let pool = open_in_memory().await.unwrap();
     cache_manga(&pool, "s", &sample_manga("m1")).await.unwrap();
-    add_to_library(&pool, "s", "m1").await.unwrap();
+    add_to_library(&pool, "s", "m1", None).await.unwrap();
     finish_chapter(&pool, "s", "m1", "c1", 10).await.unwrap();
     assert_eq!(continue_reading(&pool, 10).await.unwrap().len(), 1);
 
@@ -103,6 +103,7 @@ async fn continue_reading_excludes_hidden_categories() {
         &secret.id,
         &CategoryOptions {
             hidden: true,
+            locked: false,
             is_default: false,
             sort_mode: CategorySort::Added,
             color: None,

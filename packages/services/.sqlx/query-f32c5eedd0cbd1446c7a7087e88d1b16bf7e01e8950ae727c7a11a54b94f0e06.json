@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE read_progress SET last_page = 99",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "f32c5eedd0cbd1446c7a7087e88d1b16bf7e01e8950ae727c7a11a54b94f0e06"
+}

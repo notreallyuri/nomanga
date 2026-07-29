@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO category (id, name, is_default) VALUES ('r', 'Remote', 1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "52abd0e50f6bddb0186e50a71a23bfd49a784dea965af6c7de94ef66fa3f5dd0"
+}

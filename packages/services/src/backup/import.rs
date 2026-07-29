@@ -61,12 +61,14 @@ pub async fn import(
         let is_default = if has_local_default { 0 } else { category.is_default };
 
         sqlx::query!(
-            "INSERT INTO category (id, name, sort_order, hidden, is_default, sort_mode, color, icon)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO category (id, name, sort_order, hidden, locked, is_default, sort_mode,
+                                   color, icon)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             category.id,
             category.name,
             category.sort_order,
             category.hidden,
+            category.locked,
             is_default,
             category.sort_mode,
             category.color,
@@ -187,18 +189,21 @@ pub async fn import(
 
     for row in &backup.source_preferences {
         sqlx::query!(
-            "INSERT INTO source_preference (source_id, enabled, private, blur_covers, skip_updates)
-             VALUES (?, ?, ?, ?, ?)
+            "INSERT INTO source_preference (source_id, enabled, private, blur_covers,
+                                            skip_updates, default_category_id)
+             VALUES (?, ?, ?, ?, ?, ?)
              ON CONFLICT (source_id) DO UPDATE SET
                  enabled = excluded.enabled,
                  private = excluded.private,
                  blur_covers = excluded.blur_covers,
-                 skip_updates = excluded.skip_updates",
+                 skip_updates = excluded.skip_updates,
+                 default_category_id = excluded.default_category_id",
             row.source_id,
             row.enabled,
             row.private,
             row.blur_covers,
-            row.skip_updates
+            row.skip_updates,
+            row.default_category_id
         )
         .execute(&mut *tx)
         .await?;

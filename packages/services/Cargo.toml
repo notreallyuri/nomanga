@@ -14,6 +14,8 @@ serde_json = { workspace = true }
 tokio = { version = "1", features = ["rt", "macros", "fs", "process", "time"] }
 thiserror = "2"
 sha2 = "0.10"
+argon2 = { version = "0.5", features = ["std"] }
+password-hash = { version = "0.5", features = ["getrandom"] }
 flate2 = "1"
 gethostname = "1"
 

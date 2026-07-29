@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO read_chapter (source_id, manga_id, chapter_id, read_at)\n         VALUES ('src', 'm1', 'c1', '2099-01-01T00:00:00Z')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "bb9dac6d565e0a9660203c3fd51481a22fb1a7c3f3ecfe2ed3d7e196c20c90b2"
+}
