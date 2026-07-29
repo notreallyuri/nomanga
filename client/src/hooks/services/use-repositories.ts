@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { unwrap } from "@/lib/unwrap";
+import type { RepositoryExtension } from "@/types/bindings";
 import { commands } from "@/types/bindings";
 import { extensionKeys } from "./use-extensions";
 import { sourceKeys } from "./use-sources";
@@ -20,6 +22,39 @@ export function useRepositoryCatalog() {
 		queryFn: () => unwrap(commands.browseRepositories()),
 		staleTime: 5 * 60 * 1000,
 	});
+}
+
+export type RepositoryOffer = {
+	repositoryUrl: string;
+	extension: RepositoryExtension;
+	unsupported: boolean;
+};
+
+/**
+ * What the added repositories offer, keyed by extension id. Two repositories
+ * offering the same id collapse to one entry, so an extension is never listed
+ * twice; the last one added wins.
+ */
+export function useRepositoryOffers() {
+	const query = useRepositoryCatalog();
+
+	const offers = useMemo(() => {
+		const map = new Map<string, RepositoryOffer>();
+
+		for (const catalog of query.data ?? []) {
+			for (const extension of catalog.index?.extensions ?? []) {
+				map.set(extension.info.id, {
+					repositoryUrl: catalog.repository.url,
+					extension,
+					unsupported: catalog.unsupported.includes(extension.info.id),
+				});
+			}
+		}
+
+		return map;
+	}, [query.data]);
+
+	return { ...query, offers };
 }
 
 export function useAddRepository() {
