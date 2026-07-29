@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["client/src-tauri", "packages/*", "extensions/*", "cli"]
+members = ["client/src-tauri", "packages/*", "cli"]
 default-members = ["client/src-tauri", "packages/*", "cli"]
 
 [profile.release]
