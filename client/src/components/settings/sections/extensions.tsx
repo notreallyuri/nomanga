@@ -1,5 +1,4 @@
 import {
-	ArrowClockwiseIcon,
 	CloudArrowDownIcon,
 	PlugsIcon,
 	TrashIcon,
@@ -37,7 +36,7 @@ import { RepositoryGroup } from "./repositories";
 
 export function ExtensionSection() {
 	const { data: installed, isPending, error } = useExtensions();
-	const { offers, refetch, isFetching } = useRepositoryOffers();
+	const { offers } = useRepositoryOffers();
 	const installFile = useInstallExtension();
 	const installRemote = useInstallFromRepository();
 	const uninstall = useUninstallExtension();
@@ -149,19 +148,7 @@ export function ExtensionSection() {
 
 			{available.length > 0 && (
 				<SettingGroup title={`Available (${available.length})`}>
-					<div className="flex justify-end py-2">
-						<Button
-							disabled={isFetching}
-							onClick={() => refetch()}
-							size="sm"
-							variant="ghost"
-						>
-							<ArrowClockwiseIcon />
-							Refresh
-						</Button>
-					</div>
-
-					<div className="flex flex-col gap-3 pb-2">
+					<div className="flex flex-col gap-3 py-2">
 						{available.map((offer) => (
 							<ExtensionCard
 								author={offer.extension.info.author}

@@ -1,4 +1,9 @@
-import { CaretRightIcon, GlobeIcon, TrashIcon } from "@phosphor-icons/react";
+import {
+	ArrowClockwiseIcon,
+	CaretRightIcon,
+	GlobeIcon,
+	TrashIcon,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,7 +33,7 @@ import { useDeepLink } from "@/hooks/use-deep-link";
  * summary row and leaves the extension lists as the section's subject.
  */
 export function RepositoryGroup() {
-	const { data: catalogs } = useRepositoryCatalog();
+	const { data: catalogs, refetch, isFetching } = useRepositoryCatalog();
 	const add = useAddRepository();
 	const remove = useRemoveRepository();
 	const { pendingRepository, clearPendingRepository } = useDeepLink();
@@ -52,23 +57,37 @@ export function RepositoryGroup() {
 	return (
 		<>
 			<Collapsible onOpenChange={setOpen} open={open}>
-				<CollapsibleTrigger
-					className="flex w-full items-center gap-2 py-3 text-left"
-					render={<button type="button" />}
-				>
-					<CaretRightIcon
-						className={`shrink-0 text-muted-foreground transition-transform ${
-							open ? "rotate-90" : ""
-						}`}
-						size={16}
-					/>
-					<span className="font-medium text-sm">Repositories</span>
-					<span className="text-muted-foreground text-xs">
-						{count === 0
-							? "none added"
-							: `${count} added${failing > 0 ? ` · ${failing} unreachable` : ""}`}
-					</span>
-				</CollapsibleTrigger>
+				<div className="flex items-center gap-2">
+					<CollapsibleTrigger
+						className="flex flex-1 items-center gap-2 py-3 text-left"
+						render={<button type="button" />}
+					>
+						<CaretRightIcon
+							className={`shrink-0 text-muted-foreground transition-transform ${
+								open ? "rotate-90" : ""
+							}`}
+							size={16}
+						/>
+						<span className="font-medium text-sm">Repositories</span>
+						<span className="text-muted-foreground text-xs">
+							{count === 0
+								? "none added"
+								: `${count} added${failing > 0 ? ` · ${failing} unreachable` : ""}`}
+						</span>
+					</CollapsibleTrigger>
+
+					{count > 0 && (
+						<Button
+							disabled={isFetching}
+							onClick={() => refetch()}
+							size="sm"
+							variant="ghost"
+						>
+							<ArrowClockwiseIcon />
+							{isFetching ? "Checking…" : "Check for updates"}
+						</Button>
+					)}
+				</div>
 
 				<CollapsibleContent>
 					<div className="pb-4 pl-6">
