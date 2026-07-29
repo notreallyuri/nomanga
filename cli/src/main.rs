@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::process::ExitCode;
 
 mod html;
+mod icon;
 
 use clap::{Parser, Subcommand};
 use nomanga_core::extension::common::{HostRequest, HostResponse};
@@ -50,6 +51,12 @@ enum Command {
         #[arg(long, default_value_t = 1)]
         page: u32,
     },
+    Icon {
+        /// A URL, or a local file for sources that block hotlinking.
+        source: String,
+        #[arg(long)]
+        out: String,
+    },
     Index {
         wasm: Vec<String>,
         #[arg(long)]
@@ -79,6 +86,11 @@ fn main() -> ExitCode {
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+
+    if let Command::Icon { source, out } = &cli.command {
+        icon::build(source, out)?;
+        return Ok(());
+    }
 
     if let Command::Index {
         wasm,
@@ -127,7 +139,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     let value = match cli.command {
-        Command::Info | Command::Index { .. } => unreachable!("handled above"),
+        Command::Info | Command::Index { .. } | Command::Icon { .. } => {
+            unreachable!("handled above")
+        }
         Command::Homepage => to_value(ext.homepage(source)?, cli.json)?,
         Command::Filters => to_value(ext.filters(source)?, cli.json)?,
         Command::Search { term, page } => {

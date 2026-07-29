@@ -16,10 +16,6 @@
   already do, instead of only on a visit to Settings → Extensions. The catalog
   fetch and the version comparison both exist; what is missing is a schedule
   and somewhere to surface "3 extensions have updates".
-- [ ] Per-source icons in the repository index. `SourceInfo.icon_url` points at
-  each site's own favicon today, which means the Available list hotlinks five
-  different origins before anything is installed. Aidoku publishes icons
-  beside the index (`icons/en.aquamanga-v2.png`) for exactly this reason.
 
 ### Cloudflare bypass
 
@@ -131,6 +127,26 @@ default.
   Worth remembering: the page is one big `format!` raw string and
   `href="#"` contains `"#`, which closed `r#"…"#` early. It is `r##"…"##` now,
   with a test asserting the document still ends in `</html>`.
+
+- [x] Source icons are `data:` URIs baked into the extension, not links to each
+  site's favicon. The app renders `SourceInfo.icon_url` straight into an `<img>`,
+  so every Browse and Sources render was one request per source to that site —
+  announcing to each which extensions a user has installed, on a screen they
+  open constantly.
+  They live in the `.wasm` rather than the published index deliberately: an
+  installed extension's `SourceInfo` comes from the binary, so index-only
+  embedding would have fixed the pre-install list and left Browse still
+  hotlinking. The index gets them anyway, since it is built from the binaries'
+  own metadata.
+  `nomanga-cli icon <url|file> --out <path>` normalises to a 64×64 PNG data URI
+  (favicons are often `.ico`, MangaPill's was a 180px touch icon), and the
+  source does `include_str!`. It accepts a local file because fetching is not
+  always possible: two of nine were already broken in the app before this —
+  WeebCentral 403s a plain fetch and NatoManga's favicon is behind Cloudflare —
+  and MadaraDex 404s `/favicon.ico`, serving its logo from `wp-content`.
+  Cost: +4% wasm, and the mainpack index went 1.6 KB → 43 KB. Worth watching if
+  a repository ever carries many packs; the format still allows a relative
+  `icons/` path the way Aidoku does.
 
 - [x] Reinstalling an installed extension no longer lists it twice.
   `Registry::load_from` ended with `self.extensions.push(meta.extension)` on a

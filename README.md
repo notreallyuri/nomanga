@@ -234,6 +234,29 @@ Grab a prebuilt binary from [Releases](https://github.com/notreallyuri/nomanga/r
 latter compiles wasmtime, so it takes a few minutes. Both extension repos carry
 a `publish.sh` wrapping the whole build-and-write step.
 
+### Source icons
+
+`SourceInfo.icon_url` should be a `data:` URI baked into the extension, not a
+link to the site's favicon — the app renders it directly, so a remote URL means
+a request to that source on every Browse or Sources screen, whether or not the
+user is using it. `nomanga-cli` normalises one to a 64×64 PNG:
+
+```sh
+nomanga-cli icon https://example.org/favicon.ico --out icons/example.txt
+```
+
+Then in the source, with no trailing newline to worry about:
+
+```rust
+icon_url: Some(include_str!("../../../icons/example.txt").into()),
+```
+
+The argument may also be a local file, which is what several sources need — a
+favicon behind Cloudflare cannot be fetched at all, and some sites serve their
+real logo from somewhere other than `/favicon.ico`. Keeping icons in the `.wasm`
+rather than the published index means installed extensions get them too, and the
+index picks them up anyway since it is built from the binaries' own metadata.
+
 ### Inspecting / testing with the CLI
 
 Run source calls against a built `.wasm` without launching the app:
