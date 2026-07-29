@@ -61,7 +61,6 @@ rows line up with no translation layer.
 | `packages/sdk` | `nomanga-sdk` | Guest-side SDK for writing sources: the `register_sources!` macro (generates the plugin exports), a `Request` HTTP builder with `get_text`/`get_json`, source-config accessors (`setting_*`), and HTML-scraping utilities (`parse`, backed by `scraper`). Declarative builders keep large source definitions readable — `Setting::*` and `Filter::*` constructors, `SelectOption::list`, and the `FilterValues` trait for reading a user's selections back by id. |
 | `packages/services` | `nomanga-services` | SQLite persistence via `sqlx`: library, categories, read history & resume progress, per-source preferences, reader-setting overrides, and app settings. Ships migrations. |
 | `cli` | `nomanga-cli` | Dev CLI to inspect and run an extension `.wasm` without the app. |
-| `extensions/extension_example` | `extension_example` | Example extension bundling WeebCentral and MangaDex sources, compiled to `wasm32-unknown-unknown`. |
 | `client` | Tauri app | React/Vite frontend and the `src-tauri` backend that wires services + host into `#[tauri::command]`s. |
 
 ### Data & persistence
@@ -133,13 +132,21 @@ build with your desktop environment without packaging it.
 
 ### Building an extension
 
-Extensions target WebAssembly:
+Extensions live in their own repositories and depend on `nomanga-sdk` from this
+one:
 
-```sh
-rustup target add wasm32-unknown-unknown
-cargo build -p extension_example --release --target wasm32-unknown-unknown
-# → target/wasm32-unknown-unknown/release/extension_example.wasm
+| Repository | Sources |
+|---|---|
+| [nomanga-extension-mainpack](https://github.com/notreallyuri/nomanga-extension-mainpack) | WeebCentral, MangaDex, MangaPill, NatoManga, WEBTOON |
+| [nomanga-extension-nsfw](https://github.com/notreallyuri/nomanga-extension-nsfw) | nHentai, Hitomi.la, MadaraDex, E-Hentai |
+
+```toml
+nomanga-sdk = { git = "https://github.com/notreallyuri/nomanga", branch = "main" }
 ```
+
+`Cargo.lock` pins the resolved commit, so the SDK only moves on an explicit
+`cargo update -p nomanga-sdk`. Each repo pins `wasm32-unknown-unknown` in
+`.cargo/config.toml`, so a plain `cargo build --release` produces the `.wasm`.
 
 The app loads `.wasm` files from its extensions directory (under the platform
 app-data dir); `Registry::install` copies an extension in and activates it.
@@ -234,8 +241,8 @@ nomanga_sdk::register_sources! {
 
 Sources can also expose user-configurable settings (API keys, language, content
 ratings) with the `Setting::*` builders and read them back with `guest::setting_*`;
-see `extensions/extension_example` for complete working sources (WeebCentral and
-MangaDex).
+see [nomanga-extension-mainpack](https://github.com/notreallyuri/nomanga-extension-mainpack)
+for complete working sources.
 
 ## Tech stack
 

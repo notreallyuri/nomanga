@@ -1627,39 +1627,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "extension_mainpack"
-version = "0.1.0"
-dependencies = [
- "extism-pdk",
- "nomanga-sdk",
- "scraper",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "extension_nsfw"
-version = "0.1.0"
-dependencies = [
- "extism-pdk",
- "nomanga-sdk",
- "regex",
- "scraper",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "extension_stub"
-version = "0.1.0"
-dependencies = [
- "extism-pdk",
- "nomanga-sdk",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "extism"
 version = "1.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
