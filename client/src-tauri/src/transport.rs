@@ -1,5 +1,6 @@
 use nomanga_core::extension::common::{HostRequest, HostResponse};
 use nomanga_host::transport::{CallLog, TransportShared};
+use reqwest::cookie::CookieStore;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     mpsc, Arc,
@@ -12,7 +13,7 @@ use std::sync::{
 /// already runs on a `spawn_blocking` thread — so blocking here is safe, but
 /// driving an async client from it is not. Requests are handed to a task on the
 /// tokio runtime and the calling thread waits for the reply.
-pub fn shared(client: reqwest::Client) -> TransportShared {
+pub fn shared(client: reqwest::Client, jar: Arc<reqwest::cookie::Jar>) -> TransportShared {
     let (tx, rx) = mpsc::channel::<(HostRequest, mpsc::Sender<HostResponse>)>();
 
     // One long-lived receiver task; the channel is the only synchronisation
@@ -43,9 +44,24 @@ pub fn shared(client: reqwest::Client) -> TransportShared {
                 Err(message) => failed(&message),
             }
         }),
+        set_cookie: Arc::new(move |url, cookie| {
+            if let Ok(url) = url.parse::<reqwest::Url>() {
+                jar.set_cookies(&mut std::iter::once(&header_value(cookie)), &url);
+            }
+        }),
+        random_hex: Arc::new(|bytes| {
+            let mut buf = vec![0u8; bytes];
+            getrandom::fill(&mut buf).expect("no system entropy");
+            buf.iter().map(|b| format!("{b:02x}")).collect()
+        }),
         log: Arc::new(CallLog::default()),
         recording: Arc::new(AtomicBool::new(false)),
     }
+}
+
+fn header_value(cookie: &str) -> reqwest::header::HeaderValue {
+    reqwest::header::HeaderValue::from_str(cookie)
+        .unwrap_or_else(|_| reqwest::header::HeaderValue::from_static(""))
 }
 
 async fn perform(client: &reqwest::Client, request: HostRequest) -> HostResponse {

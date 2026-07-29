@@ -81,3 +81,21 @@ pub struct HostResponse {
     /// non-2xx status, which is a real answer from the server.
     pub transport_error: Option<String>,
 }
+
+/// The one identity the app presents, whether the request comes from an
+/// extension or from the app fetching an image on its behalf.
+///
+/// These have to agree: MadaraDex binds its CDN token to the User-Agent that
+/// minted it, so a source authenticating in `pages()` and a proxy fetching the
+/// image under a different UA is a 403.
+pub const USER_AGENT: &str =
+    "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0";
+
+/// Lets an extension seed a cookie the server never sets — MadaraDex binds its
+/// image token to a fingerprint only the page's own JavaScript produces.
+/// `cookie` is a raw `Set-Cookie` value, so attributes carry through unchanged.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HostCookie {
+    pub url: String,
+    pub cookie: String,
+}

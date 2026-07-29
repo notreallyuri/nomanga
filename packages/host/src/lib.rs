@@ -39,8 +39,9 @@ impl ExtensionMetadata {
         })?;
 
         let manifest = Manifest::new([Wasm::data(bytes)]);
-        let (function, _) = crate::transport::function(crate::transport::denied().context(Vec::new()));
-        let mut plugin = Plugin::new(&manifest, [function], true)?;
+        let (functions, _) =
+            crate::transport::functions(crate::transport::denied().context(Vec::new()));
+        let mut plugin = Plugin::new(&manifest, functions, true)?;
 
         let Json(extension): Json<ExtensionInfo> = plugin.call("get_extension", ())?;
 
@@ -87,8 +88,8 @@ impl ExtensionMetadata {
             manifest = manifest.with_config_key(&k, v);
         }
 
-        let (function, transport_data) = crate::transport::function(transport);
-        let plugin = Plugin::new(&manifest, [function], true)?;
+        let (functions, transport_data) = crate::transport::functions(transport);
+        let plugin = Plugin::new(&manifest, functions, true)?;
 
         Ok(LoadedExtension {
             plugin,
