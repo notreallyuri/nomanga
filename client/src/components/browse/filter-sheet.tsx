@@ -24,14 +24,10 @@ export function FilterSheet({
 }) {
 	const { data, isPending } = useSourceFilters(sourceId);
 	const [open, setOpen] = useState(false);
-	// Edits are staged locally while the sheet is open so the search only runs
-	// once, when it closes — not on every tag toggle.
 	const [draft, setDraft] = useState<FilterValue[]>(filters);
 
 	const handleOpenChange = (next: boolean) => {
 		if (next) {
-			// Sync the draft from the committed filters each time we open, in case
-			// they changed elsewhere (e.g. cleared from the search bar).
 			setDraft(filters);
 		} else if (draft !== filters) {
 			onChange(draft);

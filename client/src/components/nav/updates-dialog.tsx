@@ -72,8 +72,6 @@ export function UpdatesDialog({
 						{log.length > 0 && (
 							<ul className="no-scrollbar max-h-56 min-w-0 space-y-1 overflow-y-auto">
 								{[...log].reverse().map((entry, i) => {
-									// The newest entry is the one currently being checked; the
-									// rest have completed.
 									const inProgress = i === 0;
 									return (
 										<li

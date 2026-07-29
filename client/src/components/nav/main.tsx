@@ -31,13 +31,6 @@ interface NavSection {
 	items: NavItem[];
 }
 
-/**
- * The current page takes the app accent rather than the sidebar's own
- * `data-active` tint, which is too subtle against this palette.
- */
-const ACTIVE_ITEM =
-	"data-[active=true]:bg-primary data-[active=true]:text-primary-foreground";
-
 const NAV_SECTIONS: NavSection[] = [
 	{
 		title: "Library",
@@ -86,7 +79,7 @@ export function NavMain() {
 						{section.items.map((item) => (
 							<SidebarMenuItem key={item.name}>
 								<SidebarMenuButton
-									className={ACTIVE_ITEM}
+									className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
 									isActive={isActive(item.path)}
 									tooltip={item.name}
 									render={
@@ -116,7 +109,10 @@ export function NavSettings({
 			<SidebarMenu>
 				<SidebarMenuItem>
 					<SidebarMenuButton
-						className={cn("cursor-pointer", ACTIVE_ITEM)}
+						className={cn(
+							"cursor-pointer",
+							"data-[active=true]:bg-primary data-[active=true]:text-primary-foreground",
+						)}
 						isActive={settingsOpen}
 						onClick={() => onSettingsOpenChange(true)}
 						tooltip="Settings"

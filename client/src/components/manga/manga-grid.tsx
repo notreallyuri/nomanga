@@ -4,9 +4,6 @@ import { cn } from "@/lib/utils";
 import type { CardSize } from "@/types/bindings";
 import { Skeleton } from "../ui/skeleton";
 
-// Two orthogonal axes: `card_size` sets the cover width, `compact_mode` sets the
-// spacing between cards. `size` is library-scoped; without it the column width
-// falls back to the compact-mode density.
 const SIZE_WIDTHS: Record<CardSize, string> = {
 	Small: "grid-cols-[repeat(auto-fill,minmax(7rem,1fr))]",
 	Medium: "grid-cols-[repeat(auto-fill,minmax(9rem,1fr))]",
@@ -29,9 +26,7 @@ export function MangaGrid({
 	size,
 }: {
 	children: ReactNode;
-	/** Forces density; defaults to the compact-mode setting. */
 	compact?: boolean;
-	/** Explicit card size; wins over `compact` when set (library grid). */
 	size?: CardSize;
 }) {
 	const appearance = useAppearance();
@@ -51,7 +46,6 @@ export function MangaGridSkeleton({
 }) {
 	const appearance = useAppearance();
 	const dense = compact ?? appearance.compact_mode;
-	// A large grid still reads as compact for the title placeholder spacing.
 	const tight = size ? size === "Small" : dense;
 
 	return (
@@ -59,8 +53,6 @@ export function MangaGridSkeleton({
 			{Array.from({ length: count }, (_, i) => (
 				<div key={i}>
 					<Skeleton className="aspect-2/3" />
-					{/* Placeholder for the title line so the grid doesn't jump by a
-					    row of text once the real cards arrive. */}
 					{appearance.show_titles && (
 						<Skeleton
 							className={cn("h-3", tight ? "mt-1.5 w-2/3" : "mt-2 w-4/5")}

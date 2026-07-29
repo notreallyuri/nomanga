@@ -20,7 +20,6 @@ import { categoryIcon } from "@/lib/category-visuals";
 import { cn } from "@/lib/utils";
 import type { EntryRef, LibraryItem } from "@/types/bindings";
 
-/** neutral = leave every entry as it is; add/remove apply to all of them. */
 type Action = "add" | "remove";
 
 export function BulkCategoriesDialog({
@@ -37,8 +36,6 @@ export function BulkCategoriesDialog({
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
 			<DialogContent>
-				{/* Remounted per selection so the action state starts clean and the
-				    counts are seeded from the right entries. */}
 				{open && items.length > 0 && (
 					<Body items={items} onApplied={onApplied} />
 				)}
@@ -68,7 +65,6 @@ function Body({
 	const countFor = (categoryId: string) =>
 		counts.data?.find((c) => c.category_id === categoryId)?.count ?? 0;
 
-	// neutral → add → remove → neutral
 	const cycle = (categoryId: string) =>
 		setActions((prev) => {
 			const next = new Map(prev);
@@ -133,8 +129,6 @@ function Body({
 								)}
 								<span className="flex-1 truncate">{category.name}</span>
 
-								{/* Current membership across the selection, so the user knows
-								    what a change would actually do. */}
 								<span className="shrink-0 text-muted-foreground text-xs tabular-nums">
 									{inCount}/{items.length}
 								</span>

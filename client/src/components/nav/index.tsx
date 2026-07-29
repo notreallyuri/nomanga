@@ -48,9 +48,6 @@ export function Sidebar({
 			<SidebarContent>
 				<NavMain />
 			</SidebarContent>
-			{/* Each child is a SidebarGroup, which brings its own p-2 — the footer's
-			    own padding would double it and knock the icons off-centre in the
-			    collapsed rail. SidebarContent leaves the padding to its groups too. */}
 			<SidebarFooter className="gap-0 p-0">
 				<NavSettings
 					onSettingsOpenChange={onSettingsOpenChange}
@@ -66,11 +63,6 @@ export function Sidebar({
 
 const MODIFIER = navigator.userAgent.includes("Mac") ? "⌘" : "Ctrl+";
 
-/**
- * Collapsed to icons there is only room for one control, so the mark doubles as
- * the expand button — the rail and the keyboard shortcut still work for anyone
- * who never tries it.
- */
 function BrandToggle() {
 	const { toggleSidebar } = useSidebar();
 

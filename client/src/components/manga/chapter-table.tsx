@@ -74,21 +74,10 @@ export function ChapterTable({
 	]);
 	const [selection, setSelection] = useState<RowSelectionState>({});
 	const [filter, setFilter] = useState("");
-
-	// The last row the user toggled by hand, which is what a range selection
-	// measures from. Cleared whenever the selection is emptied.
 	const [anchorId, setAnchorId] = useState<string | null>(null);
 
-	// Range helpers need the table's current row order, but the table is built
-	// from `columns` below — so they read it through a ref instead, which also
-	// keeps them stable enough for the `columns` memo.
 	const tableRef = useRef<TableInstance<Chapter> | null>(null);
 
-	/**
-	 * Ids in the order the user actually sees them: filtered and sorted, but
-	 * across every page rather than just the visible one. "Above" and "below"
-	 * therefore mean what they look like on screen, under either sort direction.
-	 */
 	const orderedIds = useCallback(
 		() => tableRef.current?.getSortedRowModel().rows.map((row) => row.id) ?? [],
 		[],
@@ -121,15 +110,12 @@ export function ChapterTable({
 		[orderedIds, select],
 	);
 
-	/** Everything between the anchor and `id`, inclusive, in display order. */
 	const selectRangeTo = useCallback(
 		(id: string) => {
 			const ids = orderedIds();
 			const to = ids.indexOf(id);
 			const from = anchorId ? ids.indexOf(anchorId) : -1;
 
-			// With no anchor yet there is no range to fill, so fall back to
-			// selecting just this row and letting it become the anchor.
 			if (to < 0 || from < 0) {
 				select([id]);
 				setAnchorId(id);
@@ -179,8 +165,6 @@ export function ChapterTable({
 							row.toggleSelected(!!v);
 							setAnchorId(row.id);
 						}}
-						// Shift-click fills from the last hand-toggled row, the
-						// range gesture people already expect from file managers.
 						onClick={(e) => {
 							if (!e.shiftKey) return;
 							e.preventDefault();
@@ -431,7 +415,7 @@ export function ChapterTable({
 				table={table}
 			/>
 
-			<div className="min-h-0 flex-1 overflow-y-auto rounded-none border border-border">
+			<div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border">
 				<Table>
 					<TableHeader>
 						{table.getHeaderGroups().map((group) => (

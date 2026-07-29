@@ -14,14 +14,8 @@ import { cn } from "@/lib/utils";
 import type { Filter, FilterValue } from "@/types/bindings";
 import { SearchableMultiSelect, SearchableSelect } from "./searchable-select";
 
-/**
- * Above this many options a Select/MultiSelect switches to a searchable popover
- * instead of a native dropdown / inline pills, so long tag lists stay usable.
- */
 const SEARCH_THRESHOLD = 12;
 
-// The closed trigger resolves its text through this map; without it the option
-// id ("originals", "az") shows instead of the source's own label.
 const optionLabels = (options: { id: string; label: string }[]) =>
 	Object.fromEntries(options.map((option) => [option.id, option.label]));
 
@@ -284,8 +278,6 @@ function MultiSelectControl({
 		} else if (state === "included" && filter.supports_exclusion) {
 			excluded.push(id);
 		}
-		// "included" without exclusion support, or "excluded", falls through
-		// to neutral — nothing pushed.
 
 		setValue({ type: "MultiSelect", id: filter.id, included, excluded });
 	};

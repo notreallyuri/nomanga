@@ -19,12 +19,6 @@ import {
 import { categoryIcon } from "@/lib/category-visuals";
 import type { Manga, MangaSimple } from "@/types/bindings";
 
-/**
- * Library toggle with a category picker hanging off a caret. The plain button
- * quick-adds (the backend files the entry under the default category); the
- * picker lets the user choose the shelves up front, or re-file an entry that is
- * already in the library.
- */
 export function LibraryAction({
 	sourceId,
 	mangaId,
@@ -104,8 +98,6 @@ function CategoryPicker({
 
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 
-	// Seed each time the picker opens: an existing entry keeps its shelves, a new
-	// one pre-checks the default so a quick confirm still honours it.
 	useEffect(() => {
 		if (!open) return;
 		if (saved) {
@@ -138,7 +130,6 @@ function CategoryPicker({
 	};
 
 	const busy = add.isPending || save.isPending;
-	// Editing an existing entry can't confirm until its saved set has loaded.
 	const disabled = busy || (saved && !assigned.isSuccess);
 
 	return (

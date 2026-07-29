@@ -53,7 +53,6 @@ export function DownloadsDialog({
 
 	const hasFinished = items.some((i) => !isActive(i));
 
-	// Always land back on the overview when the dialog reopens.
 	const handleOpenChange = (next: boolean) => {
 		if (!next) setSelectedId(null);
 		onOpenChange(next);
@@ -134,10 +133,6 @@ export function DownloadsDialog({
 	);
 }
 
-/**
- * Pause takes effect between chapters, so the one already downloading finishes
- * — the label says "after this chapter" rather than implying an instant stop.
- */
 function QueueControls({ active }: { active: number }) {
 	const { data: paused } = useDownloadsPaused();
 	const setPaused = useSetDownloadsPaused();
@@ -183,7 +178,6 @@ interface Group {
 const isActive = (i: DownloadProgress) =>
 	i.state === "Queued" || i.state === "Downloading";
 
-// Downloading first, then queued, failed, and finally the completed ones.
 const RANK: Record<DownloadState, number> = {
 	Downloading: 0,
 	Queued: 1,
@@ -211,14 +205,12 @@ function groupByManga(items: DownloadProgress[]): Group[] {
 	for (const group of list) {
 		group.items.sort((a, b) => RANK[a.state] - RANK[b.state]);
 	}
-	// Series with something in flight float to the top.
+
 	return list.sort(
 		(a, b) => Number(b.items.some(isActive)) - Number(a.items.some(isActive)),
 	);
 }
 
-/** Continuous completion across a series, counting a downloading chapter's own
- *  page progress so the bar advances smoothly, not just per finished chapter. */
 function groupPercent(items: DownloadProgress[]): number {
 	const sum = items.reduce((acc, i) => {
 		if (i.state === "Done") return acc + 1;
@@ -243,7 +235,6 @@ function summarize(items: DownloadProgress[]): string {
 	return parts.length > 0 ? parts.join(" · ") : "Nothing in progress.";
 }
 
-/** The overview: one row per series with an aggregate bar, opening its detail. */
 function MangaRow({ group, onOpen }: { group: Group; onOpen: () => void }) {
 	const done = group.items.filter((i) => i.state === "Done").length;
 
@@ -268,13 +259,10 @@ function MangaRow({ group, onOpen }: { group: Group; onOpen: () => void }) {
 	);
 }
 
-/** The single most relevant state for a series in the overview. */
 function groupState(items: DownloadProgress[]): DownloadState {
 	if (items.some((i) => i.state === "Downloading")) return "Downloading";
 	if (items.some((i) => i.state === "Queued")) return "Queued";
 	if (items.some((i) => i.state === "Failed")) return "Failed";
-	// Only after Done is ruled out, so a series with one cancelled chapter and
-	// the rest downloaded still reads as finished.
 	if (items.every((i) => i.state === "Cancelled")) return "Cancelled";
 	return "Done";
 }

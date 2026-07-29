@@ -89,8 +89,6 @@ export function MangaCard({
 				className={coverVariants({ coverStyle: appearance.cover_style })}
 				title={title}
 				titleVisible={titleVisible}
-				// Proxied so covers on hotlink-protected CDNs (NatoManga) load;
-				// a pass-through for every other source.
 				url={sourceImageUrl(sourceId, coverUrl, { cache: true })}
 			/>
 

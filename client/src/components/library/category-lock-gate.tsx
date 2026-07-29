@@ -6,17 +6,11 @@ import { useVerifyLibraryPassword } from "@/hooks/services/use-library";
 import { libraryLock } from "@/lib/library-lock";
 import type { Category } from "@/types/bindings";
 
-/**
- * Stands in for the entry grid while a locked category is closed. The gate is
- * an access control inside the app, not encryption — the entries themselves are
- * stored in the clear.
- */
 export function CategoryLockGate({ category }: { category: Category }) {
 	const [password, setPassword] = useState("");
 	const [wrong, setWrong] = useState(false);
 	const verify = useVerifyLibraryPassword();
 
-	// A different locked tab starts from a clean field.
 	useEffect(() => {
 		setPassword("");
 		setWrong(false);

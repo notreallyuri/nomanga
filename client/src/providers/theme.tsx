@@ -2,6 +2,18 @@ import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { useSettings, useUpdateSettings } from "@/hooks/services/use-settings";
 import type { Theme, ThemeDarkMode } from "@/types/bindings";
 
+// "default" is in here because it now carries the palette that used to live
+// only on :root, which is what lets a preview show the default colours while
+// another theme is active.
+const THEME_CLASSES = [
+	"default",
+	"havoc",
+	"void",
+	"amber",
+	"rose",
+	"cyberpunk",
+] as const;
+
 interface ThemeProviderProps {
 	children: ReactNode;
 	defaultColor?: Theme;
@@ -42,15 +54,7 @@ export function ThemeProvider({
 		if (isLoading) return;
 
 		const root = window.document.documentElement;
-		root.classList.remove(
-			"light",
-			"dark",
-			"havoc",
-			"void",
-			"amber",
-			"rose",
-			"cyberpunk",
-		);
+		root.classList.remove("light", "dark", ...THEME_CLASSES);
 
 		if (theme === "System") {
 			const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
@@ -62,9 +66,7 @@ export function ThemeProvider({
 			root.classList.add(theme.toLowerCase());
 		}
 
-		if (color !== "Default") {
-			root.classList.add(color.toLowerCase());
-		}
+		root.classList.add(color.toLowerCase());
 	}, [theme, color, isLoading]);
 
 	useEffect(() => {

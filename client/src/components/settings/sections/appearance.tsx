@@ -10,7 +10,6 @@ import type { CoverStyle, Theme, ThemeDarkMode } from "@/types/bindings";
 
 const { Group, Select, Switch } = createGroupComponents("appearance");
 
-// Fixed palettes so the mode previews read as themselves, whatever mode is live.
 const LIGHT = {
 	bg: "#ffffff",
 	panel: "#f1f1f1",
@@ -33,9 +32,7 @@ const THEME_ORDER: Theme[] = [
 	"Cyberpunk",
 ];
 
-// Default has no class; others map to their lowercase class name.
-const themeClass = (theme: Theme): string =>
-	theme === "Default" ? "" : theme.toLowerCase();
+const themeClass = (theme: Theme): string => theme.toLowerCase();
 
 export function AppearanceSection() {
 	const { dark_mode, theme, cover_style } = useAppearance();
@@ -228,8 +225,6 @@ function SystemPreview() {
 	);
 }
 
-// Wrapping in the theme's class overrides its CSS variables for this subtree,
-// so the semantic bg-*/border-* utilities inside render in that theme's colours.
 function ThemePreview({
 	colorClass,
 	dark,
@@ -293,7 +288,7 @@ function CoverPreview({ style }: { style: CoverStyle }) {
 		<div className="flex aspect-4/3 w-full items-center justify-center bg-muted p-3">
 			<div
 				className={cn(
-					"aspect-2/3 h-full bg-gradient-to-br from-primary/70 to-primary/25",
+					"aspect-2/3 h-full bg-linear-to-br from-primary/70 to-primary/25",
 					COVER_STYLE_CLASS[style],
 				)}
 			/>

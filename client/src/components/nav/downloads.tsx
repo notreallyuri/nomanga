@@ -12,11 +12,6 @@ import {
 } from "../ui/sidebar";
 import { DownloadsDialog } from "./downloads-dialog";
 
-/**
- * Persistent download-queue status pinned to the sidebar. Download events are
- * global, so the current progress shows from any screen; clicking opens the
- * detailed queue dialog.
- */
 export function NavDownloads() {
 	const { items, active, clearFinished } = useDownloadsQueue();
 	const { state } = useSidebar();
@@ -24,8 +19,6 @@ export function NavDownloads() {
 	const [open, setOpen] = useState(false);
 
 	const current = items.find((i) => i.state === "Downloading");
-	// The count lives in the badge, so the button keeps a stable label; the
-	// tooltip is the collapsed rail's only text, so it carries the state.
 	const label = active > 0 ? `Downloading ${active}` : "Downloads";
 
 	const percent =
@@ -50,8 +43,6 @@ export function NavDownloads() {
 					{active > 0 && (
 						<>
 							<SidebarMenuBadge>{active}</SidebarMenuBadge>
-							{/* The badge is hidden in the collapsed rail, where a pulsing
-							    icon alone reads as decoration rather than activity. */}
 							<span
 								aria-hidden
 								className="pointer-events-none absolute top-1 right-1 hidden size-2 rounded-full bg-primary ring-2 ring-sidebar group-data-[collapsible=icon]:block"

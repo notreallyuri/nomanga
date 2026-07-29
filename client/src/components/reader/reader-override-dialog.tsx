@@ -57,8 +57,6 @@ const FIELDS = [
 	},
 ] as const;
 
-// The trigger renders whatever this map returns for the current value; without
-// it the stored enum variant ("SinglePage", "inherit") is what shows.
 const FIELD_ITEMS: Record<string, Record<string, string>> = Object.fromEntries(
 	FIELDS.map((field) => [
 		field.key,
@@ -169,8 +167,6 @@ function Form({
 	initial: ReaderOverride;
 	onChange: (over: ReaderOverride) => void;
 }) {
-	// Local mirror so the selects stay responsive; the change is pushed straight
-	// to the backend, which the reader reads back live.
 	const [over, setOver] = useState<ReaderOverride>(initial);
 
 	const set = (key: keyof ReaderOverride, value: string) => {
