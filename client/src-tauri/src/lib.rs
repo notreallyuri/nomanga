@@ -139,14 +139,63 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         ])
 }
 
+/// Strips the quotes `register_all` puts around the binary path in the dev
+/// handler's `Exec`. The quoting is legal, but xdg-open's `first_word` does not
+/// remove it, so its `command -v` check fails and it falls through to opening a
+/// browser instead — and Chrome dispatches unknown schemes through xdg-open, so
+/// the link silently does nothing. `gio` and the portal are unaffected, as are
+/// packaged builds, which ship their own .desktop with an unquoted Exec.
+#[cfg(all(debug_assertions, target_os = "linux"))]
+fn unquote_dev_handler_exec() {
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+    let Some(stem) = exe.file_stem().and_then(|s| s.to_str()) else {
+        return;
+    };
+
+    let data_dir = std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")));
+    let Some(path) = data_dir.map(|d| d.join("applications").join(format!("{stem}-handler.desktop")))
+    else {
+        return;
+    };
+
+    let Ok(contents) = std::fs::read_to_string(&path) else {
+        return;
+    };
+
+    let fixed = contents
+        .lines()
+        .map(|line| {
+            if line.starts_with("Exec=") {
+                line.replace('"', "")
+            } else {
+                line.to_owned()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    if fixed != contents.trim_end_matches('\n') {
+        std::fs::write(&path, format!("{fixed}\n")).ok();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = specta_builder();
 
+    // Relative to client/src-tauri, so it fails whenever the binary starts
+    // anywhere else — a nomanga:// link starts it from the browser's directory.
+    // Not worth aborting for: tests/export_bindings.rs is what regenerates the
+    // file, and such a launch exists only to forward its argv to the running
+    // instance.
     #[cfg(debug_assertions)]
-    builder
-        .export(Typescript::default(), "../src/types/bindings.ts")
-        .expect("failed to export typescript bindings");
+    if let Err(e) = builder.export(Typescript::default(), "../src/types/bindings.ts") {
+        eprintln!("skipped exporting typescript bindings: {e}");
+    }
 
     tauri::Builder::default()
         // Must stay first, and must come before deep-link: on Linux and Windows
@@ -173,6 +222,8 @@ pub fn run() {
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 app.deep_link().register_all().ok();
+                #[cfg(target_os = "linux")]
+                unquote_dev_handler_exec();
             }
 
             let handle = app.handle().clone();
