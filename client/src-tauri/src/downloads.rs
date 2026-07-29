@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::{AppHandle, Manager};
 use tauri_specta::Event;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 
 use crate::AppState;
 
@@ -18,6 +18,7 @@ pub enum DownloadState {
     Downloading,
     Done,
     Failed,
+    Cancelled,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, tauri_specta::Event)]
@@ -52,6 +53,12 @@ pub struct DownloadManager {
     app: AppHandle,
     tx: mpsc::UnboundedSender<Job>,
     queued: Arc<Mutex<HashSet<Key>>>,
+    /// Keys the user asked to drop. The queue is an unbounded channel, so a
+    /// job cannot be pulled back out of the middle of it — the worker checks
+    /// this when the job surfaces, and `process` checks it between pages to
+    /// stop one already running.
+    cancelled: Arc<Mutex<HashSet<Key>>>,
+    paused: watch::Sender<bool>,
 }
 
 impl DownloadManager {
@@ -62,6 +69,8 @@ impl DownloadManager {
     ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let queued: Arc<Mutex<HashSet<Key>>> = Arc::new(Mutex::new(HashSet::new()));
+        let cancelled: Arc<Mutex<HashSet<Key>>> = Arc::new(Mutex::new(HashSet::new()));
+        let (paused, paused_rx) = watch::channel(false);
 
         let client = reqwest::Client::builder()
             .user_agent(nomanga_core::extension::common::USER_AGENT)
@@ -75,9 +84,41 @@ impl DownloadManager {
             downloads_dir,
             client,
             queued.clone(),
+            cancelled.clone(),
+            paused_rx,
         ));
 
-        Self { app, tx, queued }
+        Self {
+            app,
+            tx,
+            queued,
+            cancelled,
+            paused,
+        }
+    }
+
+    pub fn set_paused(&self, paused: bool) {
+        self.paused.send_replace(paused);
+    }
+
+    pub fn is_paused(&self) -> bool {
+        *self.paused.borrow()
+    }
+
+    /// Marks one chapter for cancellation whether it is waiting or already
+    /// downloading. A job that has already finished is simply not in `queued`,
+    /// so this is a no-op for it rather than an error.
+    pub fn cancel(&self, source_id: String, manga_id: String, chapter_id: String) {
+        let key = (source_id, manga_id, chapter_id);
+
+        if self.queued.lock().unwrap().contains(&key) {
+            self.cancelled.lock().unwrap().insert(key);
+        }
+    }
+
+    pub fn cancel_all(&self) {
+        let queued = self.queued.lock().unwrap().clone();
+        self.cancelled.lock().unwrap().extend(queued);
     }
 
     pub fn enqueue(
@@ -120,12 +161,17 @@ impl DownloadManager {
     }
 }
 
+/// Pauses between chapters rather than mid-chapter: a job already running is
+/// left to finish, which keeps pause free of the partial-file question that
+/// cancel has to answer.
 async fn worker(
     app: AppHandle,
     mut rx: mpsc::UnboundedReceiver<Job>,
     downloads_dir: PathBuf,
     client: reqwest::Client,
     queued: Arc<Mutex<HashSet<Key>>>,
+    cancelled: Arc<Mutex<HashSet<Key>>>,
+    mut paused: watch::Receiver<bool>,
 ) {
     while let Some(job) = rx.recv().await {
         let key = (
@@ -134,7 +180,22 @@ async fn worker(
             job.target.chapter_id.clone(),
         );
 
-        if let Err(err) = process(&app, &downloads_dir, &client, &job).await {
+        while *paused.borrow() && !cancelled.lock().unwrap().contains(&key) {
+            if paused.changed().await.is_err() {
+                break;
+            }
+        }
+
+        let outcome = if cancelled.lock().unwrap().contains(&key) {
+            Err(Stopped::Cancelled)
+        } else {
+            process(&app, &downloads_dir, &client, &cancelled, &key, &job).await
+        };
+
+        if let Err(stopped) = outcome {
+            // Nothing is recorded until the whole chapter lands, so only files
+            // need clearing — a partial directory left behind would read as a
+            // complete download.
             let dir = downloads::chapter_dir(
                 &downloads_dir,
                 &job.source_id,
@@ -143,6 +204,11 @@ async fn worker(
             );
             let _ = tokio::fs::remove_dir_all(&dir).await;
 
+            let (state, error) = match stopped {
+                Stopped::Cancelled => (DownloadState::Cancelled, None),
+                Stopped::Failed(err) => (DownloadState::Failed, Some(err)),
+            };
+
             emit(
                 &app,
                 &job.source_id,
@@ -150,14 +216,26 @@ async fn worker(
                 &job.manga_title,
                 &job.target.chapter_id,
                 &job.target.title,
-                DownloadState::Failed,
+                state,
                 0,
                 0,
-                Some(err),
+                error,
             );
         }
 
         queued.lock().unwrap().remove(&key);
+        cancelled.lock().unwrap().remove(&key);
+    }
+}
+
+enum Stopped {
+    Cancelled,
+    Failed(String),
+}
+
+impl From<String> for Stopped {
+    fn from(message: String) -> Self {
+        Self::Failed(message)
     }
 }
 
@@ -165,8 +243,10 @@ async fn process(
     app: &AppHandle,
     downloads_dir: &PathBuf,
     client: &reqwest::Client,
+    cancelled: &Arc<Mutex<HashSet<Key>>>,
+    key: &Key,
     job: &Job,
-) -> Result<(), String> {
+) -> Result<(), Stopped> {
     let state = app.state::<AppState>();
     let pool = state.pool.clone();
     let registry = state.registry.clone();
@@ -207,6 +287,10 @@ async fn process(
     let mut total_bytes = 0u64;
 
     for (index, page) in pages.iter().enumerate() {
+        if cancelled.lock().unwrap().contains(key) {
+            return Err(Stopped::Cancelled);
+        }
+
         let resp = client
             .get(&page.image_url)
             .header(reqwest::header::REFERER, &base_url)

@@ -29,6 +29,41 @@ pub async fn queue_downloads(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn set_downloads_paused(
+    state: State<'_, AppState>,
+    paused: bool,
+) -> CommandResult<()> {
+    state.downloads.set_paused(paused);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn downloads_paused(state: State<'_, AppState>) -> CommandResult<bool> {
+    Ok(state.downloads.is_paused())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_download(
+    state: State<'_, AppState>,
+    source_id: String,
+    manga_id: String,
+    chapter_id: String,
+) -> CommandResult<()> {
+    state.downloads.cancel(source_id, manga_id, chapter_id);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_all_downloads(state: State<'_, AppState>) -> CommandResult<()> {
+    state.downloads.cancel_all();
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn downloaded_chapter_ids(
     state: State<'_, AppState>,
     source_id: String,
