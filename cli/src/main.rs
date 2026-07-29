@@ -7,6 +7,7 @@ use nomanga_host::transport::{CallLog, TransportShared};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use nomanga_core::extension::query::{ChapterRef, MangaRef, SearchQuery};
+use nomanga_core::extension::repository::{INDEX_VERSION, RepositoryExtension, RepositoryIndex};
 use nomanga_host::ExtensionMetadata;
 
 #[derive(Parser)]
@@ -47,6 +48,19 @@ enum Command {
         #[arg(long, default_value_t = 1)]
         page: u32,
     },
+    Index {
+        wasm: Vec<String>,
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        base_url: String,
+        #[arg(long)]
+        description: Option<String>,
+        #[arg(long)]
+        website: Option<String>,
+        #[arg(long)]
+        out: Option<String>,
+    },
 }
 
 fn main() -> ExitCode {
@@ -61,6 +75,24 @@ fn main() -> ExitCode {
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+
+    if let Command::Index {
+        wasm,
+        name,
+        base_url,
+        description,
+        website,
+        out,
+    } = &cli.command
+    {
+        let index = build_index(wasm, name, base_url, description, website)?;
+        let rendered = to_value(&index, cli.json)?;
+        match out {
+            Some(path) => std::fs::write(path, format!("{rendered}\n"))?,
+            None => println!("{rendered}"),
+        }
+        return Ok(());
+    }
 
     let wasm = cli.wasm.as_deref().ok_or("--wasm <path> is required")?;
 
@@ -84,7 +116,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     let value = match cli.command {
-        Command::Info => unreachable!("handled above"),
+        Command::Info | Command::Index { .. } => unreachable!("handled above"),
         Command::Homepage => to_value(ext.homepage(source)?, cli.json)?,
         Command::Filters => to_value(ext.filters(source)?, cli.json)?,
         Command::Search { term, page } => {
@@ -125,6 +157,47 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{value}");
     Ok(())
+}
+
+/// Builds a repository index from the extensions' own metadata rather than a
+/// hand-written manifest, so the published `abi_version` and source list cannot
+/// drift from the `.wasm` they describe. `base_url` is joined with each file's
+/// name to form its download URL.
+fn build_index(
+    wasm: &[String],
+    name: &str,
+    base_url: &str,
+    description: &Option<String>,
+    website: &Option<String>,
+) -> Result<RepositoryIndex, Box<dyn std::error::Error>> {
+    if wasm.is_empty() {
+        return Err("at least one .wasm path is required".into());
+    }
+
+    let mut extensions = Vec::with_capacity(wasm.len());
+
+    for path in wasm {
+        let meta = ExtensionMetadata::inspect(path)?;
+        let file = std::path::Path::new(path)
+            .file_name()
+            .ok_or_else(|| format!("{path} has no file name"))?
+            .to_string_lossy()
+            .into_owned();
+
+        extensions.push(RepositoryExtension {
+            info: meta.extension.clone(),
+            download_url: format!("{}/{file}", base_url.trim_end_matches('/')),
+            sources: meta.sources.clone(),
+        });
+    }
+
+    Ok(RepositoryIndex {
+        index_version: INDEX_VERSION,
+        name: name.to_owned(),
+        description: description.clone(),
+        website: website.clone(),
+        extensions,
+    })
 }
 
 fn to_value<T: serde::Serialize>(v: T, json: bool) -> Result<String, serde_json::Error> {
