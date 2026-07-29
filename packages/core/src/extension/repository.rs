@@ -36,3 +36,39 @@ impl RepositoryExtension {
         (ABI_MIN_SUPPORTED..=ABI_VERSION).contains(&abi)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The README documents this shape and says it can be written by hand, so
+    /// the smallest legal index is worth pinning: optional fields omitted
+    /// entirely, not spelled as null.
+    #[test]
+    fn parses_a_hand_written_index() {
+        let index: RepositoryIndex = serde_json::from_str(
+            r#"{
+              "index_version": 1,
+              "name": "My pack",
+              "extensions": [{
+                "info": {
+                  "id": "dev.you.mypack", "name": "My Pack", "version": "0.1.0",
+                  "abi_version": 5, "author": "you", "website": null
+                },
+                "download_url": "my_pack.wasm",
+                "sources": [{
+                  "id": "com.example.en", "name": "Example", "version": "1.0",
+                  "language": "en", "base_url": "https://example.org",
+                  "icon_url": null, "hosts": ["example.org"], "nsfw": false
+                }]
+              }]
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(index.name, "My pack");
+        assert!(index.description.is_none());
+        assert_eq!(index.extensions[0].download_url, "my_pack.wasm");
+        assert_eq!(index.extensions[0].sources[0].hosts, ["example.org"]);
+    }
+}

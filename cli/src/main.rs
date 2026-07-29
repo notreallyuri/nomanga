@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::process::ExitCode;
 
+mod html;
+
 use clap::{Parser, Subcommand};
 use nomanga_core::extension::common::{HostRequest, HostResponse};
 use nomanga_host::transport::{CallLog, TransportShared};
@@ -60,6 +62,8 @@ enum Command {
         website: Option<String>,
         #[arg(long)]
         out: Option<String>,
+        #[arg(long)]
+        html: Option<String>,
     },
 }
 
@@ -83,13 +87,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         description,
         website,
         out,
+        html,
     } = &cli.command
     {
         let index = build_index(wasm, name, base_url, description, website)?;
+
+        if let Some(path) = html {
+            std::fs::write(path, html::render(&index))?;
+        }
+
         let rendered = to_value(&index, cli.json)?;
         match out {
             Some(path) => std::fs::write(path, format!("{rendered}\n"))?,
-            None => println!("{rendered}"),
+            None if html.is_none() => println!("{rendered}"),
+            None => {}
         }
         return Ok(());
     }

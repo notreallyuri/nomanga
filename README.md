@@ -166,22 +166,64 @@ app-data dir); `Registry::install` copies an extension in and activates it.
 ### Publishing a repository
 
 A repository is a static directory: an index next to the `.wasm` files it
-describes. `nomanga-cli` writes the index from the binaries' own metadata, so
-the published `abi_version` and source lists cannot drift from what shipped:
+describes. Committing that directory and pointing GitHub Pages at it (*Settings
+→ Pages → Deploy from a branch: main, folder /docs*) is enough — no CI is
+involved.
 
-```sh
-cargo install --git https://github.com/notreallyuri/nomanga nomanga-cli
-nomanga-cli index --name "My pack" --out docs/index.min.json --json docs/*.wasm
+The index is plain JSON and nothing stops you writing it by hand:
+
+```json
+{
+  "index_version": 1,
+  "name": "My pack",
+  "description": "Optional.",
+  "website": "https://github.com/you/my-pack",
+  "extensions": [
+    {
+      "info": {
+        "id": "dev.you.mypack", "name": "My Pack", "version": "0.1.0",
+        "abi_version": 5, "author": "you", "website": null
+      },
+      "download_url": "my_pack.wasm",
+      "sources": [
+        {
+          "id": "com.example.en", "name": "Example", "version": "1.0",
+          "language": "en", "base_url": "https://example.org",
+          "icon_url": null, "hosts": ["example.org"], "nsfw": false
+        }
+      ]
+    }
+  ]
+}
 ```
 
-Each `download_url` is then just a file name, resolved against wherever the
-index was fetched from — so the same directory works served from anywhere.
-Committing `docs/` and pointing GitHub Pages at it (*Settings → Pages → Deploy
-from a branch: main, folder /docs*) is enough; no CI is involved. Both extension
-repos carry a `publish.sh` that does the whole build-and-write step.
+`download_url` may be a bare file name, resolved against wherever the index was
+fetched from, so the same directory works served from anywhere. Use an absolute
+URL only when the `.wasm` lives elsewhere, such as a release asset.
 
-Pass `--base-url` only when the `.wasm` files live somewhere other than beside
-the index, such as a release asset.
+Nothing in the index is trusted: the app re-reads the `.wasm` through
+`ExtensionMetadata::inspect` on install, so a wrong `abi_version` or an invented
+source is caught there. The index exists so the app can *show* a list before
+downloading, not to vouch for it.
+
+`nomanga-cli` is the ergonomic path rather than a requirement — it reads the
+metadata out of the built binaries, so what you publish cannot drift from what
+shipped, and writes a browsable landing page beside it:
+
+```sh
+nomanga-cli index --name "My pack" \
+  --out docs/index.min.json --json --html docs/index.html docs/*.wasm
+```
+
+`index.html` is self-contained and derives the repository URL from `location`
+at view time, so opening the Pages URL in a browser gives a copyable link, the
+source list, and each extension's declared hosts.
+
+Grab a prebuilt binary from [Releases](https://github.com/notreallyuri/nomanga/releases)
+(`nomanga-cli-linux`, `-macos`, `-windows.exe`), or build it with
+`cargo install --git https://github.com/notreallyuri/nomanga nomanga-cli` — the
+latter compiles wasmtime, so it takes a few minutes. Both extension repos carry
+a `publish.sh` wrapping the whole build-and-write step.
 
 ### Inspecting / testing with the CLI
 
