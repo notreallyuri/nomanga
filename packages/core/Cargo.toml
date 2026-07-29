@@ -2,6 +2,9 @@
 name = "nomanga-core"
 version = "0.1.0"
 edition = "2024"
+description = "Shared data model and extension ABI for nomanga"
+repository = "https://github.com/notreallyuri/nomanga"
+# license = "..."   # required before this can be published to crates.io
 
 [features]
 typescript = ["dep:specta", "dep:specta-typescript"]
