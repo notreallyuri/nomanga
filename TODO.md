@@ -111,6 +111,26 @@ default.
   repository itself.
   Verified end to end over HTTP: `publish.sh` → served `docs/` → index fetched,
   relative `download_url` resolved, `.wasm` downloaded and loaded at ABI 5.
+  Published live at `notreallyuri.github.io/nomanga-extension-mainpack`. Pages
+  needed the GitHub Actions source, not "deploy from a branch": the latter runs
+  Jekyll over `docs/` *even with a `.nojekyll` in it* and then dies converting
+  the default theme's `style.scss`. `pages.yml` uploads the directory verbatim
+  and compiles nothing.
+
+- [x] `nomanga://add-repo?url=…` deep link, so the generated landing page can
+  hand a repository straight to the app. `tauri-plugin-deep-link` registers the
+  scheme; `DeepLinkProvider` parses the link, rejects anything that is not
+  http(s) (the backend's `normalize_url` checks again), focuses the window,
+  opens Settings → Extensions and raises a confirmation.
+  The link *adds*, never installs — it is untrusted input from any page on the
+  internet, so it can at most put a URL in front of the user, and installing
+  stays a separate step behind the host allow-list dialog.
+  On Linux this rides on `MimeType=x-scheme-handler/nomanga` in the `.desktop`
+  file, so it comes from the PKGBUILD or `install-local.sh`; dev builds call
+  `register_all()` at runtime since they have neither.
+  Worth remembering: the page is one big `format!` raw string and
+  `href="#"` contains `"#`, which closed `r#"…"#` early. It is `r##"…"##` now,
+  with a test asserting the document still ends in `</html>`.
 
 - [x] Reinstalling an installed extension no longer lists it twice.
   `Registry::load_from` ended with `self.extensions.push(meta.extension)` on a

@@ -217,7 +217,16 @@ nomanga-cli index --name "My pack" \
 
 `index.html` is self-contained and derives the repository URL from `location`
 at view time, so opening the Pages URL in a browser gives a copyable link, the
-source list, and each extension's declared hosts.
+source list, and each extension's declared hosts. Its *Open in nomanga* button
+is a `nomanga://add-repo?url=…` link — the app registers that scheme, focuses
+itself, jumps to Settings → Extensions and asks the user to confirm the URL.
+A link can only ever *add* a repository; installing is still a separate,
+explicit step with its own host allow-list confirmation.
+
+On Linux the handler comes from the `.desktop` file's
+`MimeType=x-scheme-handler/nomanga`, so it is registered by the PKGBUILD or by
+`packaging/install-local.sh`; a `pnpm tauri dev` build registers it at runtime
+instead. Windows registers it from the NSIS installer, macOS from the bundle.
 
 Grab a prebuilt binary from [Releases](https://github.com/notreallyuri/nomanga/releases)
 (`nomanga-cli-linux`, `-macos`, `-windows.exe`), or build it with

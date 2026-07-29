@@ -28,6 +28,7 @@ import {
 	useRemoveRepository,
 	useRepositoryCatalog,
 } from "@/hooks/services/use-repositories";
+import { useDeepLink } from "@/hooks/use-deep-link";
 import type { RepositoryExtension } from "@/types/bindings";
 
 type Pending = { url: string; extension: RepositoryExtension };
@@ -43,21 +44,26 @@ export function RepositorySection() {
 	const add = useAddRepository();
 	const remove = useRemoveRepository();
 	const install = useInstallFromRepository();
+	const { pendingRepository, clearPendingRepository } = useDeepLink();
 
 	const [url, setUrl] = useState("");
 	const [pending, setPending] = useState<Pending | null>(null);
+
+	function addUrl(target: string, onDone?: () => void) {
+		add.mutate(target, {
+			onSuccess: (index) => {
+				onDone?.();
+				toast.success(`Added ${index.name}`);
+			},
+			onError: (e) => toast.error(e.message),
+		});
+	}
 
 	function handleAdd() {
 		const trimmed = url.trim();
 		if (!trimmed) return;
 
-		add.mutate(trimmed, {
-			onSuccess: (index) => {
-				setUrl("");
-				toast.success(`Added ${index.name}`);
-			},
-			onError: (e) => toast.error(e.message),
-		});
+		addUrl(trimmed, () => setUrl(""));
 	}
 
 	function handleInstall(target: Pending) {
@@ -182,7 +188,60 @@ export function RepositorySection() {
 				onConfirm={handleInstall}
 				pending={pending}
 			/>
+
+			<AddFromLinkDialog
+				busy={add.isPending}
+				onCancel={clearPendingRepository}
+				onConfirm={() =>
+					addUrl(pendingRepository ?? "", clearPendingRepository)
+				}
+				url={pendingRepository}
+			/>
 		</>
+	);
+}
+
+/**
+ * Confirms a repository that arrived over a `nomanga://add-repo` link. Adding
+ * one installs nothing, but the link can come from any page on the internet, so
+ * the URL is shown in full and the user decides.
+ */
+function AddFromLinkDialog({
+	url,
+	busy,
+	onCancel,
+	onConfirm,
+}: {
+	url: string | null;
+	busy: boolean;
+	onCancel: () => void;
+	onConfirm: () => void;
+}) {
+	return (
+		<Dialog onOpenChange={(open) => !open && onCancel()} open={url !== null}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Add this repository?</DialogTitle>
+					<DialogDescription>
+						A link asked nomanga to add the repository below. Nothing is
+						installed — you pick what to install afterwards.
+					</DialogDescription>
+				</DialogHeader>
+
+				<p className="break-all rounded-md border bg-muted/40 p-3 font-mono text-xs">
+					{url}
+				</p>
+
+				<DialogFooter>
+					<Button onClick={onCancel} variant="outline">
+						Cancel
+					</Button>
+					<Button disabled={busy} onClick={onConfirm}>
+						Add repository
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }
 

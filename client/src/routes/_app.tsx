@@ -7,6 +7,7 @@ import {
 } from "@/components/settings/context";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { DownloadsProvider } from "@/hooks/services/use-downloads";
+import { DeepLinkProvider } from "@/hooks/use-deep-link";
 
 export const Route = createFileRoute("/_app")({
 	component: RouteComponent,
@@ -15,9 +16,11 @@ export const Route = createFileRoute("/_app")({
 function RouteComponent() {
 	return (
 		<SettingsUIProvider>
-			<DownloadsProvider>
-				<AppShell />
-			</DownloadsProvider>
+			<DeepLinkProvider>
+				<DownloadsProvider>
+					<AppShell />
+				</DownloadsProvider>
+			</DeepLinkProvider>
 		</SettingsUIProvider>
 	);
 }

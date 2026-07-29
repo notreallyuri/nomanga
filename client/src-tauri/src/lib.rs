@@ -151,10 +151,19 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_deep_link::init())
         .register_asynchronous_uri_scheme_protocol(image_proxy::SCHEME, image_proxy::handle)
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
+
+            // A packaged build gets nomanga:// from its installer or .desktop
+            // file; a dev build has neither, so it registers at runtime.
+            #[cfg(debug_assertions)]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().register_all().ok();
+            }
 
             let handle = app.handle().clone();
             let dir = handle.path().app_data_dir().expect("no app data dir");

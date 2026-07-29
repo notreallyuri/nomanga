@@ -85,7 +85,7 @@ pub fn render(index: &RepositoryIndex) -> String {
         .unwrap_or_default();
 
     format!(
-        r#"<!doctype html>
+        r##"<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -118,6 +118,11 @@ h1 {{ margin: 0 0 .25rem; font-size: 1.85rem; letter-spacing: -.02em; }}
 .add h2 {{ margin: 0 0 .35rem; font-size: .8rem; text-transform: uppercase;
   letter-spacing: .06em; color: var(--muted); }}
 .add p {{ margin: .6rem 0 0; font-size: .875rem; color: var(--muted); }}
+.open {{
+  display: inline-block; margin-bottom: .85rem; padding: .55rem 1.1rem;
+  background: var(--accent); color: #fff; border-radius: .5rem;
+  font-size: .875rem; font-weight: 600; text-decoration: none;
+}}
 .row {{ display: flex; gap: .5rem; align-items: stretch; }}
 #url {{
   flex: 1; min-width: 0; padding: .6rem .7rem; border: 1px solid var(--line);
@@ -165,12 +170,15 @@ footer a {{ color: inherit; }}
 
   <div class="add">
     <h2>Add this repository</h2>
+    <a class="open" id="open" href="#">Open in nomanga</a>
     <div class="row">
       <input id="url" readonly value="index.min.json">
       <button id="copy" type="button">Copy</button>
     </div>
-    <p>In nomanga, open Settings &rarr; Extensions and paste this into the
-    repository field.</p>
+    <p>The button hands this URL to nomanga, which asks you to confirm before
+    adding it &mdash; nothing installs on its own. If nothing happens, nomanga
+    is not installed or has not registered the <code>nomanga://</code> handler;
+    copy the URL into Settings &rarr; Extensions instead.</p>
   </div>
 
   {extensions}
@@ -186,6 +194,9 @@ footer a {{ color: inherit; }}
   const field = document.getElementById("url");
   field.value = new URL("index.min.json", location.href).href;
 
+  document.getElementById("open").href =
+    "nomanga://add-repo?url=" + encodeURIComponent(field.value);
+
   document.getElementById("copy").addEventListener("click", async () => {{
     const button = document.getElementById("copy");
     try {{
@@ -200,7 +211,7 @@ footer a {{ color: inherit; }}
 </script>
 </body>
 </html>
-"#,
+"##,
         name = esc(&index.name),
         description = description,
         website = website,
@@ -213,4 +224,64 @@ fn esc(raw: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nomanga_core::extension::info::ExtensionInfo;
+    use nomanga_core::extension::repository::RepositoryExtension;
+    use nomanga_core::extension::source::SourceInfo;
+
+    fn index() -> RepositoryIndex {
+        RepositoryIndex {
+            index_version: 1,
+            name: "Test pack".into(),
+            description: None,
+            website: None,
+            extensions: vec![RepositoryExtension {
+                info: ExtensionInfo {
+                    id: "dev.test.pack".into(),
+                    name: "Test <Pack>".into(),
+                    version: "0.1.0".into(),
+                    abi_version: 5,
+                    author: "a & b".into(),
+                    website: None,
+                },
+                download_url: "test.wasm".into(),
+                sources: vec![SourceInfo {
+                    id: "com.example.en".into(),
+                    name: "Example".into(),
+                    version: "1.0".into(),
+                    language: "en".into(),
+                    base_url: "https://example.org".into(),
+                    icon_url: None,
+                    hosts: vec!["example.org".into()],
+                    nsfw: true,
+                }],
+            }],
+        }
+    }
+
+    /// The page is one big raw string, so a stray `"#` in the markup truncates
+    /// it. Checking that the closing tags survive catches that.
+    #[test]
+    fn renders_a_complete_document() {
+        let page = render(&index());
+
+        assert!(page.starts_with("<!doctype html>"));
+        assert!(page.trim_end().ends_with("</html>"));
+        assert!(page.contains("nomanga://add-repo?url="));
+        assert!(page.contains("test.wasm"));
+        assert!(page.contains("class=\"nsfw\""));
+    }
+
+    #[test]
+    fn escapes_names_from_the_extension() {
+        let page = render(&index());
+
+        assert!(page.contains("Test &lt;Pack&gt;"));
+        assert!(page.contains("a &amp; b"));
+        assert!(!page.contains("Test <Pack>"));
+    }
 }

@@ -8,3 +8,4 @@ Icon=nomanga
 Terminal=false
 Categories=Graphics;Viewer;
 StartupWMClass=nomanga
+MimeType=x-scheme-handler/nomanga;
