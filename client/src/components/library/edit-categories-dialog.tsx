@@ -29,8 +29,6 @@ export function EditCategoriesDialog({
 	return (
 		<Dialog onOpenChange={(open) => !open && onClose()} open={item !== null}>
 			<DialogContent>
-				{/* Remounted per entry so the checkbox state is seeded fresh from
-				    that entry's saved categories. */}
 				{item && (
 					<Body item={item} key={`${item.source_id}/${item.manga_id}`} />
 				)}
@@ -46,7 +44,6 @@ function Body({ item }: { item: LibraryItem }) {
 
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 
-	// Seed once the saved set arrives; the dialog is already open by then.
 	useEffect(() => {
 		if (assigned.data) setSelected(new Set(assigned.data));
 	}, [assigned.data]);

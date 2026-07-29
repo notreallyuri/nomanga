@@ -79,8 +79,6 @@ export function ManageCategoriesDialog({ trigger }: { trigger: ReactElement }) {
 	const categories = useCategories();
 	const reorder = useReorderCategories();
 
-	// Local order so a drag reorders instantly; the server list re-seeds it
-	// whenever we aren't mid-drag.
 	const [items, setItems] = useState<Category[]>([]);
 	const [dragging, setDragging] = useState(false);
 
@@ -89,7 +87,6 @@ export function ManageCategoriesDialog({ trigger }: { trigger: ReactElement }) {
 	}, [categories.data, dragging]);
 
 	const sensors = useSensors(
-		// A small distance keeps the grip from hijacking edit/delete clicks.
 		useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
 		useSensor(KeyboardSensor, {
 			coordinateGetter: sortableKeyboardCoordinates,
@@ -279,7 +276,6 @@ const SORT_LABELS: Record<CategorySort, string> = {
 	unread: "Most unread",
 };
 
-/** The icon-in-accent (or bare colour dot) shown beside a category name. */
 function CategoryBadge({ category }: { category: Category }) {
 	const Icon = categoryIcon(category.icon);
 	const color = category.color ?? undefined;
@@ -311,10 +307,6 @@ function optionsOf(c: Category): CategoryOptions {
 	};
 }
 
-/**
- * Locking is only offered once a library password exists — without one there
- * would be nothing to unlock with.
- */
 function LockRow({
 	category,
 	onApply,

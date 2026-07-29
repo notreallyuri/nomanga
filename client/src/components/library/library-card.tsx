@@ -22,8 +22,6 @@ export function LibraryCard({
 }) {
 	const { show_unread_badge } = useAppearance();
 
-	// Goes non-zero only once chapter counts are cached; until then the badge
-	// stays hidden rather than showing a wrong number.
 	const unread = Math.max(0, item.cached_total_chapters - item.read_chapters);
 
 	return (
@@ -42,7 +40,6 @@ export function LibraryCard({
 				/>
 
 				{selectionMode && (
-					// Sits above the card's Link so a tap selects instead of navigating.
 					<button
 						aria-pressed={selected}
 						className={cn(

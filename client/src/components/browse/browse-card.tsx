@@ -28,11 +28,6 @@ import {
 	ContextMenuTrigger,
 } from "../ui/context-menu";
 
-/**
- * A browse-result cover with an overlaid library toggle and a matching context
- * menu. Shared by the homepage rows, section view, and search results so the
- * save affordance behaves identically everywhere.
- */
 export function BrowseCard({
 	sourceId,
 	item,
@@ -60,8 +55,6 @@ export function BrowseCard({
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger>
-				{/* isolate keeps the badge's z-10 inside the card, below the sticky
-				    search bar rather than punching through it while scrolling. */}
 				<div className="group/card relative isolate">
 					<MangaCard
 						compactTitle={compactTitle}
@@ -110,10 +103,6 @@ export function BrowseCard({
 	);
 }
 
-/**
- * Lives inside the popup so its queries only run while the menu is open —
- * a browse grid holds dozens of these cards.
- */
 function CategorySubmenu({
 	sourceId,
 	item,
@@ -131,7 +120,6 @@ function CategorySubmenu({
 	if (!categories.data?.length) return null;
 
 	const current = saved ? (assigned.data ?? []) : [];
-	// An unsaved entry has to land in the library before it can be filed.
 	const busy =
 		add.isPending || save.isPending || (saved && !assigned.isSuccess);
 

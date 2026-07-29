@@ -26,7 +26,7 @@ export function LibraryList({
 	onEditCategories: (item: LibraryItem) => void;
 }) {
 	return (
-		<div className="flex flex-col divide-y divide-border/60 border-border/60 border-y">
+		<div className="flex flex-col divide-y divide-border/60 border-y">
 			{items.map((item) => (
 				<LibraryRow
 					isSelected={selected.has(keyOf(item))}
@@ -90,7 +90,6 @@ function LibraryRow({
 		</>
 	);
 
-	// In selection mode the whole row toggles selection; otherwise it navigates.
 	const row: ReactNode = selectionMode ? (
 		<button
 			aria-pressed={isSelected}

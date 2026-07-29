@@ -109,6 +109,10 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::repository::install_from_repository,
             // downloads
             commands::downloads::queue_downloads,
+            commands::downloads::set_downloads_paused,
+            commands::downloads::downloads_paused,
+            commands::downloads::cancel_download,
+            commands::downloads::cancel_all_downloads,
             commands::downloads::downloaded_chapter_ids,
             commands::downloads::local_pages,
             commands::downloads::delete_download,

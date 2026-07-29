@@ -9,11 +9,6 @@ import { MangaGrid, MangaGridSkeleton } from "../manga/manga-grid";
 import { Button } from "../ui/button";
 import { BrowseCard } from "./browse-card";
 
-/**
- * The full, paginated listing behind a homepage section's "View more". The
- * title is resolved from the (already cached) homepage rather than carried in
- * the URL, so links stay `?section=<id>` and never drift out of sync.
- */
 export function SectionView({
 	sourceId,
 	sectionId,

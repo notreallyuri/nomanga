@@ -28,10 +28,6 @@ import {
 } from "@/hooks/services/use-repositories";
 import { useDeepLink } from "@/hooks/use-deep-link";
 
-/**
- * Repositories are set once and rarely touched, so this collapses to a single
- * summary row and leaves the extension lists as the section's subject.
- */
 export function RepositoryGroup() {
 	const { data: catalogs, refetch, isFetching } = useRepositoryCatalog();
 	const add = useAddRepository();
@@ -161,11 +157,6 @@ export function RepositoryGroup() {
 	);
 }
 
-/**
- * Confirms a repository that arrived over a `nomanga://add-repo` link. Adding
- * one installs nothing, but the link can come from any page on the internet, so
- * the URL is shown in full and the user decides.
- */
 function AddFromLinkDialog({
 	url,
 	busy,

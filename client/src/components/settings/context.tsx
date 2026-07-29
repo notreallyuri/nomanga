@@ -17,7 +17,6 @@ interface SettingsUI {
 	setOpen: (open: boolean) => void;
 	active: SettingsItem;
 	setActive: (item: SettingsItem) => void;
-	/** Open the settings dialog, optionally jumping straight to a tab. */
 	openSettings: (route?: SettingsRoute) => void;
 }
 

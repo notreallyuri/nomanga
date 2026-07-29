@@ -14,11 +14,6 @@ import {
 import { useToggleLibrary } from "@/hooks/services/use-library";
 import type { LibraryItem } from "@/types/bindings";
 
-/**
- * The right-click actions shared by every library entry, whatever layout it's
- * drawn in (cover grid or compact list). `children` is the entry's clickable
- * surface, which becomes the menu trigger.
- */
 export function LibraryEntryMenu({
 	item,
 	onEditCategories,

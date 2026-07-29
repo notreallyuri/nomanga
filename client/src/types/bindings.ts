@@ -92,6 +92,10 @@ export const commands = {
 	 */
 	installFromRepository: (url: string, extensionId: string) => typedError<string, CommandError>(__TAURI_INVOKE("install_from_repository", { url, extensionId })),
 	queueDownloads: (sourceId: string, mangaId: string, mangaTitle: string, targets: DownloadTarget[]) => typedError<null, CommandError>(__TAURI_INVOKE("queue_downloads", { sourceId, mangaId, mangaTitle, targets })),
+	setDownloadsPaused: (paused: boolean) => typedError<null, CommandError>(__TAURI_INVOKE("set_downloads_paused", { paused })),
+	downloadsPaused: () => typedError<boolean, CommandError>(__TAURI_INVOKE("downloads_paused")),
+	cancelDownload: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("cancel_download", { sourceId, mangaId, chapterId })),
+	cancelAllDownloads: () => typedError<null, CommandError>(__TAURI_INVOKE("cancel_all_downloads")),
 	downloadedChapterIds: (sourceId: string, mangaId: string) => typedError<string[], CommandError>(__TAURI_INVOKE("downloaded_chapter_ids", { sourceId, mangaId })),
 	localPages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("local_pages", { sourceId, mangaId, chapterId })),
 	deleteDownload: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("delete_download", { sourceId, mangaId, chapterId })),
@@ -268,7 +272,7 @@ export type DownloadProgress = {
 	error: string | null,
 };
 
-export type DownloadState = "Queued" | "Downloading" | "Done" | "Failed";
+export type DownloadState = "Queued" | "Downloading" | "Done" | "Failed" | "Cancelled";
 
 export type DownloadTarget = {
 	chapter_id: string,

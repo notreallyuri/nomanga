@@ -31,7 +31,6 @@ export function StripReader({
 		pageRefs.current[i]?.scrollIntoView({ block: "start" });
 	}, []);
 
-	// Jump to the resume page once, after its element has mounted.
 	const restored = useRef(false);
 	useEffect(() => {
 		if (restored.current) return;
@@ -85,10 +84,6 @@ export function StripReader({
 		return () => observer.disconnect();
 	}, [onIndexChange]);
 
-	// The observer only marks a page "current" while it's in the middle third of
-	// the viewport, but a short final page can never get there — at max scroll it
-	// sits in the bottom third, so the last index is never reported and the
-	// chapter never registers as finished. Reaching the bottom forces it.
 	useEffect(() => {
 		const container = containerRef.current;
 		if (!container || pages.length === 0) return;

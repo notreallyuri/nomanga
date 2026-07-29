@@ -21,10 +21,6 @@ import {
 import { cn } from "@/lib/utils";
 import type { SelectOption } from "@/types/bindings";
 
-/**
- * Searchable single-select. Renders a trigger showing the current label and a
- * popover with a filterable list. Selecting the active option again clears it.
- */
 export function SearchableSelect({
 	options,
 	value,
@@ -87,11 +83,6 @@ export function SearchableSelect({
 
 type TriState = "neutral" | "included" | "excluded";
 
-/**
- * Searchable multi-select with optional tri-state exclusion. Selecting an option
- * cycles neutral → included → (excluded →) neutral, mirroring the pill control.
- * Chosen options are shown as removable chips above the trigger.
- */
 export function SearchableMultiSelect({
 	options,
 	included,
@@ -124,8 +115,6 @@ export function SearchableMultiSelect({
 		} else if (state === "included" && supportsExclusion) {
 			nextExcluded.push(id);
 		}
-		// "included" without exclusion support, or "excluded", falls through to
-		// neutral — nothing pushed.
 
 		onChange({ included: nextIncluded, excluded: nextExcluded });
 	};

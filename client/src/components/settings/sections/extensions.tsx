@@ -43,8 +43,6 @@ export function ExtensionSection() {
 
 	const [confirming, setConfirming] = useState<RepositoryOffer | null>(null);
 
-	// An installed extension is never repeated below: what a repository offers
-	// is folded into its own card as an update, and only the rest is "Available".
 	const installedIds = new Set(installed?.map((e) => e.info.id));
 	const available = [...offers.values()].filter(
 		(offer) => !installedIds.has(offer.extension.info.id),
@@ -246,12 +244,6 @@ function ExtensionCard({
 	);
 }
 
-/**
- * Confirms an install by listing the domains the extension declares. The
- * sandbox is what actually contains it, but the allow-list is the one part of
- * that a user can judge, so it is shown before the download rather than buried
- * in the source settings afterwards.
- */
 function InstallDialog({
 	offer,
 	onCancel,

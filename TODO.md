@@ -61,23 +61,12 @@
 
 ### Downloads and updates
 
-- [ ] Pause and cancel, for both the download queue and a library update run,
-  each in the dialog that already shows its progress (the downloads queue
-  dialog and the updates progress dialog) rather than a new surface.
-  - Neither is interruptible today. `DownloadManager` is a
-    `mpsc::UnboundedSender<Job>` into a detached `worker`, with no handle back
-    into a job once sent; `refresh_library` is a plain loop emitting
-    `LibraryRefreshProgress`. Both run to completion whatever the user does.
-  - Cancel needs two scopes and they are not the same: dropping a *queued* job
-    is just removing it from the channel, but stopping the *in-flight* one means
-    aborting a chapter mid-fetch and deciding what happens to the partial
-    directory on disk — either finish the current page and stop, or delete what
-    landed. Leaving half a chapter that reads as downloaded is the failure to
-    avoid.
-  - Pause is the easier half and probably worth doing first: a flag the worker
-    checks between jobs, no abort semantics, no cleanup question.
-  - `queued` is a `HashSet<Key>` behind a `Mutex`, so it already has the identity
-    a cancel would key off; the missing piece is a way to reach the running job.
+- [ ] Cancel a library update run, in the updates progress dialog. Downloads
+  now have this (below); `refresh_library` is still a plain loop emitting
+  `LibraryRefreshProgress` that runs to completion whatever the user does.
+  Cheaper than the download case was: an update fetches chapter lists and writes
+  rows, so stopping between series leaves nothing half-written and needs no
+  cleanup decision. Pause is probably not worth it here — a refresh is short.
 
 ### System
 
@@ -393,6 +382,24 @@ default.
     (ABI 3: `SearchQuery.query` renamed to `SearchQuery.term`.)
 
 ### Library
+
+- [x] Pause and cancel in the downloads queue dialog.
+  Pause is a `watch::channel(bool)` the worker waits on **between chapters**, so
+  the one already running finishes — that keeps pause clear of the partial-file
+  question, and the UI says "Paused after this chapter" rather than implying an
+  instant stop.
+  Cancel covers both scopes through one `cancelled: HashSet<Key>`: the queue is
+  an unbounded channel and a job cannot be pulled out of the middle of it, so
+  the worker checks the set when the job surfaces, and `process` checks it
+  between pages to stop one already downloading.
+  The partial directory is **deleted**, reusing the existing failure path.
+  `record_chapter` only runs once the whole chapter lands, so nothing is in the
+  database and only files need clearing — a half chapter left on disk would read
+  as a complete download, which is the one outcome worth avoiding.
+  `DownloadState::Cancelled` is distinct from `Failed` so it carries no error
+  and the row offers Retry. `groupState` only reports a series cancelled when
+  *every* chapter is, so one cancelled chapter among downloaded ones still reads
+  as finished.
 
 - [x] Listing layout (Allow user to toggle the layout in the library)
 - [x] Badge Toggle

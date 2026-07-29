@@ -5,10 +5,20 @@ import {
 	CheckCircleIcon,
 	CircleNotchIcon,
 	ClockIcon,
+	PauseIcon,
+	PlayIcon,
+	ProhibitIcon,
 	WarningCircleIcon,
+	XIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
-import { useQueueDownloads } from "@/hooks/services/use-downloads";
+import {
+	useCancelAllDownloads,
+	useCancelDownload,
+	useDownloadsPaused,
+	useQueueDownloads,
+	useSetDownloadsPaused,
+} from "@/hooks/services/use-downloads";
 import { cn } from "@/lib/utils";
 import type { DownloadProgress, DownloadState } from "@/types/bindings";
 import { Button } from "../ui/button";
@@ -41,11 +51,8 @@ export function DownloadsDialog({
 		? (groups.find((g) => g.mangaId === selectedId) ?? null)
 		: null;
 
-	const hasFinished = items.some(
-		(i) => i.state === "Done" || i.state === "Failed",
-	);
+	const hasFinished = items.some((i) => !isActive(i));
 
-	// Always land back on the overview when the dialog reopens.
 	const handleOpenChange = (next: boolean) => {
 		if (!next) setSelectedId(null);
 		onOpenChange(next);
@@ -110,15 +117,55 @@ export function DownloadsDialog({
 					</div>
 				)}
 
-				{hasFinished && (
-					<div className="flex justify-end border-border border-t pt-3">
-						<Button onClick={onClearFinished} size="sm" variant="ghost">
-							Clear finished
-						</Button>
+				{(hasFinished || active > 0) && (
+					<div className="flex items-center gap-2 border-border border-t pt-3">
+						<QueueControls active={active} />
+						<div className="flex-1" />
+						{hasFinished && (
+							<Button onClick={onClearFinished} size="sm" variant="ghost">
+								Clear finished
+							</Button>
+						)}
 					</div>
 				)}
 			</DialogContent>
 		</Dialog>
+	);
+}
+
+function QueueControls({ active }: { active: number }) {
+	const { data: paused } = useDownloadsPaused();
+	const setPaused = useSetDownloadsPaused();
+	const cancelAll = useCancelAllDownloads();
+
+	if (active === 0) return null;
+
+	return (
+		<>
+			<Button
+				onClick={() => setPaused.mutate(!paused)}
+				size="sm"
+				variant="ghost"
+			>
+				{paused ? <PlayIcon /> : <PauseIcon />}
+				{paused ? "Resume" : "Pause"}
+			</Button>
+
+			<Button
+				className="text-destructive"
+				onClick={() => cancelAll.mutate()}
+				size="sm"
+				variant="ghost"
+			>
+				Cancel all
+			</Button>
+
+			{paused && (
+				<span className="text-muted-foreground text-xs">
+					Paused after this chapter
+				</span>
+			)}
+		</>
 	);
 }
 
@@ -131,12 +178,12 @@ interface Group {
 const isActive = (i: DownloadProgress) =>
 	i.state === "Queued" || i.state === "Downloading";
 
-// Downloading first, then queued, failed, and finally the completed ones.
 const RANK: Record<DownloadState, number> = {
 	Downloading: 0,
 	Queued: 1,
 	Failed: 2,
-	Done: 3,
+	Cancelled: 3,
+	Done: 4,
 };
 
 function groupByManga(items: DownloadProgress[]): Group[] {
@@ -158,14 +205,12 @@ function groupByManga(items: DownloadProgress[]): Group[] {
 	for (const group of list) {
 		group.items.sort((a, b) => RANK[a.state] - RANK[b.state]);
 	}
-	// Series with something in flight float to the top.
+
 	return list.sort(
 		(a, b) => Number(b.items.some(isActive)) - Number(a.items.some(isActive)),
 	);
 }
 
-/** Continuous completion across a series, counting a downloading chapter's own
- *  page progress so the bar advances smoothly, not just per finished chapter. */
 function groupPercent(items: DownloadProgress[]): number {
 	const sum = items.reduce((acc, i) => {
 		if (i.state === "Done") return acc + 1;
@@ -179,16 +224,17 @@ function summarize(items: DownloadProgress[]): string {
 	const active = items.filter(isActive).length;
 	const done = items.filter((i) => i.state === "Done").length;
 	const failed = items.filter((i) => i.state === "Failed").length;
+	const cancelled = items.filter((i) => i.state === "Cancelled").length;
 
 	const parts: string[] = [];
 	if (active > 0) parts.push(`${active} in progress`);
 	if (done > 0) parts.push(`${done} done`);
 	if (failed > 0) parts.push(`${failed} failed`);
+	if (cancelled > 0) parts.push(`${cancelled} cancelled`);
 
 	return parts.length > 0 ? parts.join(" · ") : "Nothing in progress.";
 }
 
-/** The overview: one row per series with an aggregate bar, opening its detail. */
 function MangaRow({ group, onOpen }: { group: Group; onOpen: () => void }) {
 	const done = group.items.filter((i) => i.state === "Done").length;
 
@@ -213,16 +259,17 @@ function MangaRow({ group, onOpen }: { group: Group; onOpen: () => void }) {
 	);
 }
 
-/** The single most relevant state for a series in the overview. */
 function groupState(items: DownloadProgress[]): DownloadState {
 	if (items.some((i) => i.state === "Downloading")) return "Downloading";
 	if (items.some((i) => i.state === "Queued")) return "Queued";
 	if (items.some((i) => i.state === "Failed")) return "Failed";
+	if (items.every((i) => i.state === "Cancelled")) return "Cancelled";
 	return "Done";
 }
 
 function ChapterRow({ item }: { item: DownloadProgress }) {
 	const queue = useQueueDownloads();
+	const cancel = useCancelDownload();
 
 	const retry = () =>
 		queue.mutate({
@@ -251,7 +298,7 @@ function ChapterRow({ item }: { item: DownloadProgress }) {
 				</span>
 			)}
 
-			{item.state === "Failed" && (
+			{(item.state === "Failed" || item.state === "Cancelled") && (
 				<Button
 					className="h-6 shrink-0 gap-1 px-1.5 text-xs"
 					onClick={retry}
@@ -261,6 +308,25 @@ function ChapterRow({ item }: { item: DownloadProgress }) {
 				>
 					<ArrowClockwiseIcon size={12} />
 					Retry
+				</Button>
+			)}
+
+			{isActive(item) && (
+				<Button
+					aria-label={`Cancel ${item.title}`}
+					className="h-6 w-6 shrink-0"
+					disabled={cancel.isPending}
+					onClick={() =>
+						cancel.mutate({
+							sourceId: item.source_id,
+							mangaId: item.manga_id,
+							chapterId: item.chapter_id,
+						})
+					}
+					size="icon"
+					variant="ghost"
+				>
+					<XIcon size={12} />
 				</Button>
 			)}
 		</div>
@@ -289,6 +355,10 @@ function StateIcon({ state }: { state: DownloadState }) {
 		case "Failed":
 			return (
 				<WarningCircleIcon className="shrink-0 text-destructive" size={16} />
+			);
+		case "Cancelled":
+			return (
+				<ProhibitIcon className="shrink-0 text-muted-foreground" size={16} />
 			);
 	}
 }

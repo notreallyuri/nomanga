@@ -96,11 +96,6 @@ export function DeveloperSection() {
 	);
 }
 
-/**
- * The escape hatch for a forgotten library password. It lives here rather than
- * beside the password itself so it isn't the obvious next click — the password
- * dialog is what tells the person who set it that this exists.
- */
 function ResetLibraryLock() {
 	const lockIsSet = useLibraryLockIsSet();
 	const clear = useClearLibraryLock();
@@ -169,8 +164,6 @@ function TableBrowser({
 	const table = useDebugTable(name, page);
 	const exportRows = useExportTableRows();
 
-	// Selection is by position within the current page, so it cannot survive a
-	// change of table or page.
 	const pick = (next: string | null) => {
 		if (!next) return;
 		setName(next);
@@ -279,8 +272,6 @@ function TableBrowser({
 				<Skeleton className="h-40" />
 			) : table.data && table.data.rows.length > 0 ? (
 				<div className="overflow-x-auto rounded border border-border">
-					{/* w-max, not w-full: the table has to be allowed to exceed the
-					    container for the horizontal scroll to have anything to do. */}
 					<table className="w-max min-w-full text-xs">
 						<thead className="bg-muted/50">
 							<tr>
@@ -309,8 +300,6 @@ function TableBrowser({
 						</thead>
 						<tbody className="font-mono">
 							{rows.map((row, i) => (
-								// Raw rows have no id column to key on, and a page is always
-								// refetched whole.
 								<tr className="border-border border-t" key={i}>
 									<td className="px-2 py-1">
 										<Checkbox
