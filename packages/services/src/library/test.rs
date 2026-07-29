@@ -42,22 +42,22 @@ fn sample_manga(_source: &str, id: &str) -> Manga {
 async fn add_requires_cache_then_lists() {
     let pool = open_in_memory().await.unwrap();
 
-    let err = add_to_library(&pool, "src", "m1").await.unwrap_err();
+    let err = add_to_library(&pool, "src", "m1", None).await.unwrap_err();
     assert!(matches!(err, ServiceError::MangaNotCached { .. }));
 
     cache_manga(&pool, "src", &sample_manga("src", "m1"))
         .await
         .unwrap();
-    add_to_library(&pool, "src", "m1").await.unwrap();
+    add_to_library(&pool, "src", "m1", None).await.unwrap();
 
     assert!(is_in_library(&pool, "src", "m1").await.unwrap());
-    let lib = list_library(&pool, &CategoryFilter::All).await.unwrap();
+    let lib = list_library(&pool, &CategoryFilter::All, None).await.unwrap();
     assert_eq!(lib.len(), 1);
     assert_eq!(lib[0].title, "Test Manga");
 
-    add_to_library(&pool, "src", "m1").await.unwrap();
+    add_to_library(&pool, "src", "m1", None).await.unwrap();
     assert_eq!(
-        list_library(&pool, &CategoryFilter::All)
+        list_library(&pool, &CategoryFilter::All, None)
             .await
             .unwrap()
             .len(),
@@ -83,7 +83,7 @@ async fn add_listing_caches_without_clobbering_details() {
         .await
         .unwrap();
 
-    let lib = list_library(&pool, &CategoryFilter::All).await.unwrap();
+    let lib = list_library(&pool, &CategoryFilter::All, None).await.unwrap();
     assert_eq!(lib.len(), 1);
     assert_eq!(lib[0].title, "From Search");
 
@@ -107,7 +107,7 @@ async fn add_listing_caches_without_clobbering_details() {
     assert_eq!(description, "desc");
     assert_eq!(authors, r#"["Author"]"#);
     assert_eq!(
-        list_library(&pool, &CategoryFilter::All)
+        list_library(&pool, &CategoryFilter::All, None)
             .await
             .unwrap()
             .len(),
@@ -119,13 +119,13 @@ async fn add_listing_caches_without_clobbering_details() {
 async fn add_manga_caches_and_adds() {
     let pool = open_in_memory().await.unwrap();
 
-    add_manga_to_library(&pool, "src", &sample_manga("src", "m1"))
+    add_manga_to_library(&pool, "src", &sample_manga("src", "m1"), None)
         .await
         .unwrap();
 
     assert!(is_in_library(&pool, "src", "m1").await.unwrap());
     assert_eq!(
-        list_library(&pool, &CategoryFilter::All).await.unwrap()[0].title,
+        list_library(&pool, &CategoryFilter::All, None).await.unwrap()[0].title,
         "Test Manga"
     );
 }
@@ -136,7 +136,7 @@ async fn categories_and_membership() {
     cache_manga(&pool, "src", &sample_manga("src", "m1"))
         .await
         .unwrap();
-    add_to_library(&pool, "src", "m1").await.unwrap();
+    add_to_library(&pool, "src", "m1", None).await.unwrap();
 
     let favorites = create_category(&pool, "Favorites").await.unwrap();
     let filter = CategoryFilter::Category {
@@ -144,7 +144,7 @@ async fn categories_and_membership() {
     };
 
     assert_eq!(
-        list_library(&pool, &CategoryFilter::Uncategorized)
+        list_library(&pool, &CategoryFilter::Uncategorized, None)
             .await
             .unwrap()
             .len(),
@@ -155,9 +155,9 @@ async fn categories_and_membership() {
         .await
         .unwrap();
 
-    assert_eq!(list_library(&pool, &filter).await.unwrap().len(), 1);
+    assert_eq!(list_library(&pool, &filter, None).await.unwrap().len(), 1);
     assert_eq!(
-        list_library(&pool, &CategoryFilter::Uncategorized)
+        list_library(&pool, &CategoryFilter::Uncategorized, None)
             .await
             .unwrap()
             .len(),
@@ -165,7 +165,7 @@ async fn categories_and_membership() {
     );
 
     remove_from_library(&pool, "src", "m1").await.unwrap();
-    assert_eq!(list_library(&pool, &filter).await.unwrap().len(), 0);
+    assert_eq!(list_library(&pool, &filter, None).await.unwrap().len(), 0);
 }
 
 #[tokio::test]
@@ -208,7 +208,7 @@ async fn entry_categories_are_replaced_wholesale() {
     cache_manga(&pool, "src", &sample_manga("src", "m1"))
         .await
         .unwrap();
-    add_to_library(&pool, "src", "m1").await.unwrap();
+    add_to_library(&pool, "src", "m1", None).await.unwrap();
 
     let a = create_category(&pool, "A").await.unwrap();
     let b = create_category(&pool, "B").await.unwrap();
@@ -247,9 +247,9 @@ async fn read_counts_come_back_with_entries() {
     cache_manga(&pool, "src", &sample_manga("src", "m1"))
         .await
         .unwrap();
-    add_to_library(&pool, "src", "m1").await.unwrap();
+    add_to_library(&pool, "src", "m1", None).await.unwrap();
 
-    let entry = &list_library(&pool, &CategoryFilter::All).await.unwrap()[0];
+    let entry = &list_library(&pool, &CategoryFilter::All, None).await.unwrap()[0];
     assert_eq!(entry.read_chapters, 0);
     assert_eq!(entry.cached_total_chapters, 0);
 
@@ -257,7 +257,7 @@ async fn read_counts_come_back_with_entries() {
         .await
         .unwrap();
 
-    let entry = &list_library(&pool, &CategoryFilter::All).await.unwrap()[0];
+    let entry = &list_library(&pool, &CategoryFilter::All, None).await.unwrap()[0];
     assert_eq!(entry.read_chapters, 2);
 }
 
@@ -267,7 +267,7 @@ async fn updates_exclude_hidden_categories() {
     cache_manga(&pool, "src", &sample_manga("src", "m1"))
         .await
         .unwrap();
-    add_to_library(&pool, "src", "m1").await.unwrap();
+    add_to_library(&pool, "src", "m1", None).await.unwrap();
 
     let past = "2000-01-01T00:00:00Z".parse::<DateTime<Utc>>().unwrap();
     sqlx::query!(
@@ -300,6 +300,7 @@ async fn updates_exclude_hidden_categories() {
         &secret.id,
         &CategoryOptions {
             hidden: true,
+            locked: false,
             is_default: false,
             sort_mode: CategorySort::Added,
             color: None,
@@ -313,4 +314,94 @@ async fn updates_exclude_hidden_categories() {
         .unwrap();
 
     assert_eq!(library_updates(&pool, 30).await.unwrap().len(), 0);
+}
+
+#[tokio::test]
+async fn searches_by_field_within_the_current_category() {
+    use nomanga_core::data::manga::Tag;
+
+    let pool = open_in_memory().await.unwrap();
+
+    let mut first = sample_manga("src", "m1");
+    first.title = "Blue Flag".to_owned();
+    first.author = vec!["Kaito".to_owned()];
+    first.artist = vec!["Kaito".to_owned()];
+    first.tags = vec![Tag {
+        id: "romance".to_owned(),
+        label: "Romance".to_owned(),
+    }];
+
+    let mut second = sample_manga("src", "m2");
+    second.title = "Red Sail".to_owned();
+    second.author = vec!["Someone Else".to_owned()];
+    second.tags = vec![Tag {
+        id: "action".to_owned(),
+        label: "Action".to_owned(),
+    }];
+
+    for manga in [&first, &second] {
+        cache_manga(&pool, "src", manga).await.unwrap();
+        add_to_library(&pool, "src", &manga.id, None).await.unwrap();
+    }
+
+    let search = |field, query: &str| LibrarySearch {
+        field,
+        query: query.to_owned(),
+    };
+
+    let found = |field, query: &str| {
+        let search = search(field, query);
+        let pool = pool.clone();
+        async move {
+            list_library(&pool, &CategoryFilter::All, Some(&search))
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|i| i.manga_id)
+                .collect::<Vec<_>>()
+        }
+    };
+
+    assert_eq!(found(LibrarySearchField::Title, "blue").await, ["m1"]);
+    assert_eq!(found(LibrarySearchField::Author, "kaito").await, ["m1"]);
+    assert_eq!(found(LibrarySearchField::Artist, "kaito").await, ["m1"]);
+    assert_eq!(found(LibrarySearchField::Tag, "roman").await, ["m1"]);
+    assert_eq!(found(LibrarySearchField::Tag, "action").await, ["m2"]);
+    assert!(found(LibrarySearchField::Title, "nothing").await.is_empty());
+
+    // Wildcards in the query are matched literally, not as patterns.
+    assert!(found(LibrarySearchField::Title, "%").await.is_empty());
+
+    // A blank query is not a filter at all.
+    let all = list_library(
+        &pool,
+        &CategoryFilter::All,
+        Some(&search(LibrarySearchField::Title, "   ")),
+    )
+    .await
+    .unwrap();
+    assert_eq!(all.len(), 2);
+
+    // The search only ever looks inside the category being viewed.
+    let category = crate::library::categories::create_category(&pool, "Shelf")
+        .await
+        .unwrap();
+    assign_category(&pool, "src", "m2", &category.id).await.unwrap();
+
+    let filter = CategoryFilter::Category {
+        id: category.id.clone(),
+    };
+    assert!(
+        list_library(&pool, &filter, Some(&search(LibrarySearchField::Title, "blue")))
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        list_library(&pool, &filter, Some(&search(LibrarySearchField::Title, "red")))
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
 }

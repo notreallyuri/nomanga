@@ -1,6 +1,7 @@
 import { createGroupComponents } from "@/components/settings/components";
 import { SettingAction } from "@/components/settings/components/parts";
 import { BackupGroup } from "@/components/settings/sections/backup";
+import { LibraryLockGroup } from "@/components/settings/sections/library-lock";
 import { SyncGroup } from "@/components/settings/sections/sync";
 import {
 	useClearImageCache,
@@ -40,6 +41,10 @@ export function SystemSection() {
 					field="enable_notifications"
 					label="Enable notifications"
 				/>
+			</Group>
+
+			<Group title="Library lock">
+				<LibraryLockGroup />
 			</Group>
 
 			<Group title="Advanced">

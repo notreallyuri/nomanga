@@ -38,6 +38,7 @@ pub struct Category {
     pub name: String,
     pub sort_order: i32,
     pub hidden: bool,
+    pub locked: bool,
     pub is_default: bool,
     pub sort_mode: CategorySort,
     pub color: Option<String>,
@@ -48,6 +49,7 @@ pub struct Category {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CategoryOptions {
     pub hidden: bool,
+    pub locked: bool,
     pub is_default: bool,
     pub sort_mode: CategorySort,
     pub color: Option<String>,
@@ -78,6 +80,7 @@ pub async fn create_category(pool: &SqlitePool, name: &str) -> ServiceResult<Cat
         name: name.to_owned(),
         sort_order,
         hidden: false,
+        locked: false,
         is_default: false,
         sort_mode: CategorySort::Added,
         color: None,
@@ -105,9 +108,10 @@ pub async fn update_category_options(
 
     let result = sqlx::query!(
         "UPDATE category
-            SET hidden = ?, is_default = ?, sort_mode = ?, color = ?, icon = ?
+            SET hidden = ?, locked = ?, is_default = ?, sort_mode = ?, color = ?, icon = ?
           WHERE id = ?",
         options.hidden,
+        options.locked,
         options.is_default,
         sort_mode,
         options.color,
@@ -182,8 +186,8 @@ pub async fn delete_category(pool: &SqlitePool, category_id: &str) -> ServiceRes
 pub async fn list_categories(pool: &SqlitePool) -> ServiceResult<Vec<Category>> {
     let rows = sqlx::query!(
         r#"SELECT id, name, sort_order AS "sort_order: i32",
-                  hidden AS "hidden: bool", is_default AS "is_default: bool",
-                  sort_mode, color, icon
+                  hidden AS "hidden: bool", locked AS "locked: bool",
+                  is_default AS "is_default: bool", sort_mode, color, icon
              FROM category ORDER BY sort_order, name"#
     )
     .fetch_all(pool)
@@ -196,6 +200,7 @@ pub async fn list_categories(pool: &SqlitePool) -> ServiceResult<Vec<Category>> 
             name: r.name,
             sort_order: r.sort_order,
             hidden: r.hidden,
+            locked: r.locked,
             is_default: r.is_default,
             sort_mode: CategorySort::from_db(&r.sort_mode),
             color: r.color,

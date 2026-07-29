@@ -43,9 +43,14 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             library::add_to_library,
             library::add_listing_to_library,
             library::add_manga_to_library,
+            library::cache_entry_chapters,
             library::remove_from_library,
             library::is_in_library,
             library::list_categories,
+            library::library_lock_is_set,
+            library::verify_library_password,
+            library::set_library_password,
+            library::clear_library_lock,
             library::create_category,
             library::rename_category,
             library::update_category_options,
@@ -162,15 +167,19 @@ pub fn run() {
 
             let mut warnings = Vec::new();
 
+            // One jar behind the transport, the image proxy and the download
+            // worker alike: a source that authenticates its CDN does so from
+            // inside a `pages()` call, and the fetch that needs the cookie
+            // happens later, in the app.
+            let jar = std::sync::Arc::new(reqwest::cookie::Jar::default());
+
             let http = reqwest::Client::builder()
-                .user_agent(
-                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 \
-                     (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
-                )
+                .user_agent(nomanga_core::extension::common::USER_AGENT)
+                .cookie_provider(jar.clone())
                 .build()
                 .expect("failed to build http client");
 
-            let transport = transport::shared(http.clone());
+            let transport = transport::shared(http.clone(), jar.clone());
 
             let registry = match nomanga_host::registry::Registry::scan(
                 dir.join("extensions"),
@@ -210,7 +219,11 @@ pub fn run() {
 
             let downloads_dir = dir.join("downloads");
             std::fs::create_dir_all(&downloads_dir).ok();
-            let downloads = downloads::DownloadManager::new(handle.clone(), downloads_dir.clone());
+            let downloads = downloads::DownloadManager::new(
+                handle.clone(),
+                downloads_dir.clone(),
+                jar.clone(),
+            );
 
             let sync_path = dir.join("sync.json");
             let mut sync = nomanga_services::sync::load(&sync_path).unwrap_or_default();

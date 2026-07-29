@@ -1,7 +1,10 @@
 import { save } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { toast } from "sonner";
-import { SettingGroup } from "@/components/settings/components/parts";
+import {
+	SettingAction,
+	SettingGroup,
+} from "@/components/settings/components/parts";
 import { NetworkLog } from "@/components/settings/sections/network-log";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +21,10 @@ import {
 	useDebugTable,
 	useExportTableRows,
 } from "@/hooks/services/use-debug";
+import {
+	useClearLibraryLock,
+	useLibraryLockIsSet,
+} from "@/hooks/services/use-library";
 import { formatBytes } from "@/lib/utils";
 
 export function DeveloperSection() {
@@ -76,12 +83,47 @@ export function DeveloperSection() {
 				<NetworkLog />
 			</SettingGroup>
 
+			<SettingGroup title="Library lock">
+				<ResetLibraryLock />
+			</SettingGroup>
+
 			<SettingGroup title="Database">
 				<TableBrowser
 					tables={data.tables.map((t) => ({ name: t.name, rows: t.rows ?? 0 }))}
 				/>
 			</SettingGroup>
 		</>
+	);
+}
+
+/**
+ * The escape hatch for a forgotten library password. It lives here rather than
+ * beside the password itself so it isn't the obvious next click — the password
+ * dialog is what tells the person who set it that this exists.
+ */
+function ResetLibraryLock() {
+	const lockIsSet = useLibraryLockIsSet();
+	const clear = useClearLibraryLock();
+
+	const hasPassword = lockIsSet.data === true;
+
+	return (
+		<SettingAction
+			actionLabel={clear.isPending ? "Resetting…" : "Reset lock"}
+			description={
+				hasPassword
+					? "Clears the library password and unlocks every locked category. No password needed."
+					: "No library password is set."
+			}
+			disabled={!hasPassword || clear.isPending}
+			label="Reset library lock"
+			onAction={() =>
+				clear.mutate(undefined, {
+					onSuccess: () => toast.success("Library lock reset"),
+					onError: (e) => toast.error(e.message),
+				})
+			}
+		/>
 	);
 }
 

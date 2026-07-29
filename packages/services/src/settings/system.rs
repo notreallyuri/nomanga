@@ -47,6 +47,16 @@ impl ImageCacheLimit {
     }
 }
 
+/// How long unlocking a locked category keeps it open.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CategoryLockSession {
+    #[default]
+    UntilAppCloses,
+    UntilLeave,
+    IdleTimeout,
+}
+
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -56,6 +66,8 @@ pub struct SystemSettings {
     pub confirm_removal: bool,
     pub enable_notifications: bool,
     pub image_cache_limit: ImageCacheLimit,
+    pub category_lock_session: CategoryLockSession,
+    pub category_lock_idle_minutes: u32,
     pub developer_mode: bool,
 }
 
@@ -67,6 +79,8 @@ impl Default for SystemSettings {
             confirm_removal: true,
             enable_notifications: true,
             image_cache_limit: ImageCacheLimit::default(),
+            category_lock_session: CategoryLockSession::default(),
+            category_lock_idle_minutes: 5,
             developer_mode: false,
         }
     }

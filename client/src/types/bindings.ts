@@ -5,13 +5,25 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
-	listLibrary: (filter: CategoryFilter) => typedError<LibraryItem[], CommandError>(__TAURI_INVOKE("list_library", { filter })),
-	addToLibrary: (sourceId: string, mangaId: string) => typedError<null, CommandError>(__TAURI_INVOKE("add_to_library", { sourceId, mangaId })),
+	listLibrary: (filter: CategoryFilter, search: {
+	field: LibrarySearchField,
+	query: string,
+} | null) => typedError<LibraryItem[], CommandError>(__TAURI_INVOKE("list_library", { filter, search })),
+	addToLibrary: (sourceId: string, mangaId: string, totalChapters: number | null) => typedError<null, CommandError>(__TAURI_INVOKE("add_to_library", { sourceId, mangaId, totalChapters })),
 	addListingToLibrary: (sourceId: string, item: MangaSimple) => typedError<null, CommandError>(__TAURI_INVOKE("add_listing_to_library", { sourceId, item })),
-	addMangaToLibrary: (sourceId: string, manga: Manga) => typedError<null, CommandError>(__TAURI_INVOKE("add_manga_to_library", { sourceId, manga })),
+	addMangaToLibrary: (sourceId: string, manga: Manga, totalChapters: number | null) => typedError<null, CommandError>(__TAURI_INVOKE("add_manga_to_library", { sourceId, manga, totalChapters })),
+	/**
+	 *  Fills the chapter cache for one entry without the progress events a full
+	 *  refresh emits — used right after an add whose caller had no chapter count.
+	 */
+	cacheEntryChapters: (sourceId: string, mangaId: string) => typedError<number, CommandError>(__TAURI_INVOKE("cache_entry_chapters", { sourceId, mangaId })),
 	removeFromLibrary: (sourceId: string, mangaId: string) => typedError<null, CommandError>(__TAURI_INVOKE("remove_from_library", { sourceId, mangaId })),
 	isInLibrary: (sourceId: string, mangaId: string) => typedError<boolean, CommandError>(__TAURI_INVOKE("is_in_library", { sourceId, mangaId })),
 	listCategories: () => typedError<Category[], CommandError>(__TAURI_INVOKE("list_categories")),
+	libraryLockIsSet: () => typedError<boolean, CommandError>(__TAURI_INVOKE("library_lock_is_set")),
+	verifyLibraryPassword: (password: string) => typedError<boolean, CommandError>(__TAURI_INVOKE("verify_library_password", { password })),
+	setLibraryPassword: (current: string | null, password: string) => typedError<null, CommandError>(__TAURI_INVOKE("set_library_password", { current, password })),
+	clearLibraryLock: () => typedError<null, CommandError>(__TAURI_INVOKE("clear_library_lock")),
 	createCategory: (name: string) => typedError<Category, CommandError>(__TAURI_INVOKE("create_category", { name })),
 	renameCategory: (categoryId: string, name: string) => typedError<null, CommandError>(__TAURI_INVOKE("rename_category", { categoryId, name })),
 	updateCategoryOptions: (categoryId: string, options: CategoryOptions) => typedError<null, CommandError>(__TAURI_INVOKE("update_category_options", { categoryId, options })),
@@ -135,6 +147,7 @@ export type Category = {
 	name: string,
 	sort_order: number,
 	hidden: boolean,
+	locked: boolean,
 	is_default: boolean,
 	sort_mode: CategorySort,
 	color: string | null,
@@ -148,8 +161,12 @@ export type CategoryCount = {
 
 export type CategoryFilter = { type: "All" } | { type: "Uncategorized" } | { type: "Category"; id: string };
 
+/**  How long unlocking a locked category keeps it open. */
+export type CategoryLockSession = "UntilAppCloses" | "UntilLeave" | "IdleTimeout";
+
 export type CategoryOptions = {
 	hidden: boolean,
+	locked: boolean,
 	is_default: boolean,
 	sort_mode: CategorySort,
 	color: string | null,
@@ -372,6 +389,13 @@ export type LibraryRefreshProgress = {
 	current_title: string,
 };
 
+export type LibrarySearch = {
+	field: LibrarySearchField,
+	query: string,
+};
+
+export type LibrarySearchField = "title" | "author" | "artist" | "tag" | "description";
+
 export type LibraryUpdate = {
 	source_id: string,
 	manga_id: string,
@@ -506,6 +530,7 @@ export type SourcePreference = {
 	private: boolean,
 	blur_covers: boolean,
 	skip_updates: boolean,
+	default_category_id: string | null,
 };
 
 export type SourceSettings = {
@@ -549,6 +574,8 @@ export type SystemSettings = {
 	confirm_removal?: boolean,
 	enable_notifications?: boolean,
 	image_cache_limit?: ImageCacheLimit,
+	category_lock_session?: CategoryLockSession,
+	category_lock_idle_minutes?: number,
 	developer_mode?: boolean,
 };
 

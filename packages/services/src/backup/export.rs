@@ -38,7 +38,7 @@ pub async fn export(
 
     let categories = sqlx::query_as!(
         CategoryRow,
-        r#"SELECT id, name, sort_order, hidden, is_default, sort_mode, color, icon
+        r#"SELECT id, name, sort_order, hidden, locked, is_default, sort_mode, color, icon
            FROM category"#
     )
     .fetch_all(pool)
@@ -69,7 +69,8 @@ pub async fn export(
 
     let source_preferences = sqlx::query_as!(
         SourcePreferenceRow,
-        "SELECT source_id, enabled, private, blur_covers, skip_updates FROM source_preference"
+        "SELECT source_id, enabled, private, blur_covers, skip_updates, default_category_id
+         FROM source_preference"
     )
     .fetch_all(pool)
     .await?;
