@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM library_lock WHERE id = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "b81ea5c9a85cf23460a3dc2fc15f6c879d159d284a72d876d6b43c38d3bf0358"
+}

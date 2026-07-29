@@ -55,15 +55,17 @@ pub struct DownloadManager {
 }
 
 impl DownloadManager {
-    pub fn new(app: AppHandle, downloads_dir: PathBuf) -> Self {
+    pub fn new(
+        app: AppHandle,
+        downloads_dir: PathBuf,
+        jar: Arc<reqwest::cookie::Jar>,
+    ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let queued: Arc<Mutex<HashSet<Key>>> = Arc::new(Mutex::new(HashSet::new()));
 
         let client = reqwest::Client::builder()
-            .user_agent(
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 \
-                 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
-            )
+            .user_agent(nomanga_core::extension::common::USER_AGENT)
+            .cookie_provider(jar)
             .build()
             .expect("failed to build http client");
 

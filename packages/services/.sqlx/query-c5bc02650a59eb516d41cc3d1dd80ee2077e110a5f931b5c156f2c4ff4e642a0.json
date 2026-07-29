@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO library_lock (id, password_hash, updated_at) VALUES (1, ?, ?)\n         ON CONFLICT (id) DO UPDATE SET\n             password_hash = excluded.password_hash,\n             updated_at = excluded.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c5bc02650a59eb516d41cc3d1dd80ee2077e110a5f931b5c156f2c4ff4e642a0"
+}

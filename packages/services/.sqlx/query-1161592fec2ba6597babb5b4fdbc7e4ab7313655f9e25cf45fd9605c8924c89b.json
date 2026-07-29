@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name, sort_order AS \"sort_order: i32\",\n                  hidden AS \"hidden: bool\", is_default AS \"is_default: bool\",\n                  sort_mode, color, icon\n             FROM category ORDER BY sort_order, name",
+  "query": "SELECT id, name, sort_order, hidden, locked, is_default, sort_mode, color, icon\n           FROM category",
   "describe": {
     "columns": [
       {
@@ -26,7 +26,7 @@
         }
       },
       {
-        "name": "sort_order: i32",
+        "name": "sort_order",
         "ordinal": 2,
         "type_info": "Integer",
         "origin": {
@@ -37,7 +37,7 @@
         }
       },
       {
-        "name": "hidden: bool",
+        "name": "hidden",
         "ordinal": 3,
         "type_info": "Integer",
         "origin": {
@@ -48,8 +48,19 @@
         }
       },
       {
-        "name": "is_default: bool",
+        "name": "locked",
         "ordinal": 4,
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "category",
+            "name": "locked"
+          }
+        }
+      },
+      {
+        "name": "is_default",
+        "ordinal": 5,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -60,7 +71,7 @@
       },
       {
         "name": "sort_mode",
-        "ordinal": 5,
+        "ordinal": 6,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -71,7 +82,7 @@
       },
       {
         "name": "color",
-        "ordinal": 6,
+        "ordinal": 7,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -82,7 +93,7 @@
       },
       {
         "name": "icon",
-        "ordinal": 7,
+        "ordinal": 8,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -102,9 +113,10 @@
       false,
       false,
       false,
+      false,
       true,
       true
     ]
   },
-  "hash": "fa8b421415cdb985b12809422aa583badceae7a82e87d0e14efc141a6a79d57f"
+  "hash": "1161592fec2ba6597babb5b4fdbc7e4ab7313655f9e25cf45fd9605c8924c89b"
 }

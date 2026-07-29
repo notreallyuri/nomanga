@@ -5,6 +5,7 @@ import {
 	commands,
 	type ReaderOverride,
 	type Settings,
+	type SystemSettings,
 } from "@/types/bindings";
 
 export const settingsKeys = {
@@ -79,6 +80,24 @@ export function useAppearance(): Required<AppearanceSettings> {
 		show_unread_badge:
 			appearance?.show_unread_badge ?? APPEARANCE_DEFAULTS.show_unread_badge,
 	};
+}
+
+export const SYSTEM_DEFAULTS: Required<SystemSettings> = {
+	update_on_startup: true,
+	background_updates: "Off",
+	confirm_removal: true,
+	enable_notifications: true,
+	image_cache_limit: "Mb512",
+	category_lock_session: "UntilAppCloses",
+	category_lock_idle_minutes: 5,
+	developer_mode: false,
+};
+
+export function useSystem(): Required<SystemSettings> {
+	const { data } = useSettings();
+	const system = data?.system;
+
+	return { ...SYSTEM_DEFAULTS, ...system };
 }
 
 export function useEffectiveReader(sourceId: string, mangaId: string) {

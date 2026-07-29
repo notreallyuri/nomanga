@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO library_entry (source_id, manga_id, added_at, cached_total_chapters)\n         VALUES (?, ?, ?, COALESCE(?, 0))\n         ON CONFLICT (source_id, manga_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "4a2f11b394a0a51524af8bd859471111637024da910a4abb4b1930fa9f1d6739"
+}
