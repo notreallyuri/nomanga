@@ -1,6 +1,6 @@
 use super::rows::{
     CategoryRow, EntryCategoryRow, LibraryEntryRow, MangaRow, ProgressRow, ReadChapterRow,
-    ReaderOverrideRow, SourcePreferenceRow, SourceSettingRow,
+    ReaderOverrideRow, RepositoryRow, SourcePreferenceRow, SourceSettingRow,
 };
 use super::{Backup, ExtensionRef, VERSION};
 use crate::error::ServiceResult;
@@ -89,6 +89,13 @@ pub async fn export(
     .fetch_all(pool)
     .await?;
 
+    let repositories = sqlx::query_as!(
+        RepositoryRow,
+        "SELECT url, name, added_at FROM extension_repository"
+    )
+    .fetch_all(pool)
+    .await?;
+
     Ok(Backup {
         version: VERSION,
         created_at: now(),
@@ -104,5 +111,6 @@ pub async fn export(
         source_preferences,
         source_settings,
         reader_overrides,
+        repositories,
     })
 }

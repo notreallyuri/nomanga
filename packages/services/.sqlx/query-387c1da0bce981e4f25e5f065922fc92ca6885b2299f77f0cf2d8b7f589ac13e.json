@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO extension_repository (url, name, added_at)\n         VALUES (?, ?, ?)\n         ON CONFLICT (url) DO UPDATE SET name = excluded.name",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "387c1da0bce981e4f25e5f065922fc92ca6885b2299f77f0cf2d8b7f589ac13e"
+}

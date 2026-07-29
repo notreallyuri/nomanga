@@ -7,6 +7,7 @@ pub mod debug;
 pub mod db;
 pub mod downloads;
 pub mod error;
+pub mod extension;
 pub mod history;
 pub mod library;
 pub mod settings;

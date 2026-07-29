@@ -80,6 +80,13 @@ pub struct SourceSettingRow {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepositoryRow {
+    pub url: String,
+    pub name: String,
+    pub added_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReaderOverrideRow {
     pub source_id: String,
     pub manga_id: String,

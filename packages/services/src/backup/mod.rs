@@ -15,7 +15,7 @@ pub use file::{read_file, write_file};
 pub use import::import;
 use rows::{
     CategoryRow, EntryCategoryRow, LibraryEntryRow, MangaRow, ProgressRow, ReadChapterRow,
-    ReaderOverrideRow, SourcePreferenceRow, SourceSettingRow,
+    ReaderOverrideRow, RepositoryRow, SourcePreferenceRow, SourceSettingRow,
 };
 
 pub const VERSION: u32 = 1;
@@ -60,4 +60,8 @@ pub struct Backup {
     pub source_preferences: Vec<SourcePreferenceRow>,
     pub source_settings: Vec<SourceSettingRow>,
     pub reader_overrides: Vec<ReaderOverrideRow>,
+    // Added after VERSION 1 shipped; defaulting keeps older backups readable
+    // rather than forcing a version bump for an additive field.
+    #[serde(default)]
+    pub repositories: Vec<RepositoryRow>,
 }

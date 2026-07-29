@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM extension_repository WHERE url = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "b6a31a67a88d0c763571523bb703ab5afd6d7539d74e8d2af1af52fb80426269"
+}

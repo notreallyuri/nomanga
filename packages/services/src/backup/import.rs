@@ -32,6 +32,9 @@ pub async fn import(
         sqlx::query!("DELETE FROM reader_override")
             .execute(&mut *tx)
             .await?;
+        sqlx::query!("DELETE FROM extension_repository")
+            .execute(&mut *tx)
+            .await?;
     }
 
     let has_local_default = sqlx::query_scalar!(
@@ -228,6 +231,18 @@ pub async fn import(
             row.source_id,
             row.manga_id,
             row.data
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    for row in &backup.repositories {
+        sqlx::query!(
+            "INSERT OR IGNORE INTO extension_repository (url, name, added_at)
+             VALUES (?, ?, ?)",
+            row.url,
+            row.name,
+            row.added_at
         )
         .execute(&mut *tx)
         .await?;

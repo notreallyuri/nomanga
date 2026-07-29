@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO extension_repository (url, name, added_at)\n             VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "50be5bdce148cf7e72ea2a77bbdd49abac443b67e61ac9ae4ffec1e04d44b2fa"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE extension_repository\n         SET name = ?, last_fetched_at = ?\n         WHERE url = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "e4ff569b20f9d00633f019c6df522ec8f1e1c146fdbea8547df00261863a6d9c"
+}
