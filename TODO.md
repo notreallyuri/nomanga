@@ -59,6 +59,26 @@
 
 - [ ] Tray menu implementation.
 
+### Downloads and updates
+
+- [ ] Pause and cancel, for both the download queue and a library update run,
+  each in the dialog that already shows its progress (the downloads queue
+  dialog and the updates progress dialog) rather than a new surface.
+  - Neither is interruptible today. `DownloadManager` is a
+    `mpsc::UnboundedSender<Job>` into a detached `worker`, with no handle back
+    into a job once sent; `refresh_library` is a plain loop emitting
+    `LibraryRefreshProgress`. Both run to completion whatever the user does.
+  - Cancel needs two scopes and they are not the same: dropping a *queued* job
+    is just removing it from the channel, but stopping the *in-flight* one means
+    aborting a chapter mid-fetch and deciding what happens to the partial
+    directory on disk — either finish the current page and stop, or delete what
+    landed. Leaving half a chapter that reads as downloaded is the failure to
+    avoid.
+  - Pause is the easier half and probably worth doing first: a flag the worker
+    checks between jobs, no abort semantics, no cleanup question.
+  - `queued` is a `HashSet<Key>` behind a `Mutex`, so it already has the identity
+    a cancel would key off; the missing piece is a way to reach the running job.
+
 ### System
 
 #### E. Developer section
