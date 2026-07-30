@@ -31,6 +31,39 @@
     MadaraDex makes with `mdx_fp`. The jar is in-memory, so a clearance does
     not survive a restart — persisting it is the open question, and it is a
     credential, so it wants the same care the debug export's redaction got.
+  - **Harvesting a `cf_clearance` does not work for this source. Measured
+    2026-07-30, do not retry it without new evidence.** A fresh clearance taken
+    from a real browser, replayed from the same machine and IP, through the
+    app's own reqwest client with the app's `USER_AGENT`, still 403s on both
+    `/manga-list/latest-manga` and `/manga/<slug>` — identically to sending no
+    cookie at all. curl behaves the same. Cloudflare is not gating on
+    possession of a cookie here; it is gating on the client's TLS/HTTP
+    fingerprint, which no header or cookie can supply.
+    The UA is not the missing piece either: the same replay was tried under
+    Firefox 128/140/143/145 and a current Chrome string, all 403. Nor is the
+    clearance's provenance — the app's own challenge window was made to solve a
+    real interstitial and mint one, and that fresh cookie, replayed through the
+    app's reqwest client seconds later under WebKit's own user agent, 403s too.
+    The binding is to the client's TLS/HTTP fingerprint, which is the one thing
+    a cookie cannot carry.
+    Worth keeping from the attempt: the challenge only renders and passes when
+    the webview is left on its **native** user agent. Forcing `USER_AGENT` onto
+    it made Cloudflare serve Gecko-targeted challenge code to a WebKit engine,
+    which hung and painted black. Whatever replaces this must let the engine be
+    honest about what it is.
+    Two things fell out of measuring it. The gate is narrower than recorded
+    above: `/` is open to anything, including bare curl with no user agent,
+    while `/manga-list/*` and `/manga/*` are gated. And those routes answer a
+    browser-shaped request with a real, solvable interstitial — 403 plus
+    `cf-mitigated: challenge` and a 5.7 KB "Just a moment..." document that
+    loads `challenges.cloudflare.com` — so a browser engine can pass them. It
+    is only the *export* to reqwest that fails.
+    So the fetch itself has to happen in a browser engine; a cookie carried out
+    of one will not do. What this leaves: route the blocked fetches through the
+    webview (Tauri v2 can grant remote URLs IPC access, so a page in the
+    source's own origin can fetch and hand the HTML back), swap the HTTP stack
+    for one that reproduces a browser's TLS fingerprint, or accept that only
+    `chapters()` works and drop the source's other methods.
 
 ### Library
 
