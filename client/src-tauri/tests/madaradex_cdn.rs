@@ -41,7 +41,7 @@ fn pages_authorize_the_session_so_images_load() {
         .build()
         .unwrap();
 
-    let transport = client_lib::transport::shared(http.clone(), jar.clone());
+    let transport = nomanga_client_lib::transport::shared(http.clone(), jar.clone());
 
     let metadata = nomanga_host::ExtensionMetadata::inspect(WASM).expect("extension did not load");
     let mut extension = metadata

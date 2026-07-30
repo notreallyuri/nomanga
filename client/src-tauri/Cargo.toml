@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "nomanga-client"
 version.workspace = true
 description = "nomanga desktop app"
 edition = "2021"
@@ -11,7 +11,7 @@ publish = false
 debug = true
 
 [lib]
-name = "client_lib"
+name = "nomanga_client_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -40,9 +40,9 @@ build() {
 package() {
 	cd "$srcdir/$_pkgname"
 
-	# cargo names the binary after the crate (client); productName only renames
-	# it inside a bundle, which --no-bundle skips.
-	install -Dm755 "target/release/client" "$pkgdir/usr/bin/$_pkgname"
+	# cargo names the binary after the crate (nomanga-client); productName only
+	# renames it inside a bundle, which --no-bundle skips.
+	install -Dm755 "target/release/nomanga-client" "$pkgdir/usr/bin/$_pkgname"
 	install -Dm644 "packaging/$_pkgname.desktop" \
 		"$pkgdir/usr/share/applications/$_pkgname.desktop"
 

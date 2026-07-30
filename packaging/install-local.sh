@@ -5,7 +5,7 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-bin="$repo/target/release/client"
+bin="$repo/target/release/nomanga-client"
 
 [[ -x "$bin" ]] || { echo "no binary at $bin — run: cargo tauri build --no-bundle" >&2; exit 1; }
 
