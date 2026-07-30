@@ -14,15 +14,15 @@ pub async fn export(
     app_version: &str,
     extensions: Vec<ExtensionRef>,
 ) -> ServiceResult<Backup> {
-    // Only manga backing a library entry: library_entry has an FK onto manga,
-    // so these rows are structural, not cache. The rest of the manga cache is
-    // refetchable and would bloat the file.
+    // Every manga row, not just the ones backing a library entry. A manga the
+    // user only read or opened still has read_chapter, read_progress and
+    // reader_override rows pointing at it, and restoring those without their
+    // titles and covers leaves history the app cannot render.
     let manga = sqlx::query_as!(
         MangaRow,
-        r#"SELECT m.source_id, m.manga_id, m.title, m.cover_url, m.description,
-                  m.authors, m.artists, m.tags, m.status, m.cached_at
-           FROM manga m
-           JOIN library_entry e ON e.source_id = m.source_id AND e.manga_id = m.manga_id"#
+        r#"SELECT source_id, manga_id, title, cover_url, description,
+                  authors, artists, tags, status, cached_at
+           FROM manga"#
     )
     .fetch_all(pool)
     .await?;

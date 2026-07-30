@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT m.source_id, m.manga_id, m.title, m.cover_url, m.description,\n                  m.authors, m.artists, m.tags, m.status, m.cached_at\n           FROM manga m\n           JOIN library_entry e ON e.source_id = m.source_id AND e.manga_id = m.manga_id",
+  "query": "SELECT source_id, manga_id, title, cover_url, description,\n                  authors, artists, tags, status, cached_at\n           FROM manga",
   "describe": {
     "columns": [
       {
@@ -130,5 +130,5 @@
       false
     ]
   },
-  "hash": "abcade746846029fa6c8a38833789c7b121ddff5330c23186db6765a3586af40"
+  "hash": "a95ee2ba141d605d4c191d588bd1f49301044f44e016832296f9091ff2a601b3"
 }

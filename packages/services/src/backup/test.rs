@@ -61,6 +61,41 @@ async fn round_trips_through_a_gzipped_file() {
 }
 
 #[tokio::test]
+async fn carries_manga_the_user_read_but_never_added_to_the_library() {
+    let source = open_in_memory().await.unwrap();
+    seed(&source, "m1", "2026-01-01T00:00:00Z").await;
+    sqlx::query!(
+        "INSERT INTO manga (source_id, manga_id, title, cover_url, cached_at)
+         VALUES ('src', 'm2', 'Read Only', 'https://c/y.jpg', '2026-01-01T00:00:00Z')"
+    )
+    .execute(&source)
+    .await
+    .unwrap();
+    sqlx::query!(
+        "INSERT INTO read_chapter (source_id, manga_id, chapter_id, read_at)
+         VALUES ('src', 'm2', 'c1', '2026-01-01T00:00:00Z')"
+    )
+    .execute(&source)
+    .await
+    .unwrap();
+
+    let backup = snapshot(&source).await;
+    assert_eq!(backup.manga.len(), 2);
+    assert_eq!(backup.library.len(), 1);
+
+    let target = open_in_memory().await.unwrap();
+    import(&target, &backup, ImportMode::Merge, &[])
+        .await
+        .unwrap();
+
+    let titles: Vec<String> = sqlx::query_scalar!("SELECT title FROM manga ORDER BY manga_id")
+        .fetch_all(&target)
+        .await
+        .unwrap();
+    assert_eq!(titles, vec!["Title".to_owned(), "Read Only".to_owned()]);
+}
+
+#[tokio::test]
 async fn rejects_a_backup_from_a_newer_version() {
     let pool = open_in_memory().await.unwrap();
     let mut backup = snapshot(&pool).await;
