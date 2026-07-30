@@ -23,11 +23,7 @@
     instead, so the bypass is genuinely required for those.
   - So `chapters()` already works end to end live (verified: 66 chapters back
     to chapter 1, paging past the 50-row cap the detail page imposes), and
-    homepage/search/manga/pages are the methods actually blocked. Their
-    parsers are covered by fixture tests in
-    `extensions/extension_mainpack/fixtures/natomanga/`; the one field those
-    fixtures cannot prove is the detail-page cover, read from the JSON-LD blob
-    because "save page as" rewrote the real `src`.
+    homepage/search/manga/pages are the methods actually blocked.
   - The injection point this needed now exists, built for MadaraDex: one
     `reqwest::cookie::Jar` is shared by the extension transport, the image
     proxy and the download worker, and `guest::set_cookie()` lets an extension
