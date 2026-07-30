@@ -85,6 +85,7 @@ export function useAppearance(): Required<AppearanceSettings> {
 export const SYSTEM_DEFAULTS: Required<SystemSettings> = {
 	update_on_startup: true,
 	background_updates: "Off",
+	check_library_on_start: true,
 	confirm_removal: true,
 	enable_notifications: true,
 	image_cache_limit: "Mb512",

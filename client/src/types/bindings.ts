@@ -621,6 +621,7 @@ export type SyncStatus = {
 export type SystemSettings = {
 	update_on_startup?: boolean,
 	background_updates?: UpdateInterval,
+	check_library_on_start?: boolean,
 	confirm_removal?: boolean,
 	enable_notifications?: boolean,
 	image_cache_limit?: ImageCacheLimit,

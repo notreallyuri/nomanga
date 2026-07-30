@@ -32,6 +32,11 @@ export function SystemSection() {
 					]}
 				/>
 				<Switch
+					description="Check the library for new chapters once when the app opens"
+					field="check_library_on_start"
+					label="Check library on start"
+				/>
+				<Switch
 					description="Prompt before deleting items from your library"
 					field="confirm_removal"
 					label="Confirm removal"

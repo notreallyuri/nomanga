@@ -5,7 +5,6 @@ import {
 	PlayIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
 import { MangaCard } from "@/components/manga/manga-card";
 import { MangaRow } from "@/components/manga/manga-grid";
 import { Button } from "@/components/ui/button";
@@ -26,23 +25,11 @@ export const Route = createFileRoute("/_app/")({
 
 const RECENT_LIMIT = 18;
 
-// Once per app session — the backend throttles per series, so this is a no-op
-// when everything was checked recently.
-let autoChecked = false;
-
 function HomePage() {
 	const continueReading = useContinueReading(15);
 	const updates = useLibraryUpdates();
 	const library = useLibrary(ALL_CATEGORIES);
 	const refresh = useLibraryRefresh();
-
-	const refreshRef = useRef(refresh);
-	refreshRef.current = refresh;
-	useEffect(() => {
-		if (autoChecked) return;
-		autoChecked = true;
-		refreshRef.current.refresh({ type: "All" }, false, true);
-	}, []);
 
 	const recent = (library.data ?? []).slice(0, RECENT_LIMIT);
 
