@@ -2,8 +2,10 @@ import {
 	ArrowLeftIcon,
 	CaretRightIcon,
 	GlobeIcon,
+	ShieldCheckIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
+import { ChallengeDialog } from "@/components/challenge-dialog";
 import {
 	SettingGroup,
 	SettingRow,
@@ -119,6 +121,7 @@ function SourceDetail({
 }) {
 	const preference = useSourcePreference(info.id);
 	const { mutate } = useSetSourcePreference();
+	const [solving, setSolving] = useState(false);
 
 	const toggle = (patch: Partial<typeof preference>) =>
 		mutate({ ...preference, ...patch });
@@ -186,6 +189,24 @@ function SourceDetail({
 				/>
 			</SettingGroup>
 
+			{info.challenge && (
+				<SettingGroup title="Access">
+					<SettingRow
+						description="Clear this source's browser check. The clearance lasts until the app is closed."
+						label="Browser check"
+					>
+						<Button
+							onClick={() => setSolving(true)}
+							size="sm"
+							variant="outline"
+						>
+							<ShieldCheckIcon />
+							Verify
+						</Button>
+					</SettingRow>
+				</SettingGroup>
+			)}
+
 			<SettingGroup title="Source settings">
 				<div className="pt-2">
 					<p className="mb-4 text-muted-foreground text-xs">
@@ -195,6 +216,8 @@ function SourceDetail({
 					<ExtensionSettings sourceId={info.id} />
 				</div>
 			</SettingGroup>
+
+			<ChallengeDialog onOpenChange={setSolving} open={solving} source={info} />
 		</div>
 	);
 }
