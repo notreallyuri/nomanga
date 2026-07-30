@@ -18,7 +18,7 @@ impl SourcePreference {
     pub fn default_for(source_id: &str) -> Self {
         Self {
             source_id: source_id.to_owned(),
-            enabled: true,
+            enabled: false,
             private: false,
             blur_covers: false,
             skip_updates: false,
@@ -71,6 +71,17 @@ pub async fn list(pool: &SqlitePool) -> ServiceResult<Vec<SourcePreference>> {
         .collect())
 }
 
+// Only sources with an explicit opt-in row come back, which is what the host
+// gates plugin builds on -- a source that has never been switched on is absent
+// here and stays uncompiled.
+pub async fn enabled_ids(pool: &SqlitePool) -> ServiceResult<std::collections::HashSet<String>> {
+    let rows = sqlx::query!("SELECT source_id FROM source_preference WHERE enabled != 0")
+        .fetch_all(pool)
+        .await?;
+
+    Ok(rows.into_iter().map(|r| r.source_id).collect())
+}
+
 pub async fn set(pool: &SqlitePool, pref: &SourcePreference) -> ServiceResult<()> {
     let enabled = pref.enabled as i64;
     let private = pref.private as i64;
@@ -120,7 +131,7 @@ mod tests {
         let pool = open_in_memory().await.unwrap();
 
         let pref = get(&pool, "src").await.unwrap();
-        assert!(pref.enabled);
+        assert!(!pref.enabled, "an untouched source stays off until opted into");
         assert!(!pref.private);
 
         set(

@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT source_id FROM source_preference WHERE enabled != 0",
+  "describe": {
+    "columns": [
+      {
+        "name": "source_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "source_preference",
+            "name": "source_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "988d5dbff4cb277975c27413d942cc4040dd5697f047dcce2f33e8a63c89082b"
+}
