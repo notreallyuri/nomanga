@@ -4,6 +4,7 @@ import { AppearanceSection } from "./sections/appearance";
 import { DeveloperSection } from "./sections/developer";
 import { DownloadsSection } from "./sections/downloads";
 import { ExtensionSection } from "./sections/extensions";
+import { LibrarySection } from "./sections/library";
 import { ReaderSection } from "./sections/reader";
 import { SourceSection } from "./sections/sources";
 import { SystemSection } from "./sections/system";
@@ -11,6 +12,7 @@ import { SystemSection } from "./sections/system";
 export const SECTIONS: Record<SettingsRoute, ComponentType> = {
 	Appearance: AppearanceSection,
 	Reader: ReaderSection,
+	Library: LibrarySection,
 	Sources: SourceSection,
 	Extensions: ExtensionSection,
 	Downloads: DownloadsSection,

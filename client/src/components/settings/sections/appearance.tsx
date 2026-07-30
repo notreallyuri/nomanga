@@ -105,7 +105,7 @@ export function AppearanceSection() {
 				/>
 			</Group>
 
-			<Group title="Library">
+			<Group title="Library appearance">
 				<Select
 					description="Cover grid or a compact list"
 					field="library_layout"
