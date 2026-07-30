@@ -63,6 +63,7 @@ pub enum CategoryLockSession {
 pub struct SystemSettings {
     pub update_on_startup: bool,
     pub background_updates: UpdateInterval,
+    pub check_library_on_start: bool,
     pub confirm_removal: bool,
     pub enable_notifications: bool,
     pub image_cache_limit: ImageCacheLimit,
@@ -76,6 +77,9 @@ impl Default for SystemSettings {
         Self {
             update_on_startup: true,
             background_updates: UpdateInterval::Off,
+            // Defaults to on because it is what the app already did
+            // unconditionally, so an existing settings file keeps its behaviour.
+            check_library_on_start: true,
             confirm_removal: true,
             enable_notifications: true,
             image_cache_limit: ImageCacheLimit::default(),

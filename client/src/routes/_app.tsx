@@ -8,6 +8,7 @@ import {
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { DownloadsProvider } from "@/hooks/services/use-downloads";
 import { DeepLinkProvider } from "@/hooks/use-deep-link";
+import { useStartupLibraryCheck } from "@/hooks/use-startup-library-check";
 
 export const Route = createFileRoute("/_app")({
 	component: RouteComponent,
@@ -27,6 +28,8 @@ function RouteComponent() {
 
 function AppShell() {
 	const { open, setOpen } = useSettingsUI();
+
+	useStartupLibraryCheck();
 
 	return (
 		<SidebarProvider className="h-full overflow-hidden">

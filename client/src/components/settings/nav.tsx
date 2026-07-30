@@ -1,5 +1,6 @@
 import {
 	BookOpenIcon,
+	BooksIcon,
 	DownloadSimpleIcon,
 	GearSixIcon,
 	type Icon,
@@ -11,6 +12,7 @@ import {
 export type SettingsRoute =
 	| "Appearance"
 	| "Reader"
+	| "Library"
 	| "Sources"
 	| "Extensions"
 	| "Downloads"
@@ -45,13 +47,18 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 			{
 				name: "System",
 				icon: GearSixIcon,
-				description: "Confirmations, notifications, and updates",
+				description: "App updates, backup, sync, and cached covers",
 			},
 		],
 	},
 	{
 		title: "Content",
 		items: [
+			{
+				name: "Library",
+				icon: BooksIcon,
+				description: "Update checks, removal prompts, and locked categories",
+			},
 			{
 				name: "Sources",
 				icon: PlugsIcon,

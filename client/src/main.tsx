@@ -1,10 +1,13 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { installPackagedGuards } from "./lib/packaged-guards";
 import type { NomangaError } from "./lib/unwrap";
 import { Providers } from "./providers";
 import { routeTree } from "./routeTree.gen";
 import "./globals.css";
+
+installPackagedGuards();
 
 const router = createRouter({ routeTree, scrollRestoration: true });
 

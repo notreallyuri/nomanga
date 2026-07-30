@@ -59,7 +59,133 @@
 
 - [ ] Tray menu implementation.
 
+### App self-update
+
+Distinct from everything else filed under "Updates", which all means *library*
+updates — checking sources for new chapters. This section is the app updating
+itself. Worth keeping the words apart in UI copy too.
+
+- [ ] Self-update on Windows and macOS via `tauri-plugin-updater`; on Linux,
+  delegate to the package manager and ship no updater at all.
+  The switch already exists and is wired to nothing: `update_on_startup` in
+  `SystemSettings` appears exactly four times in the tree — the field, its
+  default, the generated TS type, and the Switch in
+  `settings/sections/system.tsx` — with no consumer in Rust or TS. Its label
+  ("Check for app updates automatically when launched") already describes
+  `check()` semantics, so it is the intended consumer, not something to redefine.
+  Decided platform split, because the updater supports AppImage/tar.gz, `.app`
+  and MSI/NSIS but **not** deb, rpm or anything pacman-shaped:
+  - Windows + macOS get real in-place updates.
+  - Linux delegates to pacman. Gate with `#[cfg(any(target_os = "windows",
+    target_os = "macos"))]` rather than runtime detection, so the Linux binary
+    does not contain the updater path at all; AppImage then drops out of the
+    updater story entirely — no Linux artifact to generate, sign or list in the
+    manifest.
+  - Frontend needs one bit to decide whether to render the switch. A
+    `self_update_supported() -> bool` command returning
+    `cfg!(any(windows, macos))` is enough and avoids adding `plugin-os`.
+  - Deliberately **no** update nagging on Linux. An app that reports updates it
+    cannot install is the usual reason distro packagers patch updaters out, and
+    the AUR helper already reports it. Showing the running version in Settings
+    is enough.
+  Prerequisite on the Linux side: "pacman handles it" is only true for a package
+  pacman can see, and `packaging/arch/PKGBUILD` currently lives in this repo and
+  nowhere else, so updating means re-running `makepkg -si` from a fresh clone.
+  Needs a decision when published: `nomanga-git` tracks `main` and recompiles
+  wasmtime on every commit and always looks newer than any tag, versus a
+  `nomanga-bin` tracking release tags — friendlier, and cheap since CI already
+  builds the binary (a plain tarball, or extracted from the `.deb`, which is the
+  usual AUR pattern for Tauri apps).
+  The plugin side is six pieces: the dependency, registration beside the others
+  in `lib.rs`, `"updater:default"` in `capabilities/default.json`,
+  `bundle.createUpdaterArtifacts: true`, a `tauri signer generate` keypair
+  (pubkey in `plugins.updater.pubkey`, private half + password as GH secrets
+  exported into the existing Build step), and an endpoint. The pubkey is
+  compiled in, so the endpoint does not have to be trusted — a static
+  `latest.json` on the release is fine.
+  Four things `.github/workflows/build.yml` needs, none obvious:
+  - The macOS updater artifact is `bundle/macos/*.app.tar.gz`, **not** the dmg.
+    The workflow uploads only `dmg/*.dmg` today, so both the artifact globs and
+    the `gh release upload` list need the tarball.
+  - Every updatable artifact's `.sig` has to be uploaded too.
+  - The macOS build is `--target universal-apple-darwin`, one binary, but the
+    manifest still needs **both** `darwin-x86_64` and `darwin-aarch64` keys
+    pointing at the same url/signature. Miss one and half of Mac users silently
+    never see an update.
+  - Assemble `latest.json` in a job that `needs` the matrix — each platform job
+    only sees its own `.sig`, which is the same race `create-release` already
+    exists to avoid. Note `releases/latest/download/` does not resolve while the
+    release is a draft, so the current draft flow doubles as a staging gate.
+  - Guard that the `v*` tag matches `tauri.conf.json`'s `version`. `check()`
+    compares against that field, so tagging `v0.2.0` with the config left at
+    `0.1.0` publishes a manifest nobody upgrades to — in a path that only runs
+    when nobody is watching.
+  Two things already in our favour: `bundle.windows.nsis.installMode` is
+  `currentUser`, so a Windows update needs no elevation and the silent
+  install-and-relaunch really is silent (per-machine would throw a UAC prompt
+  into the middle of it); and macOS in-place update works without an Apple
+  certificate, since the plugin enforces its own minisign check rather than
+  Gatekeeper's — though users there are already past an unsigned-app prompt at
+  install, so Windows is where this pays off most.
+  Watch the version source of truth while the Arch package is git-based:
+  `pkgver()` derives `0.1.0.rN.gHASH` for pacman only, and the app still reports
+  `tauri.conf.json`'s `0.1.0`, so a build tracking `main` would be offered a
+  released `0.1.1` as an "update" while running newer code. Moot once Linux
+  carries no updater, but it is the reason the cfg gate is the mechanism rather
+  than a runtime check that could be flipped on.
+  Considered and dropped: a notify-only path (compare `tag_name` from the GitHub
+  releases API, open the release page with `plugin-opener`, no keypair and no CI
+  change) as a first step. It was attractive only because it also covers deb and
+  pacman installs — and with Linux delegating to the package manager, that
+  constituency is gone.
+
 ### Downloads and updates
+
+- [ ] Parallel chapter downloads, 1–4 at a time, configurable in System
+  settings. Today `worker` in `client/src-tauri/src/downloads.rs` is a single
+  `while let Some(job) = rx.recv()` loop, so a queued series downloads strictly
+  one chapter at a time.
+  Cheaper than it looks, because the two halves of a download are already
+  separate: only the page list goes through the plugin (`fetch_page_list` →
+  `handle.throttled(SourceMethod::Pages, …)`), while the images are fetched with
+  the host's own `reqwest::Client` and touch neither wasm nor the rate limiter.
+  The bookkeeping is already concurrency-shaped too — `queued`/`cancelled` are
+  keyed `(source_id, manga_id, chapter_id)` rather than "the current job",
+  `record_chapter` writes one independent row set per chapter, and
+  `DownloadsProvider` keeps a per-chapter map and derives `active` as a count,
+  so the queue dialog renders several `Downloading` rows with no UI change.
+  Shape: `worker` becomes a dispatcher whose current body moves into a task in a
+  `JoinSet`, awaiting `join_next()` while in-flight ≥ limit. Re-read the limit
+  from `state.settings` each iteration rather than caching it — `save_settings`
+  has no side-effect hooks, so that is what makes the setting apply without a
+  restart (raising it takes the next dispatch, lowering it drains). Keep pause
+  as "pauses between chapters" so it stays clear of the partial-file question.
+  `SystemSettings` is `#[serde(default)]`, so the new field needs no migration.
+  Three things to decide when building it:
+  - Page-list fetches still serialise per source. `with_plugin` holds a mutex
+    over the single wasm instance for the whole guest call, and *browsing shares
+    it* — a running queue makes search and chapter-list calls queue behind it.
+    Throughput is barely affected (one guest call per chapter vs. dozens of
+    images); "downloads make browsing feel sluggish" is the failure mode.
+  - Image requests are unthrottled — `SourceMethod` has no `Image` variant, and
+    the only thing keeping them polite today is that a chapter fetches its pages
+    one at a time. Concurrency N is the first time N simultaneous requests hit
+    one CDN, which is what the MadaraDex-style shields react to. Reason to cap
+    at 4 rather than exposing 8 or 16.
+  - A global cap can hand all slots to one host when two sources are queued. A
+    global N plus an implicit per-source max of 2 is politer and barely more
+    code; easier to build in now than to retrofit.
+  Minor: `db.rs` sets no journal mode and sqlx 0.9 deliberately leaves it alone,
+  so the pool is on the default rollback journal — one writer at a time. Two
+  chapters finishing together means one waits on the 5s busy timeout.
+  Transactions are short enough not to bite at N=4; `.journal_mode(Wal)` is the
+  answer if it ever does.
+  Alternative axis, not chosen: parallelising *pages within* one chapter. Same
+  request budget, but one chapter finishes 3× faster instead of three finishing
+  at once — usually the better feel when downloading the next chapter to read
+  now. Needs the cancel check at the page loop to move into the join. The two
+  compete for the same politeness budget, so doing both later means bounding
+  N×M.
 
 - [ ] Cancel a library update run, in the updates progress dialog. Downloads
   now have this (below); `refresh_library` is still a plain loop emitting
