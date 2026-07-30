@@ -8,6 +8,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useLayoutEffect, useRef, useState } from "react";
 import { LibraryAction } from "@/components/library/library-action";
 import { ChapterTable } from "@/components/manga/chapter-table";
+import { CoverImage } from "@/components/manga/cover-image";
 import { ReaderOverrideDialog } from "@/components/reader/reader-override-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,6 @@ import {
 	useSourceChapters,
 	useSourceManga,
 } from "@/hooks/services/use-sources";
-import { sourceImageUrl } from "@/lib/source-image";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/manga/$sourceId/$mangaId")({
@@ -87,10 +87,12 @@ function MangaDetails() {
 					{inLibrary.data ? "Library" : "Back"}
 				</Button>
 
-				<img
+				<CoverImage
 					alt={manga.data.title}
 					className="mx-auto aspect-2/3 w-48 rounded-lg border border-border object-cover shadow-xl lg:w-full lg:max-w-none"
-					src={sourceImageUrl(sourceId, manga.data.cover_url, { cache: true })}
+					iconSize={32}
+					sourceId={sourceId}
+					url={manga.data.cover_url}
 				/>
 
 				<h1 className="mt-4 text-balance font-bold font-heading text-2xl leading-tight">

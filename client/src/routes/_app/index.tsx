@@ -5,6 +5,7 @@ import {
 	PlayIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { CoverImage } from "@/components/manga/cover-image";
 import { MangaCard } from "@/components/manga/manga-card";
 import { MangaRow } from "@/components/manga/manga-grid";
 import { Button } from "@/components/ui/button";
@@ -172,11 +173,10 @@ function ResumeCard({ item }: { item: ContinueReadingItem }) {
 			to="/read/$sourceId/$mangaId/$chapterId"
 		>
 			<div className="relative aspect-2/3 overflow-hidden rounded-none bg-muted ring-offset-2 ring-offset-background transition-shadow group-focus-visible:ring-2 group-focus-visible:ring-ring">
-				<img
-					alt=""
+				<CoverImage
 					className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-					loading="lazy"
-					src={item.cover_url}
+					sourceId={item.source_id}
+					url={item.cover_url}
 				/>
 				<div className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-linear-to-t from-black/85 to-transparent p-1.5 pt-4">
 					<PlayIcon className="text-white" size={12} weight="fill" />
