@@ -365,12 +365,54 @@ async fn fetch_page_list(
 }
 
 pub fn source_base_url(registry: &Arc<RwLock<Registry>>, source_id: &str) -> String {
-    registry
+    let declared = registry
         .read()
         .ok()
         .and_then(|r| r.source(source_id).ok())
         .map(|h| h.info.base_url)
-        .unwrap_or_default()
+        .unwrap_or_default();
+
+    as_referer(declared)
+}
+
+/// Sent as a Referer, so it has to look like one. A source declaring
+/// `https://host` with no path would otherwise produce a header no browser ever
+/// sends, and hotlink checks that string-match the site root reject it:
+/// manganato.gg's CDN serves `https://www.manganato.gg/` and 403s the same URL
+/// without the slash. Parsing and re-serialising supplies the empty path and
+/// leaves a declared path alone.
+fn as_referer(declared: String) -> String {
+    declared
+        .parse::<reqwest::Url>()
+        .map(|url| url.to_string())
+        .unwrap_or(declared)
+}
+
+#[cfg(test)]
+mod referer_tests {
+    use super::as_referer;
+
+    #[test]
+    fn supplies_the_empty_path_without_touching_a_real_one() {
+        // The case that broke covers: bare origin gets its slash.
+        assert_eq!(
+            as_referer("https://www.manganato.gg".into()),
+            "https://www.manganato.gg/"
+        );
+        // Already correct, and must not gain a second slash.
+        assert_eq!(
+            as_referer("https://www.manganato.gg/".into()),
+            "https://www.manganato.gg/"
+        );
+        // A source that declares a path keeps exactly that path — appending a
+        // slash here would break the referer for a site that checks it.
+        assert_eq!(
+            as_referer("https://www.webtoons.com/en".into()),
+            "https://www.webtoons.com/en"
+        );
+        // Anything unparseable is passed through rather than dropped.
+        assert_eq!(as_referer(String::new()), "");
+    }
 }
 
 fn pick_extension(url: &str, headers: &reqwest::header::HeaderMap) -> String {
