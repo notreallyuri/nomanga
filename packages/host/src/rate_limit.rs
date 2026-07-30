@@ -16,8 +16,6 @@ impl RateLimiter {
         Self { buckets }
     }
 
-    /// Reserve one slot for `method`, returning how long the caller must wait
-    /// before proceeding. Zero when the method is unlimited or has budget.
     pub fn reserve(&mut self, method: SourceMethod) -> Duration {
         self.buckets
             .get_mut(&method)

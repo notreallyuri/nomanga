@@ -7,16 +7,8 @@ pub const EXPORT: &str = "nomanga_fetch";
 pub const EXPORT_SET_COOKIE: &str = "nomanga_set_cookie";
 pub const EXPORT_RANDOM_HEX: &str = "nomanga_random_hex";
 
-/// Performs a request on the extension's behalf. Supplied by the application so
-/// the host stays free of an HTTP stack and the app can reuse its own client,
-/// connection pool and cookie jar.
 pub type Fetcher = Arc<dyn Fn(HostRequest) -> HostResponse + Send + Sync>;
-
-/// Writes a cookie into the jar the fetcher reads from.
 pub type CookieWriter = Arc<dyn Fn(&str, &str) + Send + Sync>;
-
-/// Extensions build for `wasm32-unknown-unknown`, which has no entropy source,
-/// so nonces have to come from here.
 pub type RandomHex = Arc<dyn Fn(usize) -> String + Send + Sync>;
 
 #[derive(Debug, Clone)]
@@ -30,18 +22,13 @@ pub struct CallRecord {
     pub request_headers: Vec<(String, String)>,
     pub response_headers: Vec<(String, String)>,
     pub body: Vec<u8>,
-    /// Length before the log capped it, so the UI can say what it is hiding.
     pub body_bytes: usize,
     pub at: chrono::DateTime<chrono::Utc>,
 }
 
-/// Bounded so a long browsing session cannot grow it without limit; the newest
-/// calls are the ones worth keeping.
 pub struct CallLog {
     entries: Mutex<std::collections::VecDeque<CallRecord>>,
     capacity: usize,
-    /// Response bodies are the point of the log, but a chapter page list can be
-    /// megabytes — keep a prefix rather than the whole thing.
     body_limit: usize,
 }
 
@@ -86,9 +73,6 @@ impl Default for CallLog {
     }
 }
 
-/// For metadata-only plugin instances. The import has to exist or the module
-/// will not instantiate, but `inspect` only reads declarations — nothing it
-/// calls should ever reach the network.
 pub fn denied() -> TransportShared {
     TransportShared {
         fetch: Arc::new(|_| HostResponse {
@@ -104,7 +88,6 @@ pub fn denied() -> TransportShared {
     }
 }
 
-/// The parts an application owns once and every activated plugin shares.
 #[derive(Clone)]
 pub struct TransportShared {
     pub fetch: Fetcher,
@@ -133,8 +116,6 @@ pub struct TransportContext {
     pub set_cookie: CookieWriter,
     pub random_hex: RandomHex,
     pub log: Arc<CallLog>,
-    /// Mirrors what Extism's built-in HTTP enforced before the transport moved
-    /// host-side. Without this an extension could reach any host it liked.
     pub allowed_hosts: Vec<String>,
     pub source_id: String,
     pub recording: Arc<std::sync::atomic::AtomicBool>,
@@ -158,8 +139,6 @@ fn host_of(url: &str) -> Option<&str> {
     Some(host.split(':').next().unwrap_or(host))
 }
 
-/// Extism accepts `*` wildcards in `allowed_hosts`; keep the same shape so
-/// existing `SourceInfo::hosts` declarations behave exactly as before.
 fn matches_host(pattern: &str, host: &str) -> bool {
     if pattern == "*" {
         return true;
@@ -223,8 +202,6 @@ host_fn!(set_cookie_impl(user_data: TransportContext; req: Json<HostCookie>) -> 
 
     let Json(cookie) = req;
 
-    // Same gate as a fetch: a source may only touch jars for hosts it declared,
-    // or it could plant a cookie against any site the app later requests.
     if !ctx.is_allowed(&cookie.url) {
         return Ok(Json(false));
     }
@@ -240,9 +217,6 @@ host_fn!(random_hex_impl(user_data: TransportContext; bytes: u64) -> String {
     Ok((ctx.random_hex)(bytes.clamp(1, 64) as usize))
 });
 
-/// The returned handle lets the caller retarget `source_id` before each call —
-/// one extension can serve several sources, and the log is only useful if a
-/// record says which one made the request.
 pub fn functions(ctx: TransportContext) -> (Vec<Function>, UserData<TransportContext>) {
     let data = UserData::new(ctx);
     let functions = vec![
@@ -279,7 +253,10 @@ mod tests {
 
     #[test]
     fn extracts_the_host_from_a_url() {
-        assert_eq!(host_of("https://a.example.com/x?y=1"), Some("a.example.com"));
+        assert_eq!(
+            host_of("https://a.example.com/x?y=1"),
+            Some("a.example.com")
+        );
         assert_eq!(host_of("http://example.com:8080/x"), Some("example.com"));
         assert_eq!(host_of("not a url"), None);
     }
@@ -305,7 +282,6 @@ mod tests {
 
         let snap = log.snapshot();
         assert_eq!(snap.len(), 2);
-        // Newest first.
         assert_eq!(snap[0].url, "u2");
         assert_eq!(snap[1].url, "u1");
     }
