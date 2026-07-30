@@ -2,110 +2,133 @@ use crate::{
     error::{CommandError, CommandResult},
     AppState,
 };
-use nomanga_core::extension::common::USER_AGENT;
 use std::time::Duration;
-use tauri::{
-    webview::WebviewBuilder, AppHandle, LogicalPosition, LogicalSize, Manager, State, Url,
-    WebviewUrl,
-};
+use tauri::{AppHandle, Manager, State, Url, WebviewUrl, WebviewWindowBuilder};
 
 const LABEL: &str = "cf-challenge";
 const POLL: Duration = Duration::from_millis(400);
 const TIMEOUT: Duration = Duration::from_secs(180);
 
-/// Where the frontend's dialog body sits, in logical pixels relative to the
-/// window. The embedded webview is a native child rather than part of the DOM,
-/// so it cannot be laid out by CSS and has to be told.
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, specta::Type)]
-pub struct ChallengeRect {
-    pub x: f64,
-    pub y: f64,
-    pub width: f64,
-    pub height: f64,
+/// What the attempt actually saw. `solved` alone cannot distinguish "the user
+/// walked away" from "the cookie store never answered" from "the site never
+/// issued a clearance", and those want different fixes.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct ChallengeOutcome {
+    pub solved: bool,
+    /// Cookie names present on the last successful read, whatever they were.
+    pub seen: Vec<String>,
+    /// How many times the store answered at all.
+    pub reads: u32,
+    /// Last read failure, if any.
+    pub error: Option<String>,
+    /// Where the page ended up, in case it is not where it was sent.
+    pub landed: String,
 }
 
-/// Opens the source's challenge page in an embedded browser view and waits for
-/// the user to clear it.
+/// Opens the source's challenge page in a browser window and waits for the user
+/// to clear it.
 ///
 /// Returns true once every cookie the source named has appeared and been copied
-/// into the shared jar, false on timeout or if the user closed the dialog first.
+/// into the shared jar, false on timeout or if the window was closed first.
+///
+/// A separate window rather than one embedded in the app: on Linux wry packs a
+/// child webview into the window's GtkBox, which ignores the bounds it is given
+/// and lays the view out as a sibling of the app — so the embedded shape cannot
+/// be built there at all.
 #[tauri::command]
 #[specta::specta]
 pub async fn solve_challenge(
     app: AppHandle,
     state: State<'_, AppState>,
     source_id: String,
-    rect: ChallengeRect,
-) -> CommandResult<bool> {
-    let challenge = {
+) -> CommandResult<ChallengeOutcome> {
+    let source = {
         let registry = state.registry.read()?;
-        registry
-            .sources()
-            .into_iter()
-            .find(|s| s.id == source_id)
-            .and_then(|s| s.challenge)
+        registry.sources().into_iter().find(|s| s.id == source_id)
     };
 
-    let challenge = challenge.ok_or_else(|| CommandError::Source {
+    let source = source.ok_or_else(|| CommandError::Source {
         source_id: Some(source_id.clone()),
-        message: "source declares no challenge".to_owned(),
+        message: "unknown source".to_owned(),
     })?;
+
+    let challenge = source
+        .challenge
+        .clone()
+        .ok_or_else(|| CommandError::Source {
+            source_id: Some(source_id.clone()),
+            message: "source declares no challenge".to_owned(),
+        })?;
 
     let url: Url = challenge.url.parse().map_err(|e| CommandError::Source {
         source_id: Some(source_id.clone()),
         message: format!("challenge url is not a url: {e}"),
     })?;
 
-    let window = app
-        .get_window("main")
-        .ok_or_else(|| CommandError::Internal {
-            message: "no main window".to_owned(),
-        })?;
-
     // A previous attempt may have been left open by a reload.
-    if let Some(stale) = app.get_webview(LABEL) {
+    if let Some(stale) = app.get_webview_window(LABEL) {
         let _ = stale.close();
     }
 
-    // The user agent has to match the client that will later present the
-    // cookie: Cloudflare binds a clearance to the UA that earned it, and a
-    // mismatch reads as a forged cookie. This is the MadaraDex trap.
-    let builder =
-        WebviewBuilder::new(LABEL, WebviewUrl::External(url.clone())).user_agent(USER_AGENT);
-
-    let webview = window
-        .add_child(
-            builder,
-            LogicalPosition::new(rect.x, rect.y),
-            LogicalSize::new(rect.width, rect.height),
-        )
+    // Deliberately *not* pinned to core's USER_AGENT. Forcing a Firefox string
+    // onto a WebKit engine makes Cloudflare serve Gecko-targeted challenge
+    // code, which hangs and paints the window black; left alone, the engine is
+    // consistent with itself and the challenge solves. Measured 2026-07-30.
+    let window = WebviewWindowBuilder::new(&app, LABEL, WebviewUrl::External(url.clone()))
+        .title(format!("{} — browser check", source.name))
+        .inner_size(520.0, 660.0)
+        .center()
+        .focused(true)
+        .always_on_top(true)
+        .build()
         .map_err(|e| CommandError::Internal {
-            message: format!("could not open the challenge view: {e}"),
+            message: format!("could not open the challenge window: {e}"),
         })?;
 
     let deadline = std::time::Instant::now() + TIMEOUT;
     let mut solved = false;
+    let mut last_error: Option<String> = None;
+    let mut reads = 0u32;
+    let mut seen: Vec<String> = Vec::new();
+    let mut landed_at = url.to_string();
 
     while std::time::Instant::now() < deadline {
         tokio::time::sleep(POLL).await;
 
-        // Closed from the frontend's cancel button, or by a reload.
-        if app.get_webview(LABEL).is_none() {
-            return Ok(false);
+        // Closed by the user, the cancel button, or a reload.
+        if app.get_webview_window(LABEL).is_none() {
+            break;
         }
+
+        // Read against wherever the page actually ended up. A challenge that
+        // redirects to another host sets its clearance there, and asking for
+        // the URL we opened would come back empty however well it went.
+        let landed = window.url().unwrap_or_else(|_| url.clone());
 
         // Reading the cookie store dispatches onto the webview thread and is
         // documented to deadlock if it happens on a synchronous command; this
         // one is async and the read is moved off the runtime thread besides.
-        let probe = webview.clone();
-        let for_url = url.clone();
+        let probe = window.clone();
+        let for_url = landed.clone();
         let cookies = tokio::task::spawn_blocking(move || probe.cookies_for_url(for_url))
             .await
             .map_err(|e| CommandError::Internal {
                 message: format!("cookie read panicked: {e}"),
             })?;
 
-        let Ok(cookies) = cookies else { continue };
+        let cookies = match cookies {
+            Ok(cookies) => cookies,
+            Err(e) => {
+                // A read that fails every poll looks exactly like a challenge
+                // nobody completed, so it must not be swallowed.
+                last_error = Some(e.to_string());
+                continue;
+            }
+        };
+
+        reads += 1;
+        landed_at = landed.to_string();
+        seen = cookies.iter().map(|c| c.name().to_owned()).collect();
 
         let harvested: Vec<_> = cookies
             .iter()
@@ -118,51 +141,50 @@ pub async fn solve_challenge(
 
         // Straight into the jar the transport, image proxy and download worker
         // all share — the same writer guest::set_cookie() reaches.
+        //
+        // Domain and Path are carried over rather than dropped: a clearance is
+        // issued for `.natomanga.com`, and a bare `name=value` would be stored
+        // host-only against whichever host happened to be challenged.
         for cookie in harvested {
-            (state.transport.set_cookie)(
-                url.as_str(),
-                &format!("{}={}", cookie.name(), cookie.value()),
-            );
+            let mut set = format!("{}={}", cookie.name(), cookie.value());
+
+            if let Some(domain) = cookie.domain() {
+                set.push_str(&format!("; Domain={domain}"));
+            }
+            if let Some(path) = cookie.path() {
+                set.push_str(&format!("; Path={path}"));
+            }
+
+            (state.transport.set_cookie)(landed.as_str(), &set);
         }
 
         solved = true;
         break;
     }
 
-    if let Some(view) = app.get_webview(LABEL) {
-        let _ = view.close();
+    if let Some(window) = app.get_webview_window(LABEL) {
+        let _ = window.close();
     }
 
-    Ok(solved)
+    Ok(ChallengeOutcome {
+        solved,
+        seen,
+        reads,
+        error: last_error,
+        landed: landed_at,
+    })
 }
 
-/// Closes the challenge view without waiting for it to be solved. The pending
+/// Closes the challenge window without waiting for it to be solved. The pending
 /// `solve_challenge` call notices on its next poll and resolves false.
 #[tauri::command]
 #[specta::specta]
 pub async fn cancel_challenge(app: AppHandle) -> CommandResult<()> {
-    if let Some(view) = app.get_webview(LABEL) {
-        view.close().map_err(|e| CommandError::Internal {
-            message: format!("could not close the challenge view: {e}"),
+    if let Some(window) = app.get_webview_window(LABEL) {
+        window.close().map_err(|e| CommandError::Internal {
+            message: format!("could not close the challenge window: {e}"),
         })?;
     }
-
-    Ok(())
-}
-
-/// Keeps the embedded view aligned with the dialog when the window resizes.
-#[tauri::command]
-#[specta::specta]
-pub async fn move_challenge(app: AppHandle, rect: ChallengeRect) -> CommandResult<()> {
-    let Some(view) = app.get_webview(LABEL) else {
-        return Ok(());
-    };
-
-    view.set_position(LogicalPosition::new(rect.x, rect.y))
-        .and_then(|_| view.set_size(LogicalSize::new(rect.width, rect.height)))
-        .map_err(|e| CommandError::Internal {
-            message: format!("could not move the challenge view: {e}"),
-        })?;
 
     Ok(())
 }

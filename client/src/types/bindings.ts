@@ -65,20 +65,23 @@ export const commands = {
 	sourcePages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("source_pages", { sourceId, mangaId, chapterId })),
 	installExtension: (wasmPath: string) => typedError<string, CommandError>(__TAURI_INVOKE("install_extension", { wasmPath })),
 	/**
-	 *  Opens the source's challenge page in an embedded browser view and waits for
-	 *  the user to clear it.
+	 *  Opens the source's challenge page in a browser window and waits for the user
+	 *  to clear it.
 	 * 
 	 *  Returns true once every cookie the source named has appeared and been copied
-	 *  into the shared jar, false on timeout or if the user closed the dialog first.
+	 *  into the shared jar, false on timeout or if the window was closed first.
+	 * 
+	 *  A separate window rather than one embedded in the app: on Linux wry packs a
+	 *  child webview into the window's GtkBox, which ignores the bounds it is given
+	 *  and lays the view out as a sibling of the app — so the embedded shape cannot
+	 *  be built there at all.
 	 */
-	solveChallenge: (sourceId: string, rect: ChallengeRect) => typedError<boolean, CommandError>(__TAURI_INVOKE("solve_challenge", { sourceId, rect })),
+	solveChallenge: (sourceId: string) => typedError<ChallengeOutcome, CommandError>(__TAURI_INVOKE("solve_challenge", { sourceId })),
 	/**
-	 *  Closes the challenge view without waiting for it to be solved. The pending
+	 *  Closes the challenge window without waiting for it to be solved. The pending
 	 *  `solve_challenge` call notices on its next poll and resolves false.
 	 */
 	cancelChallenge: () => typedError<null, CommandError>(__TAURI_INVOKE("cancel_challenge")),
-	/**  Keeps the embedded view aligned with the dialog when the window resizes. */
-	moveChallenge: (rect: ChallengeRect) => typedError<null, CommandError>(__TAURI_INVOKE("move_challenge", { rect })),
 	getSettings: () => typedError<Settings, CommandError>(__TAURI_INVOKE("get_settings")),
 	saveSettings: (newSettings: Settings) => typedError<null, CommandError>(__TAURI_INVOKE("save_settings", { newSettings })),
 	effectiveReaderSettings: (sourceId: string, mangaId: string) => typedError<ReaderSettings, CommandError>(__TAURI_INVOKE("effective_reader_settings", { sourceId, mangaId })),
@@ -226,15 +229,20 @@ export type Challenge = {
 };
 
 /**
- *  Where the frontend's dialog body sits, in logical pixels relative to the
- *  window. The embedded webview is a native child rather than part of the DOM,
- *  so it cannot be laid out by CSS and has to be told.
+ *  What the attempt actually saw. `solved` alone cannot distinguish "the user
+ *  walked away" from "the cookie store never answered" from "the site never
+ *  issued a clearance", and those want different fixes.
  */
-export type ChallengeRect = {
-	x: number | null,
-	y: number | null,
-	width: number | null,
-	height: number | null,
+export type ChallengeOutcome = {
+	solved: boolean,
+	/**  Cookie names present on the last successful read, whatever they were. */
+	seen: string[],
+	/**  How many times the store answered at all. */
+	reads: number,
+	/**  Last read failure, if any. */
+	error: string | null,
+	/**  Where the page ended up, in case it is not where it was sent. */
+	landed: string,
 };
 
 export type Chapter = {

@@ -18,11 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-# "unstable" is what gates Window::add_child, which the challenge flow uses to
-# embed the browser view inside a dialog. Tauri may break these APIs in a minor
-# release; commands/challenge.rs is the only consumer, so falling back to a
-# separate WebviewWindow means touching one file.
-tauri = { version = "2", features = ["protocol-asset", "unstable"] }
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
