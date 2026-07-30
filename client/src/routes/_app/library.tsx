@@ -2,7 +2,7 @@ import {
 	ArrowClockwiseIcon,
 	ArrowsDownUpIcon,
 	BooksIcon,
-	CheckSquareIcon,
+	CheckCircleIcon,
 	FolderSimpleIcon,
 	type Icon,
 	LockKeyIcon,
@@ -332,7 +332,7 @@ function LibraryPage() {
 						}
 						variant="ghost"
 					>
-						<CheckSquareIcon />
+						<CheckCircleIcon />
 						{selectionMode ? "Done" : "Select"}
 					</Button>
 					<ManageCategoriesDialog
