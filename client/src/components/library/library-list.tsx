@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { UnreadBadge } from "@/components/manga/manga-card";
 import { useAppearance } from "@/hooks/services/use-settings";
+import { sourceImageUrl } from "@/lib/source-image";
 import { cn } from "@/lib/utils";
 import type { LibraryItem } from "@/types/bindings";
 import { LibraryEntryMenu } from "./library-entry-menu";
@@ -75,7 +76,10 @@ function LibraryRow({
 				</span>
 			)}
 
-			<Thumb title={item.title} url={item.cover_url} />
+			<Thumb
+				title={item.title}
+				url={sourceImageUrl(item.source_id, item.cover_url, { cache: true })}
+			/>
 
 			<div className="min-w-0 flex-1">
 				<p className="truncate font-medium text-sm">{item.title}</p>

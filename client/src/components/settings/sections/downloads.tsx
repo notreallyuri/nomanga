@@ -6,6 +6,7 @@ import {
 	useDeleteDownload,
 	useDownloads,
 } from "@/hooks/services/use-downloads";
+import { sourceImageUrl } from "@/lib/source-image";
 import { cn, formatBytes } from "@/lib/utils";
 import type { DownloadedManga } from "@/types/bindings";
 
@@ -94,7 +95,12 @@ function MangaDownloads({ manga }: { manga: DownloadedManga }) {
 						size={14}
 					/>
 
-					<Cover title={manga.title} url={manga.cover_url} />
+					<Cover
+						title={manga.title}
+						url={sourceImageUrl(manga.source_id, manga.cover_url, {
+							cache: true,
+						})}
+					/>
 
 					<div className="min-w-0">
 						<p className="truncate font-medium text-sm">{manga.title}</p>

@@ -29,6 +29,7 @@ import {
 	useContinueReading,
 	useRemoveHistoryEntries,
 } from "@/hooks/services/use-history";
+import { sourceImageUrl } from "@/lib/source-image";
 import { formatRelativeTime, historyBucket } from "@/lib/utils";
 import type { ContinueReadingItem, HistoryEntryRef } from "@/types/bindings";
 
@@ -238,7 +239,12 @@ function HistoryRow({
 					}}
 					to="/read/$sourceId/$mangaId/$chapterId"
 				>
-					<Thumbnail title={item.title} url={item.cover_url} />
+					<Thumbnail
+						title={item.title}
+						url={sourceImageUrl(item.source_id, item.cover_url, {
+							cache: true,
+						})}
+					/>
 					<span className="min-w-0 flex-1 truncate font-medium">
 						{item.title}
 					</span>

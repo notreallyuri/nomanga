@@ -4,6 +4,7 @@ import {
 	SparkleIcon,
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+import { sourceImageUrl } from "@/lib/source-image";
 import type { LibraryRefreshProgress, LibraryUpdate } from "@/types/bindings";
 import { Button } from "../ui/button";
 import {
@@ -116,7 +117,9 @@ export function UpdatesDialog({
 										alt=""
 										className="h-14 w-10 shrink-0 rounded-sm object-cover"
 										loading="lazy"
-										src={update.cover_url}
+										src={sourceImageUrl(update.source_id, update.cover_url, {
+											cache: true,
+										})}
 									/>
 									<div className="min-w-0 flex-1">
 										<p className="truncate font-medium text-sm">
