@@ -2,14 +2,6 @@
 
 ## Open
 
-### Extensions
-
-- [ ] Comix (`com.comix.en`)
-- [ ] AsuraScans (`asuracomic.net`) — not started. Behind Cloudflare but
-  passing as of 2026-07-26, so its selectors can be verified against live
-  HTML rather than saved fixtures. Manhwa-heavy.
-- [ ] MangaPlus - not started.
-
 ### Extension distribution
 
 - [ ] Check for extension updates in the background, the way library updates
@@ -463,62 +455,6 @@ default.
   - Note: the proxy already sends `Cache-Control: public, max-age=86400`, so the
     webview serves many repeats without reaching the handler. The win this buys
     is *across restarts*, not within a session.
-
-### Extensions
-
-- [x] Hitomi (`la.hitomi`)
-- [x] WeebCentral (`com.weebcentral.en`)
-- [x] MangaDex (`org.mangadex`)
-- [x] MangaPill (`com.mangapill.en`)
-- [x] NatoManga (`com.natomanga.en`) — written and fixture-tested. Only
-  `chapters()` works live today; the rest wait on the Cloudflare bypass above.
-- [x] WEBTOON (`com.webtoons.en`)
-- [x] E-Hentai (`org.ehentai`) — verified live: homepage, search, cursor
-  paging, details, chapters, and a 6-page gallery whose images all fetched 200.
-  Two shapes worth remembering.
-  *Pagination is cursor-only.* `?page=N` is accepted and silently ignored —
-  pages 0, 1 and 3 come back byte-identical. The only pager is
-  `?next=<gid of the last row>`, so the source keeps a static
-  `listing url -> page -> cursor` map, filled as the user pages forward.
-  Sequential paging costs one request per page; a cold jump to a deep page
-  walks forward from the deepest cursor it knows. Chosen over widening the ABI
-  because the client drives pagination, so a `cursor` field would have meant
-  threading it through the browse UI too.
-  *Pages are unavoidably request-heavy.* There is no bulk image-URL endpoint:
-  image keys come from `/g/?p=N` (20 per request), one `/s/` page yields the
-  gallery's `showkey`, then every remaining page needs its own `showpage` API
-  call. ~0.7s per page measured, so a 55-page gallery is ~40s. `rate_limits()`
-  caps Pages at 4/min, but note the limiter throttles *calls to the method*,
-  not the requests made inside one — the internal loop is unthrottled, which is
-  the main ban risk left.
-  Images sit on sharded `*.hath.network` nodes on non-standard ports, need no
-  referer, and carry a `keystamp` that expires on a ~5-minute bucket — stale
-  URLs are expected for slow reads and queued downloads. The stable-looking
-  `/r/` "forum image link" is not an alternative; it 404s.
-  Auth is cookies, not a key: `ipb_member_id` + `ipb_pass_hash` seeded into the
-  host jar via `guest::set_cookie()`. Optional, and both were left unset here,
-  so the member branch (MPV image keys) is written but unverified. Automated
-  login is not an option — `forums.e-hentai.org` is behind a Cloudflare
-  interstitial, so it waits on the bypass above.
-- [x] MadaraDex (`org.madaradex`) — verified live end to end: homepage (5
-  sections), search, details, 218 chapters, pages.
-  The site itself is open — no Cloudflare challenge — but `cdn.madaradex.org`
-  serves a custom 403 for chapter images unless the request carries the
-  `madaradex-shield` plugin's cookie pair. Covers are unaffected; they sit on
-  `madaradex.org/wp-content` and need nothing.
-  The pair is `mdx_fp`, a fingerprint only the page's own JavaScript generates,
-  and `mdx_auth`, a ~6h token the server mints *against that fingerprint* — a
-  token presented with a different fingerprint is rejected, so neither half is
-  usable alone. `Referer` is required too, and the token is bound to the
-  User-Agent that minted it.
-  Two traps worth recording. The `mdx_auth` the chapter HTML sets is useless:
-  that page is edge-cached, so its `Set-Cookie` is whatever was minted when the
-  cache filled — which is exactly why the plugin re-mints over AJAX on every
-  page view, and why `authorize()` runs per `pages()` call rather than once.
-  And the UA binding was the whole reason the first working implementation
-  still 403'd: the SDK minted under Firefox while the image proxy fetched under
-  Chrome. `USER_AGENT` now lives in core and both sides use it — the app must
-  present one identity per source, not two.
 
 ### Platform
 
