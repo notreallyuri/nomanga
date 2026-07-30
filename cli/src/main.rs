@@ -12,6 +12,7 @@ use std::sync::atomic::AtomicBool;
 use nomanga_core::extension::query::{ChapterRef, MangaRef, SearchQuery};
 use nomanga_core::extension::repository::{INDEX_VERSION, RepositoryExtension, RepositoryIndex};
 use nomanga_host::ExtensionMetadata;
+use nomanga_host::snapshot::ExtensionSnapshot;
 
 #[derive(Parser)]
 #[command(name = "nomanga-cli", about = "Run and inspect nomanga extensions")]
@@ -119,7 +120,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let wasm = cli.wasm.as_deref().ok_or("--wasm <path> is required")?;
 
-    let meta = ExtensionMetadata::inspect(wasm)?;
+    let snapshot = ExtensionSnapshot::build(std::path::Path::new(wasm))?;
+    let meta = ExtensionMetadata::from_snapshot(&snapshot, wasm);
 
     if let Command::Info = cli.command {
         print_info(&meta);
@@ -143,7 +145,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             unreachable!("handled above")
         }
         Command::Homepage => to_value(ext.homepage(source)?, cli.json)?,
-        Command::Filters => to_value(ext.filters(source)?, cli.json)?,
+        Command::Filters => {
+            let declared = snapshot
+                .source(source)
+                .ok_or_else(|| format!("unknown source id: {source}"))?;
+            to_value(&declared.filters, cli.json)?
+        }
         Command::Search { term, page } => {
             let q = SearchQuery {
                 term,

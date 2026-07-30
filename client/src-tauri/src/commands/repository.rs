@@ -140,8 +140,11 @@ async fn install_staged(
     path: &std::path::Path,
 ) -> CommandResult<String> {
     let configs = nomanga_services::source::config::all_configs(&state.pool).await?;
+    let enabled = nomanga_services::source::preference::enabled_ids(&state.pool).await?;
+
     let mut registry = state.registry.write()?;
     let info = registry.install(path, &configs)?;
+    registry.set_enabled(&enabled)?;
 
     Ok(info.id)
 }

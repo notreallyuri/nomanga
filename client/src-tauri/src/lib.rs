@@ -1,6 +1,5 @@
 use crate::commands::*;
 use nomanga_services::{StartupWarning, WarningKind};
-use specta_typescript::Typescript;
 use std::{
     path::PathBuf,
     sync::{Arc, RwLock},
@@ -16,8 +15,6 @@ pub mod transport;
 
 pub struct AppState {
     pub pool: sqlx::SqlitePool,
-    /// Shared client for the image proxy; sources that hotlink-protect their
-    /// CDNs need the request to originate here rather than in the webview.
     pub http: reqwest::Client,
     pub registry: Arc<RwLock<nomanga_host::registry::Registry>>,
     pub settings: Arc<RwLock<nomanga_services::settings::Settings>>,
@@ -161,8 +158,10 @@ fn unquote_dev_handler_exec() {
     let data_dir = std::env::var_os("XDG_DATA_HOME")
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")));
-    let Some(path) = data_dir.map(|d| d.join("applications").join(format!("{stem}-handler.desktop")))
-    else {
+    let Some(path) = data_dir.map(|d| {
+        d.join("applications")
+            .join(format!("{stem}-handler.desktop"))
+    }) else {
         return;
     };
 
@@ -197,7 +196,10 @@ pub fn run() {
     // file, and such a launch exists only to forward its argv to the running
     // instance.
     #[cfg(debug_assertions)]
-    if let Err(e) = builder.export(Typescript::default(), "../src/types/bindings.ts") {
+    if let Err(e) = builder.export(
+        specta_typescript::Typescript::default(),
+        "../src/types/bindings.ts",
+    ) {
         eprintln!("skipped exporting typescript bindings: {e}");
     }
 
@@ -235,14 +237,17 @@ pub fn run() {
             std::fs::create_dir_all(&dir).ok();
 
             let db_path = dir.join("library.db");
-            let (pool, configs) = tauri::async_runtime::block_on(async {
+            let (pool, configs, enabled_sources) = tauri::async_runtime::block_on(async {
                 let pool = nomanga_services::db::open(db_path.to_str().expect("non-utf8 db path"))
                     .await
                     .expect("failed to open database");
                 let configs = nomanga_services::source::config::all_configs(&pool)
                     .await
                     .unwrap_or_default();
-                (pool, configs)
+                let enabled_sources = nomanga_services::source::preference::enabled_ids(&pool)
+                    .await
+                    .unwrap_or_default();
+                (pool, configs, enabled_sources)
             });
 
             let mut warnings = Vec::new();
@@ -279,6 +284,15 @@ pub fn run() {
                 }
             };
 
+            // Until this lands, every source is compilable; a source the user
+            // never turned on must never build its plugin.
+            if let Err(e) = registry.set_enabled(&enabled_sources) {
+                warnings.push(StartupWarning {
+                    kind: WarningKind::ExtensionFailed,
+                    message: format!("Could not apply source preferences: {e}"),
+                });
+            }
+
             let settings_path = dir.join("settings.json");
 
             let settings = match nomanga_services::settings::load(&settings_path) {
@@ -299,11 +313,8 @@ pub fn run() {
 
             let downloads_dir = dir.join("downloads");
             std::fs::create_dir_all(&downloads_dir).ok();
-            let downloads = downloads::DownloadManager::new(
-                handle.clone(),
-                downloads_dir.clone(),
-                jar.clone(),
-            );
+            let downloads =
+                downloads::DownloadManager::new(handle.clone(), downloads_dir.clone(), jar.clone());
 
             let sync_path = dir.join("sync.json");
             let mut sync = nomanga_services::sync::load(&sync_path).unwrap_or_default();
@@ -338,6 +349,7 @@ pub fn run() {
             });
 
             tauri::async_runtime::spawn(background::run_loop(handle.clone()));
+            tauri::async_runtime::spawn(background::evict_loop(handle.clone()));
 
             Ok(())
         })

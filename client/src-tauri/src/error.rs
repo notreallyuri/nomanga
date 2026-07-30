@@ -86,6 +86,14 @@ impl From<HostError> for CommandError {
                 message: format!("unknown source id: {source_id}"),
                 source_id: Some(source_id),
             },
+            // Attributed to the source rather than the extension so the UI can
+            // point at the switch that turns it back on.
+            HostError::SourceDisabled(source_id) => Self::Source {
+                message: format!(
+                    "{source_id} is turned off — enable it in Settings to use it again"
+                ),
+                source_id: Some(source_id),
+            },
             other => Self::Extension {
                 message: other.to_string(),
             },

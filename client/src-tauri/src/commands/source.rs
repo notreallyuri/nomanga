@@ -52,41 +52,11 @@ pub async fn source_filters(
     state: State<'_, AppState>,
     source_id: String,
 ) -> CommandResult<Vec<Filter>> {
-    use nomanga_services::cache::source as source_cache;
+    let registry = state.registry.read()?;
 
-    let version = {
-        let registry = state.registry.read()?;
-        registry.source(&source_id)?.info.version
-    };
-
-    if let Some(filters) = source_cache::get_filters(
-        &state.pool,
-        &source_id,
-        &version,
-        source_cache::default_ttl(),
-    )
-    .await?
-    {
-        return Ok(filters);
-    }
-
-    let handle = {
-        let registry = state.registry.read()?;
-        registry.source(&source_id)?
-    };
-    let fetch_id = source_id.clone();
-    let filters = tokio::task::spawn_blocking(move || {
-        handle.with_plugin(|ext| ext.filters(&fetch_id))
-    })
-    .await
-    .map_err(|e| CommandError::Internal {
-        message: format!("task panicked: {e}"),
-    })?
-    .map_err(|e| CommandError::from(e).with_source_id(&source_id))?;
-
-    source_cache::set_filters(&state.pool, &source_id, &filters, &version).await?;
-
-    Ok(filters)
+    registry
+        .filters(&source_id)
+        .map_err(|e| CommandError::from(e).with_source_id(&source_id))
 }
 
 #[tauri::command]
@@ -194,12 +164,17 @@ pub async fn install_extension(
     wasm_path: String,
 ) -> CommandResult<String> {
     let configs = nomanga_services::source::config::all_configs(&state.pool).await?;
+    let enabled = nomanga_services::source::preference::enabled_ids(&state.pool).await?;
 
     let mut registry = state.registry.write().map_err(|_| CommandError::Internal {
         message: "registry poisoned".into(),
     })?;
 
     let info = registry.install(&wasm_path, &configs)?;
+
+    // Sources arrive compilable; a freshly installed one has no opt-in row yet
+    // and must not build until the user turns it on.
+    registry.set_enabled(&enabled)?;
 
     Ok(info.id)
 }

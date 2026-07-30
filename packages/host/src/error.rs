@@ -9,6 +9,8 @@ pub enum HostError {
     AbiTooNew { found: u32, max: u32 },
     #[error("unknown source id: {0}")]
     UnknownSource(String),
+    #[error("source {0} is turned off")]
+    SourceDisabled(String),
     #[error("host lock poisoned")]
     Poisoned,
     #[error("source error: {0}")]
@@ -18,6 +20,13 @@ pub enum HostError {
         path: String,
         source: std::io::Error,
     },
+    #[error("could not write extension metadata to {path}: {source}")]
+    SnapshotWrite {
+        path: String,
+        source: std::io::Error,
+    },
+    #[error("could not encode extension metadata: {0}")]
+    SnapshotEncode(#[from] serde_json::Error),
 }
 
 pub type HostResult<T> = Result<T, HostError>;

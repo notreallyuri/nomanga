@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::State;
 
-use crate::error::CommandError;
 use crate::{error::CommandResult, AppState};
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct InstalledExtension {
@@ -97,6 +96,9 @@ pub async fn set_source_preference(
 ) -> CommandResult<()> {
     preference::set(&state.pool, &preference).await?;
 
+    let registry = state.registry.read()?;
+    registry.set_source_enabled(&preference.source_id, preference.enabled)?;
+
     Ok(())
 }
 
@@ -106,18 +108,10 @@ pub async fn get_source_settings(
     state: State<'_, AppState>,
     source_id: String,
 ) -> CommandResult<SourceSettings> {
-    let handle = {
+    let schema = {
         let registry = state.registry.read()?;
-        registry.source(&source_id)?
+        registry.settings(&source_id)?
     };
-
-    let id = source_id.clone();
-    let schema =
-        tauri::async_runtime::spawn_blocking(move || handle.with_plugin(|ext| ext.settings(&id)))
-            .await
-            .map_err(|e| CommandError::Internal {
-                message: format!("settings task panicked: {e}"),
-            })??;
 
     let values = config::config_for(&state.pool, &source_id).await?;
 
@@ -135,8 +129,8 @@ pub async fn save_source_settings(
 
     let config = config::config_for(&state.pool, &source_id).await?;
 
-    let mut registry = state.registry.write()?;
-    registry.reactivate(&source_id, config)?;
+    let registry = state.registry.read()?;
+    registry.set_config(&source_id, config)?;
 
     Ok(())
 }

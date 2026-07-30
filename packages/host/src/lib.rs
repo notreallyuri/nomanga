@@ -1,4 +1,5 @@
 use crate::error::{HostError, HostResult};
+use crate::snapshot::ExtensionSnapshot;
 use extism::{Manifest, Plugin, Wasm, convert::Json};
 use nomanga_core::{
     data::{
@@ -7,19 +8,17 @@ use nomanga_core::{
         manga::Manga,
     },
     extension::{
-        config::Setting,
         error::SourceResult,
-        filter::Filter,
         info::ExtensionInfo,
         query::{ChapterRef, MangaPage, MangaRef, SearchQuery, SectionRef},
-        rate_limit::RateLimit,
-        source::{ABI_MIN_SUPPORTED, ABI_VERSION, SourceInfo, Sourced},
+        source::{SourceInfo, Sourced},
     },
 };
 use std::collections::HashMap;
 
 pub mod error;
 pub mod rate_limit;
+pub mod snapshot;
 pub mod transport;
 pub mod registry;
 
@@ -32,40 +31,19 @@ pub struct ExtensionMetadata {
 impl ExtensionMetadata {
     pub fn inspect(path: impl Into<String>) -> HostResult<Self> {
         let wasm_path = path.into();
+        let snapshot = ExtensionSnapshot::build(std::path::Path::new(&wasm_path))?;
 
-        let bytes = std::fs::read(&wasm_path).map_err(|source| HostError::WasmRead {
-            path: wasm_path.clone(),
-            source,
-        })?;
-
-        let manifest = Manifest::new([Wasm::data(bytes)]);
-        let (functions, _) =
-            crate::transport::functions(crate::transport::denied().context(Vec::new()));
-        let mut plugin = Plugin::new(&manifest, functions, true)?;
-
-        let Json(extension): Json<ExtensionInfo> = plugin.call("get_extension", ())?;
-
-        if extension.abi_version < ABI_MIN_SUPPORTED {
-            return Err(HostError::AbiTooOld {
-                found: extension.abi_version,
-                min: ABI_MIN_SUPPORTED,
-            });
-        }
-        if extension.abi_version > ABI_VERSION {
-            return Err(HostError::AbiTooNew {
-                found: extension.abi_version,
-                max: ABI_VERSION,
-            });
-        }
-
-        let Json(sources): Json<Vec<SourceInfo>> = plugin.call("get_sources", ())?;
-
-        Ok(Self {
-            extension,
-            sources,
-            wasm_path,
-        })
+        Ok(Self::from_snapshot(&snapshot, wasm_path))
     }
+
+    pub fn from_snapshot(snapshot: &ExtensionSnapshot, wasm_path: impl Into<String>) -> Self {
+        Self {
+            extension: snapshot.extension.clone(),
+            sources: snapshot.sources.iter().map(|s| s.info.clone()).collect(),
+            wasm_path: wasm_path.into(),
+        }
+    }
+
     pub fn all_hosts(&self) -> Vec<String> {
         let mut hosts: Vec<String> = self
             .sources
@@ -133,42 +111,6 @@ impl LoadedExtension {
         };
         let Json(result): Json<SourceResult<T>> = self.plugin.call(export, Json(input))?;
         Ok(result?)
-    }
-
-    pub fn filters(&mut self, source_id: &str) -> HostResult<Vec<Filter>> {
-        self.ensure_source(source_id)?;
-        let Json(v): Json<Vec<Filter>> = self.plugin.call(
-            "get_filters",
-            Json(Sourced {
-                source_id: source_id.to_owned(),
-                payload: (),
-            }),
-        )?;
-        Ok(v)
-    }
-
-    pub fn settings(&mut self, source_id: &str) -> HostResult<Vec<Setting>> {
-        self.ensure_source(source_id)?;
-        let Json(v): Json<Vec<Setting>> = self.plugin.call(
-            "get_settings",
-            Json(Sourced {
-                source_id: source_id.to_owned(),
-                payload: (),
-            }),
-        )?;
-        Ok(v)
-    }
-
-    pub fn rate_limits(&mut self, source_id: &str) -> HostResult<Vec<RateLimit>> {
-        self.ensure_source(source_id)?;
-        let Json(v): Json<Vec<RateLimit>> = self.plugin.call(
-            "get_rate_limits",
-            Json(Sourced {
-                source_id: source_id.to_owned(),
-                payload: (),
-            }),
-        )?;
-        Ok(v)
     }
 
     pub fn homepage(&mut self, source_id: &str) -> HostResult<Homepage> {

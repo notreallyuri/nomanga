@@ -7,6 +7,31 @@ use tauri_plugin_notification::NotificationExt;
 
 const IDLE_POLL: Duration = Duration::from_secs(30 * 60);
 
+const EVICT_SWEEP: Duration = Duration::from_secs(60);
+const EVICT_AFTER: Duration = Duration::from_secs(5 * 60);
+
+// A loaded source holds several MB of compiled code that comes back when it is
+// dropped, and rebuilding costs on the order of 10ms -- cheap enough that the
+// user never sees it, so browsing one source does not keep every source they
+// visited earlier resident for the rest of the session. Kept separate from the
+// library refresh loop, whose interval is user-configurable and far too coarse
+// to sweep on.
+pub async fn evict_loop(app: AppHandle) {
+    loop {
+        tokio::time::sleep(EVICT_SWEEP).await;
+
+        let registry = {
+            let state = app.state::<AppState>();
+            state.registry.clone()
+        };
+
+        let Ok(registry) = registry.read() else {
+            continue;
+        };
+        registry.evict_idle(EVICT_AFTER);
+    }
+}
+
 // Owned values, so no settings lock guard is held across the loop's awaits.
 fn read_config(app: &AppHandle) -> (Option<Duration>, bool) {
     let state = app.state::<AppState>();

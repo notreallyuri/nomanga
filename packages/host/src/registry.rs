@@ -1,33 +1,102 @@
 use crate::rate_limit::RateLimiter;
+use crate::snapshot::{self, ExtensionSnapshot, SourceSnapshot};
 use crate::{ExtensionMetadata, HostError, HostResult, LoadedExtension};
+use nomanga_core::extension::config::Setting;
+use nomanga_core::extension::filter::Filter;
 use nomanga_core::extension::info::ExtensionInfo;
 use nomanga_core::extension::rate_limit::SourceMethod;
 use nomanga_core::extension::source::SourceInfo;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 #[derive(Clone)]
 pub struct SourceHandle {
     pub info: SourceInfo,
     pub extension_id: String,
-    wasm_path: PathBuf,
-    plugin: Arc<Mutex<LoadedExtension>>,
+    meta: Arc<ExtensionMetadata>,
+    config: Arc<Mutex<HashMap<String, String>>>,
+    transport: crate::transport::TransportShared,
+    enabled: Arc<AtomicBool>,
+    plugin: Arc<Mutex<Option<Loaded>>>,
     limiter: Arc<Mutex<RateLimiter>>,
 }
 
+// The instant lives with the instance rather than beside it so the two can
+// never disagree about whether a source is in use.
+struct Loaded {
+    plugin: LoadedExtension,
+    last_used: Instant,
+}
+
 impl SourceHandle {
+    // Compiling a source's wasm costs several MB of resident memory that is
+    // never handed back, so it happens here -- on the first call that actually
+    // needs to run guest code -- rather than for every installed source at
+    // startup. The lock is held across the build so a burst of concurrent first
+    // calls compiles once, not once each.
     pub fn with_plugin<T>(
         &self,
         f: impl FnOnce(&mut LoadedExtension) -> HostResult<T>,
     ) -> HostResult<T> {
+        // Checked before the lock so a source the user turned off can never
+        // reach the build below, which is what bounds how much an install can
+        // ever cost: only sources they opted into are compilable.
+        if !self.enabled.load(Ordering::Relaxed) {
+            return Err(HostError::SourceDisabled(self.info.id.clone()));
+        }
+
         let mut guard = self.plugin.lock().map_err(|_| HostError::Poisoned)?;
-        f(&mut guard)
+
+        if guard.is_none() {
+            *guard = Some(Loaded {
+                plugin: self.build()?,
+                last_used: Instant::now(),
+            });
+        }
+
+        let loaded = guard.as_mut().expect("just built");
+        let result = f(&mut loaded.plugin);
+
+        // Stamped on the way out, and for failures too: a call that errored
+        // still means the user is on this source, and evicting it would only
+        // make the retry slower.
+        loaded.last_used = Instant::now();
+
+        result
     }
 
-    /// Like [`with_plugin`](Self::with_plugin) but first waits out any rate
-    /// limit the source declared for `method`. Safe to call from a blocking
-    /// task — it may sleep the current thread.
+    // `try_lock` because a source mid-call is in use by definition, and the
+    // sweeper must never park behind a network round trip.
+    fn evict_if_idle(&self, idle_for: Duration) -> bool {
+        let Ok(mut guard) = self.plugin.try_lock() else {
+            return false;
+        };
+
+        let idle = guard
+            .as_ref()
+            .is_some_and(|l| l.last_used.elapsed() >= idle_for);
+
+        if idle {
+            *guard = None;
+        }
+
+        idle
+    }
+
+    fn build(&self) -> HostResult<LoadedExtension> {
+        let config = {
+            let config = self.config.lock().map_err(|_| HostError::Poisoned)?;
+            config.clone()
+        };
+        let hosts = self.info.hosts.clone();
+
+        self.meta
+            .activate(hosts.clone(), config, self.transport.context(hosts))
+    }
+
     pub fn throttled<T>(
         &self,
         method: SourceMethod,
@@ -42,11 +111,48 @@ impl SourceHandle {
         }
         self.with_plugin(f)
     }
+
+    // Settings reach the guest through the manifest, which is fixed once a
+    // plugin is built, so the instance is dropped rather than rebuilt here --
+    // the next call picks the new values up.
+    pub fn set_config(&self, config: HashMap<String, String>) -> HostResult<()> {
+        {
+            let mut current = self.config.lock().map_err(|_| HostError::Poisoned)?;
+            *current = config;
+        }
+
+        let mut plugin = self.plugin.lock().map_err(|_| HostError::Poisoned)?;
+        *plugin = None;
+
+        Ok(())
+    }
+
+    pub fn is_loaded(&self) -> bool {
+        self.plugin.lock().is_ok_and(|p| p.is_some())
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.enabled.load(Ordering::Relaxed)
+    }
+
+    // Turning a source off releases whatever it had already built rather than
+    // waiting for the process to end, so the memory comes back at the moment
+    // the user asks for it.
+    pub fn set_enabled(&self, enabled: bool) -> HostResult<()> {
+        self.enabled.store(enabled, Ordering::Relaxed);
+
+        if !enabled {
+            let mut plugin = self.plugin.lock().map_err(|_| HostError::Poisoned)?;
+            *plugin = None;
+        }
+
+        Ok(())
+    }
 }
 
 pub struct Registry {
     dir: PathBuf,
-    extensions: Vec<ExtensionInfo>,
+    snapshots: Vec<ExtensionSnapshot>,
     sources: HashMap<String, SourceHandle>,
     transport: crate::transport::TransportShared,
 }
@@ -62,7 +168,7 @@ impl Registry {
 
         let mut registry = Self {
             dir,
-            extensions: Vec::new(),
+            snapshots: Vec::new(),
             sources: HashMap::new(),
             transport,
         };
@@ -91,96 +197,124 @@ impl Registry {
     ) -> HostResult<ExtensionInfo> {
         let src = wasm_path.as_ref();
 
-        let meta = ExtensionMetadata::inspect(src.to_string_lossy().as_ref())?;
+        let snapshot = ExtensionSnapshot::build(src)?;
 
-        let dest = self.dir.join(format!("{}.wasm", meta.extension.id));
+        let dest = self.dir.join(format!("{}.wasm", snapshot.extension.id));
         std::fs::create_dir_all(&self.dir).ok();
         std::fs::copy(src, &dest).map_err(|source| HostError::WasmRead {
             path: dest.to_string_lossy().into_owned(),
             source,
         })?;
 
-        self.load_from(&dest, configs)?;
-        Ok(meta.extension)
+        // Installing is the one time the user is waiting on us and can act on a
+        // filesystem problem, so a snapshot that cannot be persisted is an error
+        // here rather than a silently slower startup forever after.
+        snapshot.write(&snapshot::path_for(&self.dir, &snapshot.extension.id))?;
+
+        let info = snapshot.extension.clone();
+        self.adopt(snapshot, &dest, configs);
+
+        Ok(info)
     }
 
-    pub fn reactivate(
-        &mut self,
-        source_id: &str,
-        config: HashMap<String, String>,
-    ) -> HostResult<()> {
-        let wasm_path = self
-            .sources
+    pub fn set_config(&self, source_id: &str, config: HashMap<String, String>) -> HostResult<()> {
+        self.sources
             .get(source_id)
-            .map(|h| h.wasm_path.clone())
-            .ok_or_else(|| HostError::UnknownSource(source_id.to_owned()))?;
-
-        let meta = ExtensionMetadata::inspect(wasm_path.to_string_lossy().as_ref())?;
-        let source = meta
-            .sources
-            .iter()
-            .find(|s| s.id == source_id)
-            .ok_or_else(|| HostError::UnknownSource(source_id.into()))?;
-
-        let mut plugin = meta.activate(
-            source.hosts.clone(),
-            config,
-            self.transport.context(source.hosts.clone()),
-        )?;
-        let limits = plugin.rate_limits(source_id).unwrap_or_default();
-
-        if let Some(h) = self.sources.get_mut(source_id) {
-            h.plugin = Arc::new(Mutex::new(plugin));
-            h.limiter = Arc::new(Mutex::new(RateLimiter::new(&limits)));
-        }
-
-        Ok(())
+            .ok_or_else(|| HostError::UnknownSource(source_id.to_owned()))?
+            .set_config(config)
     }
 
-    /// Replaces any already-loaded extension of the same id rather than adding
-    /// to it, so a reinstall does not list the extension twice and a source the
-    /// new build dropped does not linger. Every source is activated before
-    /// `self` is touched, so a failure part-way through leaves the previous
-    /// version in place rather than half-removed.
     fn load_from(
         &mut self,
         path: &Path,
         configs: &HashMap<String, HashMap<String, String>>,
     ) -> HostResult<()> {
-        let meta = ExtensionMetadata::inspect(path.to_string_lossy().as_ref())?;
-        let extension_id = meta.extension.id.clone();
+        let snapshot = self.snapshot_for(path)?;
+        self.adopt(snapshot, path, configs);
 
-        let mut loaded = Vec::with_capacity(meta.sources.len());
+        Ok(())
+    }
 
-        for source in &meta.sources {
-            let config = configs.get(&source.id).cloned().unwrap_or_default();
-            let mut plugin = meta.activate(
-                source.hosts.clone(),
-                config,
-                self.transport.context(source.hosts.clone()),
-            )?;
-            let limits = plugin.rate_limits(&source.id).unwrap_or_default();
+    // Reads the sidecar written at install time, falling back to a rebuild when
+    // it is missing or describes a different build of the wasm -- the latter
+    // covers an extension updated out of band, whose declarations would
+    // otherwise be served stale forever.
+    fn snapshot_for(&self, path: &Path) -> HostResult<ExtensionSnapshot> {
+        let hash = {
+            let bytes = std::fs::read(path).map_err(|source| HostError::WasmRead {
+                path: path.to_string_lossy().into_owned(),
+                source,
+            })?;
+            snapshot::digest(&bytes)
+        };
 
-            loaded.push(SourceHandle {
-                info: source.clone(),
-                extension_id: extension_id.clone(),
-                plugin: Arc::new(Mutex::new(plugin)),
-                limiter: Arc::new(Mutex::new(RateLimiter::new(&limits))),
-                wasm_path: path.to_path_buf(),
-            });
+        // Keyed on the file name rather than the extension id so a lookup and a
+        // write always agree, even for a wasm dropped in under another name.
+        let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+        let sidecar = snapshot::path_for(&self.dir, &stem);
+
+        if let Some(cached) = ExtensionSnapshot::load_fresh(&sidecar, &hash) {
+            return Ok(cached);
         }
 
+        let rebuilt = ExtensionSnapshot::build(path)?;
+        if let Err(e) = rebuilt.write(&sidecar) {
+            eprintln!("could not cache metadata for {}: {e}", rebuilt.extension.id);
+        }
+
+        Ok(rebuilt)
+    }
+
+    // Replaces any already-loaded extension of the same id rather than adding to
+    // it, so a reinstall does not list the extension twice and a source the new
+    // build dropped does not linger. Registering a source only records how to
+    // build it; nothing here runs guest code.
+    fn adopt(
+        &mut self,
+        snapshot: ExtensionSnapshot,
+        path: &Path,
+        configs: &HashMap<String, HashMap<String, String>>,
+    ) {
+        let extension_id = snapshot.extension.id.clone();
+        let meta = Arc::new(ExtensionMetadata::from_snapshot(
+            &snapshot,
+            path.to_string_lossy(),
+        ));
+
+        let handles: Vec<SourceHandle> = snapshot
+            .sources
+            .iter()
+            .map(|source| SourceHandle {
+                info: source.info.clone(),
+                extension_id: extension_id.clone(),
+                meta: meta.clone(),
+                config: Arc::new(Mutex::new(
+                    configs.get(&source.info.id).cloned().unwrap_or_default(),
+                )),
+                transport: self.transport.clone(),
+                // The host has no idea which sources the user opted into; the
+                // application pushes that in right after loading. Starting open
+                // rather than closed means forgetting to costs memory, not a
+                // registry where nothing works.
+                enabled: Arc::new(AtomicBool::new(true)),
+                plugin: Arc::new(Mutex::new(None)),
+                limiter: Arc::new(Mutex::new(RateLimiter::new(&source.rate_limits))),
+            })
+            .collect();
+
         self.sources.retain(|_, h| h.extension_id != extension_id);
-        for handle in loaded {
+        for handle in handles {
             self.sources.insert(handle.info.id.clone(), handle);
         }
 
-        match self.extensions.iter_mut().find(|e| e.id == extension_id) {
-            Some(existing) => *existing = meta.extension,
-            None => self.extensions.push(meta.extension),
+        match self
+            .snapshots
+            .iter_mut()
+            .find(|s| s.extension.id == extension_id)
+        {
+            Some(existing) => *existing = snapshot,
+            None => self.snapshots.push(snapshot),
         }
-
-        Ok(())
     }
 
     pub fn source(&self, source_id: &str) -> HostResult<SourceHandle> {
@@ -194,14 +328,63 @@ impl Registry {
         self.sources.values().map(|h| h.info.clone()).collect()
     }
 
-    pub fn extensions(&self) -> &[ExtensionInfo] {
-        &self.extensions
+    pub fn loaded_count(&self) -> usize {
+        self.sources.values().filter(|h| h.is_loaded()).count()
+    }
+
+    // Replaces the whole gate rather than merging, so a source that has lost its
+    // preference row ends up off instead of keeping a stale opt-in.
+    pub fn set_enabled(&self, enabled: &HashSet<String>) -> HostResult<()> {
+        for (id, handle) in &self.sources {
+            handle.set_enabled(enabled.contains(id))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn set_source_enabled(&self, source_id: &str, enabled: bool) -> HostResult<()> {
+        self.sources
+            .get(source_id)
+            .ok_or_else(|| HostError::UnknownSource(source_id.to_owned()))?
+            .set_enabled(enabled)
+    }
+
+    // Compiled code is the bulk of a loaded source and most of it returns to the
+    // OS when dropped, so a source nobody has touched in a while is worth giving
+    // up: rebuilding it costs milliseconds on the next call.
+    pub fn evict_idle(&self, idle_for: Duration) -> usize {
+        self.sources
+            .values()
+            .filter(|h| h.evict_if_idle(idle_for))
+            .count()
+    }
+
+    pub fn extensions(&self) -> Vec<ExtensionInfo> {
+        self.snapshots
+            .iter()
+            .map(|s| s.extension.clone())
+            .collect()
+    }
+
+    fn source_snapshot(&self, source_id: &str) -> HostResult<&SourceSnapshot> {
+        self.snapshots
+            .iter()
+            .find_map(|s| s.source(source_id))
+            .ok_or_else(|| HostError::UnknownSource(source_id.to_owned()))
+    }
+
+    pub fn filters(&self, source_id: &str) -> HostResult<Vec<Filter>> {
+        Ok(self.source_snapshot(source_id)?.filters.clone())
+    }
+
+    pub fn settings(&self, source_id: &str) -> HostResult<Vec<Setting>> {
+        Ok(self.source_snapshot(source_id)?.settings.clone())
     }
 
     pub fn empty(dir: impl Into<PathBuf>, transport: crate::transport::TransportShared) -> Self {
         Self {
             dir: dir.into(),
-            extensions: Vec::new(),
+            snapshots: Vec::new(),
             sources: HashMap::new(),
             transport,
         }
@@ -231,14 +414,22 @@ impl Registry {
             .map(|(id, _)| id.clone())
             .collect();
 
-        if removed.is_empty() && !self.extensions.iter().any(|e| e.id == extension_id) {
+        if removed.is_empty()
+            && !self
+                .snapshots
+                .iter()
+                .any(|s| s.extension.id == extension_id)
+        {
             return Err(HostError::UnknownSource(extension_id.to_owned()));
         }
 
         for id in &removed {
             self.sources.remove(id);
         }
-        self.extensions.retain(|e| e.id != extension_id);
+
+        self.snapshots.retain(|s| s.extension.id != extension_id);
+
+        std::fs::remove_file(snapshot::path_for(&self.dir, extension_id)).ok();
 
         let path = self.dir.join(format!("{extension_id}.wasm"));
         if path.exists() {
