@@ -6,7 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CoverImage } from "@/components/manga/cover-image";
-import { MangaCard } from "@/components/manga/manga-card";
+import { coverVariants, MangaCard } from "@/components/manga/manga-card";
 import { MangaRow } from "@/components/manga/manga-grid";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -18,6 +18,7 @@ import {
 	useLibraryRefresh,
 	useLibraryUpdates,
 } from "@/hooks/services/use-library";
+import { useAppearance } from "@/hooks/services/use-settings";
 import type { ContinueReadingItem, LibraryUpdate } from "@/types/bindings";
 
 export const Route = createFileRoute("/_app/")({
@@ -162,6 +163,8 @@ function Section({
 }
 
 function ResumeCard({ item }: { item: ContinueReadingItem }) {
+	const appearance = useAppearance();
+
 	return (
 		<Link
 			className="group block w-32 shrink-0"
@@ -172,7 +175,7 @@ function ResumeCard({ item }: { item: ContinueReadingItem }) {
 			}}
 			to="/read/$sourceId/$mangaId/$chapterId"
 		>
-			<div className="relative aspect-2/3 overflow-hidden rounded-none bg-muted ring-offset-2 ring-offset-background transition-shadow group-focus-visible:ring-2 group-focus-visible:ring-ring">
+			<div className={coverVariants({ coverStyle: appearance.cover_style })}>
 				<CoverImage
 					className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 					sourceId={item.source_id}

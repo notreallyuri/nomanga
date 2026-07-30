@@ -30,7 +30,7 @@ const cardVariants = cva("group block focus-visible:outline-none", {
 	defaultVariants: { dimmed: false },
 });
 
-const coverVariants = cva(
+export const coverVariants = cva(
 	[
 		"relative aspect-2/3 overflow-hidden bg-muted",
 		"ring-offset-2 ring-offset-background transition-shadow",
