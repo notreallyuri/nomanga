@@ -139,6 +139,45 @@ itself. Worth keeping the words apart in UI copy too.
   pacman installs — and with Linux delegating to the package manager, that
   constituency is gone.
 
+### Release & distribution
+
+Versioning is settled as of 2026-07-30: every manifest reads `0.1.0`, and
+`[workspace.package]` in the root `Cargo.toml` now carries `version`, `license`
+and `repository` so a release is one edit. `core` and `sdk` keep their own
+versions — they are the pair a third party would pin, and the rest are one
+binary, so nothing resolves them by version. `pkgver()` derives from
+`git describe` rather than a hardcoded string, so the Arch package tracks
+releases on its own once a tag exists.
+
+- [ ] Tag `v0.1.0`. Held deliberately: the app is early and UX polishing comes
+  first. Note the tag *is* the release — `.github/workflows/build.yml` triggers
+  on `v*`, cuts a draft GitHub release and runs the three-platform build, so
+  pushing one is the moment this becomes publicly visible.
+
+- [ ] Publish to crates.io, in order: `core` → `host` → `sdk`. Only `core` has
+  to go first (the other two depend on it). Both `host` and `sdk` already carry
+  `version = "0.1.0"` on their `nomanga-core` path dependency, which cargo
+  requires before it will publish at all. `cli` still has `*` on its path deps,
+  so it would need the same treatment if `cargo install nomanga-cli` ever
+  becomes a goal.
+
+- [ ] Move the client to its own repository, taking `nomanga-services` with it.
+  The seam is reusable engine versus app: this repo keeps `core`, `sdk`, `host`
+  and `cli`; the client repo gets `nomanga-client` + `nomanga-services`, both
+  `publish = false`.
+  Services stays off crates.io on purpose — its public API is really the app's
+  SQLite schema, so it churns with every feature, and SemVer on that is a
+  permanent tax for no external consumer. A split-out client can consume it by
+  git tag, the same way `docs/writing-a-source.md` already tells extension
+  authors to consume the SDK.
+  This is also what makes publishing `host` worth doing rather than optional:
+  the split client needs `core` and `host` from somewhere, and `cargo add` beats
+  git-pinning your own engine.
+  Travelling with services when it moves: the `.sqlx` offline cache, the
+  migrations, and `SQLX_OFFLINE: true` in CI — nothing left here touches sqlx.
+  The Tauri bundling, `packaging/arch/PKGBUILD`, `packaging/install-local.sh`
+  and the `.desktop` file go too; the CLI build step stays.
+
 ### Downloads and updates
 
 - [ ] Parallel chapter downloads, 1–4 at a time, configurable in System
