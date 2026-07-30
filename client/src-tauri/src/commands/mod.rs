@@ -1,5 +1,6 @@
 pub mod backup;
 pub mod cache;
+pub mod challenge;
 pub mod debug;
 pub mod downloads;
 pub mod extension;

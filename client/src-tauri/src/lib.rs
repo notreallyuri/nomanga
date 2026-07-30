@@ -83,6 +83,10 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             source::source_chapters,
             source::source_pages,
             source::install_extension,
+            // cloudflare-style interstitials
+            challenge::solve_challenge,
+            challenge::cancel_challenge,
+            challenge::move_challenge,
             // settings
             settings::get_settings,
             settings::save_settings,

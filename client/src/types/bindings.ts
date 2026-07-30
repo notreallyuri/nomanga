@@ -64,6 +64,21 @@ export const commands = {
 	sourceChapters: (sourceId: string, mangaId: string) => typedError<Chapter[], CommandError>(__TAURI_INVOKE("source_chapters", { sourceId, mangaId })),
 	sourcePages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("source_pages", { sourceId, mangaId, chapterId })),
 	installExtension: (wasmPath: string) => typedError<string, CommandError>(__TAURI_INVOKE("install_extension", { wasmPath })),
+	/**
+	 *  Opens the source's challenge page in an embedded browser view and waits for
+	 *  the user to clear it.
+	 * 
+	 *  Returns true once every cookie the source named has appeared and been copied
+	 *  into the shared jar, false on timeout or if the user closed the dialog first.
+	 */
+	solveChallenge: (sourceId: string, rect: ChallengeRect) => typedError<boolean, CommandError>(__TAURI_INVOKE("solve_challenge", { sourceId, rect })),
+	/**
+	 *  Closes the challenge view without waiting for it to be solved. The pending
+	 *  `solve_challenge` call notices on its next poll and resolves false.
+	 */
+	cancelChallenge: () => typedError<null, CommandError>(__TAURI_INVOKE("cancel_challenge")),
+	/**  Keeps the embedded view aligned with the dialog when the window resizes. */
+	moveChallenge: (rect: ChallengeRect) => typedError<null, CommandError>(__TAURI_INVOKE("move_challenge", { rect })),
 	getSettings: () => typedError<Settings, CommandError>(__TAURI_INVOKE("get_settings")),
 	saveSettings: (newSettings: Settings) => typedError<null, CommandError>(__TAURI_INVOKE("save_settings", { newSettings })),
 	effectiveReaderSettings: (sourceId: string, mangaId: string) => typedError<ReaderSettings, CommandError>(__TAURI_INVOKE("effective_reader_settings", { sourceId, mangaId })),
@@ -192,6 +207,35 @@ export type CategoryOptions = {
 };
 
 export type CategorySort = "added" | "title" | "unread";
+
+/**
+ *  An interstitial the user has to clear in a real browser before the source
+ *  answers — Cloudflare's managed challenge being the case this exists for.
+ */
+export type Challenge = {
+	/**
+	 *  Page to open. Not necessarily `base_url`: the challenge is often
+	 *  route-scoped, so this should be one of the routes that actually 403s.
+	 */
+	url: string,
+	/**
+	 *  Cookies to harvest once the challenge clears, e.g. `cf_clearance`. They
+	 *  are HttpOnly, so nothing script-side can read them back.
+	 */
+	cookies: string[],
+};
+
+/**
+ *  Where the frontend's dialog body sits, in logical pixels relative to the
+ *  window. The embedded webview is a native child rather than part of the DOM,
+ *  so it cannot be laid out by CSS and has to be told.
+ */
+export type ChallengeRect = {
+	x: number | null,
+	y: number | null,
+	width: number | null,
+	height: number | null,
+};
 
 export type Chapter = {
 	id: string,
@@ -572,6 +616,7 @@ export type SourceInfo = {
 	icon_url: string | null,
 	hosts: string[],
 	nsfw: boolean,
+	challenge?: Challenge | null,
 };
 
 export type SourcePreference = {

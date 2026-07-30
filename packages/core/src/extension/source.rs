@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 // Bump on any change to the guest-facing surface: exported functions, host
 // functions the guest imports, or the shape of the types crossing the boundary.
-pub const ABI_VERSION: u32 = 5;
+pub const ABI_VERSION: u32 = 6;
 
 // Raise to ABI_VERSION only when a change breaks extensions built against the
 // older ABI; leave it alone for additive ones. Adding a struct field is additive
@@ -29,6 +29,23 @@ pub struct SourceInfo {
     pub icon_url: Option<String>,
     pub hosts: Vec<String>,
     pub nsfw: bool,
+    // Additive: an ABI 5 extension emits no `challenge` and reads as None, which
+    // is why ABI_MIN_SUPPORTED stays at 5.
+    #[serde(default)]
+    pub challenge: Option<Challenge>,
+}
+
+/// An interstitial the user has to clear in a real browser before the source
+/// answers — Cloudflare's managed challenge being the case this exists for.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Challenge {
+    /// Page to open. Not necessarily `base_url`: the challenge is often
+    /// route-scoped, so this should be one of the routes that actually 403s.
+    pub url: String,
+    /// Cookies to harvest once the challenge clears, e.g. `cf_clearance`. They
+    /// are HttpOnly, so nothing script-side can read them back.
+    pub cookies: Vec<String>,
 }
 
 #[cfg_attr(feature = "typescript", derive(specta::Type))]

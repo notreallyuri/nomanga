@@ -258,6 +258,7 @@ mod tests {
                     icon_url: None,
                     hosts: vec!["example.org".into()],
                     nsfw: true,
+                    challenge: None,
                 }],
             }],
         }
