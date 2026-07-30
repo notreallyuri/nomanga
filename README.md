@@ -82,6 +82,14 @@ why Arch needs the PKGBUILD.
 | [Building & running](docs/building.md) | Dev builds, packaging, platform notes, the sqlx cache |
 | [CLI reference](docs/cli.md) | Running a source without the app |
 
+## License
+
+Copyright 2026 notreallyuri
+
+Licensed under [Apache-2.0](LICENSE). That covers the app and every crate in the
+workspace, including `nomanga-core` and `nomanga-sdk` — so a source you write
+against the SDK is yours to license however you like.
+
 ## Tech stack
 
 Rust (workspace, edition 2024) · [Extism](https://extism.org) (WASM host/PDK) ·
