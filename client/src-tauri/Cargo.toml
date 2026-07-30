@@ -1,9 +1,11 @@
 [package]
 name = "client"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version.workspace = true
+description = "nomanga desktop app"
 edition = "2021"
+repository.workspace = true
+license.workspace = true
+publish = false
 
 [profile.dev]
 debug = true

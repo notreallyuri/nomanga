@@ -3,8 +3,8 @@ name = "nomanga-sdk"
 version = "0.1.0"
 edition = "2024"
 description = "Guest-side SDK for writing nomanga source extensions"
-repository = "https://github.com/notreallyuri/nomanga"
-# license = "..."   # required before this can be published to crates.io
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
 # The version is what a crates.io release would resolve against; the path wins

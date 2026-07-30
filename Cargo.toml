@@ -3,6 +3,14 @@ resolver = "3"
 members = ["client/src-tauri", "packages/*", "cli"]
 default-members = ["client/src-tauri", "packages/*", "cli"]
 
+# The shipped app is one binary, so the crates inside it carry one version: the
+# release. `core` and `sdk` opt out — they are the pair extension authors would
+# pin from crates.io, so they need to move on their own.
+[workspace.package]
+version = "0.1.0"
+license = "Apache-2.0"
+repository = "https://github.com/notreallyuri/nomanga"
+
 [profile.release]
 lto = true
 opt-level = "z"

@@ -1,7 +1,10 @@
 [package]
 name = "nomanga-cli"
-version = "0.1.0"
+version.workspace = true
 edition = "2024"
+description = "Run and package nomanga source extensions without the app"
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
 nomanga-core = { path = "../packages/core" }

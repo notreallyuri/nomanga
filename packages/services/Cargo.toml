@@ -1,13 +1,19 @@
 [package]
 name = "nomanga-services"
-version = "0.1.0"
+version.workspace = true
 edition = "2024"
+description = "SQLite persistence for nomanga: library, history, downloads, settings"
+repository.workspace = true
+license.workspace = true
+# Deliberately not on crates.io: the public API here is really the app's schema,
+# so it churns with every feature. A split-out client consumes it by git tag.
+publish = false
 
 [features]
 typescript = ["dep:specta"]
 
 [dependencies]
-nomanga-core = { path = "../core" }
+nomanga-core = { path = "../core", version = "0.1.0" }
 
 serde = { workspace = true }
 serde_json = { workspace = true }

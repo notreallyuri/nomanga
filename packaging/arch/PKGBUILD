@@ -14,9 +14,14 @@ conflicts=("$_pkgname")
 source=("git+https://github.com/notreallyuri/nomanga.git")
 sha256sums=('SKIP')
 
+# Derived from the newest v* tag rather than hardcoded, so this tracks releases
+# on its own: v0.1.0-12-gabc1234 becomes 0.1.0.r12.gabc1234. The fallback covers
+# a shallow clone or a tree with no tags yet.
 pkgver() {
 	cd "$srcdir/$_pkgname"
-	printf "0.1.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+	git describe --long --tags --abbrev=7 --match 'v*' 2>/dev/null |
+		sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' ||
+		printf "0.0.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
 }
 
 prepare() {
