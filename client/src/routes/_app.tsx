@@ -32,7 +32,7 @@ function AppShell() {
 	useStartupLibraryCheck();
 
 	return (
-		<SidebarProvider className="h-full overflow-hidden">
+		<SidebarProvider className="h-full overflow-hidden" data-app-shell>
 			<Sidebar onSettingsOpenChange={setOpen} settingsOpen={open} />
 			<SidebarInset className="min-w-0 overflow-hidden">
 				<main className="min-h-0 min-w-0 flex-1 overflow-hidden">

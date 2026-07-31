@@ -18,6 +18,24 @@
 	}
 }
 
+/*
+ * Base UI's modal scroll lock freezes the document, and nothing in this app
+ * scrolls there -- every route scrolls inside its own container. Those keep
+ * live scrollbars while a dialog is up, and WebKit composites them above the
+ * fixed backdrop, so they show through it. The backdrop already swallows the
+ * wheel, so hiding the bars is all that is left to do.
+ *
+ * Scoped to the shell rather than the document: a dialog portals to <body>,
+ * outside it, and needs its own scrollbars to keep working.
+ */
+body:has([data-slot$="-overlay"]) [data-app-shell] * {
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
 @theme inline {
 	--font-heading: var(--font-sans);
 	--font-sans: "Figtree Variable", sans-serif;
