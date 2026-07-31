@@ -612,7 +612,12 @@ export type SettingKind = { type: "Text"; secret: boolean; placeholder: string |
 export type Settings = {
 	appearance?: AppearanceSettings,
 	reader?: ReaderSettings,
+	sidebar?: SidebarSettings,
 	system?: SystemSettings,
+};
+
+export type SidebarSettings = {
+	pinned_sources?: string[],
 };
 
 export type SourceInfo = {

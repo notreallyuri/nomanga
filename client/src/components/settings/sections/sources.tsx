@@ -1,7 +1,6 @@
 import {
 	ArrowLeftIcon,
 	CaretRightIcon,
-	GlobeIcon,
 	ShieldCheckIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -11,6 +10,7 @@ import {
 	SettingRow,
 } from "@/components/settings/components/parts";
 import { ExtensionSettings } from "@/components/settings/sections/source-settings-form";
+import { SourceIcon } from "@/components/source-icon";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -92,7 +92,12 @@ function SourceListRow({
 				onClick={onConfigure}
 				type="button"
 			>
-				<SourceIcon name={info.name} url={info.icon_url ?? undefined} />
+				<SourceIcon
+					className="size-8"
+					iconSize={16}
+					name={info.name}
+					url={info.icon_url}
+				/>
 
 				<div className="min-w-0">
 					<SourceName name={info.name} nsfw={info.nsfw} />
@@ -137,7 +142,12 @@ function SourceDetail({
 				>
 					<ArrowLeftIcon />
 				</Button>
-				<SourceIcon name={info.name} url={info.icon_url ?? undefined} />
+				<SourceIcon
+					className="size-8"
+					iconSize={16}
+					name={info.name}
+					url={info.icon_url}
+				/>
 				<div className="min-w-0 flex-1">
 					<SourceName name={info.name} nsfw={info.nsfw} />
 					<p className="text-muted-foreground text-xs uppercase">
@@ -276,26 +286,5 @@ function SourceName({ name, nsfw }: { name: string; nsfw: boolean }) {
 				</span>
 			)}
 		</p>
-	);
-}
-
-function SourceIcon({ url, name }: { url?: string; name: string }) {
-	const [failed, setFailed] = useState(false);
-
-	if (!url || failed) {
-		return (
-			<div className="flex size-8 shrink-0 items-center justify-center rounded bg-muted">
-				<GlobeIcon className="text-muted-foreground" size={16} />
-			</div>
-		);
-	}
-
-	return (
-		<img
-			alt={`${name} icon`}
-			className="size-8 shrink-0 rounded object-cover"
-			onError={() => setFailed(true)}
-			src={url}
-		/>
 	);
 }

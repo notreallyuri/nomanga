@@ -82,6 +82,42 @@ export function useAppearance(): Required<AppearanceSettings> {
 	};
 }
 
+export const MAX_PINNED_SOURCES = 5;
+
+/**
+ * The sources pinned under Browse in the sidebar, in pin order. `toggle`
+ * refuses a sixth pin rather than evicting one — silently dropping someone
+ * else's pin is worse than saying no.
+ */
+export function usePinnedSources() {
+	const { data } = useSettings();
+	const update = useUpdateSettings();
+
+	const pinned = data?.sidebar?.pinned_sources ?? [];
+	const isPinned = (sourceId: string) => pinned.includes(sourceId);
+
+	const toggle = (sourceId: string) => {
+		if (isPinned(sourceId)) {
+			update("sidebar", {
+				pinned_sources: pinned.filter((id) => id !== sourceId),
+			});
+			return true;
+		}
+
+		if (pinned.length >= MAX_PINNED_SOURCES) return false;
+
+		update("sidebar", { pinned_sources: [...pinned, sourceId] });
+		return true;
+	};
+
+	return {
+		pinned,
+		isPinned,
+		toggle,
+		isFull: pinned.length >= MAX_PINNED_SOURCES,
+	};
+}
+
 export const SYSTEM_DEFAULTS: Required<SystemSettings> = {
 	update_on_startup: true,
 	background_updates: "Off",

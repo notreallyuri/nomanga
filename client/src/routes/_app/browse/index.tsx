@@ -1,6 +1,5 @@
 import {
 	CaretRightIcon,
-	GlobeIcon,
 	MagnifyingGlassIcon,
 	PlugsIcon,
 	PlusIcon,
@@ -8,7 +7,9 @@ import {
 } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { PinToggle } from "@/components/browse/pin-toggle";
 import { useSettingsUI } from "@/components/settings/context";
+import { SourceIcon } from "@/components/source-icon";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -146,11 +147,11 @@ function SearchAllBar({ disabled }: { disabled?: boolean }) {
 function SourceCard({ info }: { info: SourceInfo }) {
 	return (
 		<Link
-			className="group flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-muted"
+			className="group relative flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-muted"
 			params={{ sourceId: info.id }}
 			to="/browse/$sourceId"
 		>
-			<SourceIcon name={info.name} url={info.icon_url ?? undefined} />
+			<SourceIcon className="size-10" name={info.name} url={info.icon_url} />
 
 			<div className="min-w-0 flex-1">
 				<div className="flex items-center gap-1.5">
@@ -166,32 +167,13 @@ function SourceCard({ info }: { info: SourceInfo }) {
 				</p>
 			</div>
 
+			<PinToggle sourceId={info.id} />
+
 			<CaretRightIcon
 				className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
 				size={16}
 			/>
 		</Link>
-	);
-}
-
-function SourceIcon({ url, name }: { url?: string; name: string }) {
-	const [failed, setFailed] = useState(false);
-
-	if (!url || failed) {
-		return (
-			<div className="flex size-10 shrink-0 items-center justify-center rounded bg-muted">
-				<GlobeIcon className="text-muted-foreground" size={20} />
-			</div>
-		);
-	}
-
-	return (
-		<img
-			alt={`${name} icon`}
-			className="size-10 shrink-0 rounded object-cover"
-			onError={() => setFailed(true)}
-			src={url}
-		/>
 	);
 }
 

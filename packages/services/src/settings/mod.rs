@@ -4,6 +4,7 @@ use std::path::Path;
 
 pub mod appearance;
 pub mod reader;
+pub mod sidebar;
 pub mod system;
 
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
@@ -12,12 +13,17 @@ pub mod system;
 pub struct Settings {
     pub appearance: appearance::AppearanceSettings,
     pub reader: reader::ReaderSettings,
+    pub sidebar: sidebar::SidebarSettings,
     pub system: system::SystemSettings,
 }
 
 pub fn load(path: &Path) -> ServiceResult<Settings> {
     match std::fs::read_to_string(path) {
-        Ok(text) => Ok(serde_json::from_str(&text)?),
+        Ok(text) => {
+            let mut settings: Settings = serde_json::from_str(&text)?;
+            settings.sidebar.pinned_sources = settings.sidebar.pinned();
+            Ok(settings)
+        }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Settings::default()),
         Err(e) => Err(e.into()),
     }

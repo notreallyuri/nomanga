@@ -1,11 +1,18 @@
-import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon, PushPinIcon, XIcon } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { FilterSheet } from "@/components/browse/filter-sheet";
 import { HomepageSections } from "@/components/browse/homepage-sections";
 import { SearchResults } from "@/components/browse/search-result";
 import { SectionView } from "@/components/browse/section-view";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { usePinSource } from "@/hooks/use-pin-source";
 import type { FilterValue } from "@/types/bindings";
 
 interface BrowseSearch {
@@ -110,6 +117,8 @@ function BrowseSource() {
 						onChange={setFilters}
 						sourceId={sourceId}
 					/>
+
+					<PinButton sourceId={sourceId} />
 				</div>
 			</div>
 
@@ -121,5 +130,30 @@ function BrowseSource() {
 				)}
 			</div>
 		</div>
+	);
+}
+
+function PinButton({ sourceId }: { sourceId: string }) {
+	const { pinned, toggle } = usePinSource(sourceId);
+
+	const label = pinned ? "Unpin from sidebar" : "Pin to sidebar";
+
+	return (
+		<Tooltip>
+			<TooltipTrigger
+				render={
+					<Button
+						aria-label={label}
+						aria-pressed={pinned}
+						onClick={toggle}
+						size="icon"
+						variant={pinned ? "default" : "outline"}
+					>
+						<PushPinIcon weight={pinned ? "fill" : "regular"} />
+					</Button>
+				}
+			/>
+			<TooltipContent>{label}</TooltipContent>
+		</Tooltip>
 	);
 }
