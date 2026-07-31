@@ -238,8 +238,17 @@ mod tests {
 
         std::thread::spawn(move || {
             let (mut stream, _) = listener.accept().unwrap();
+
+            // Drained, not parsed: the request is always the same GET, but
+            // answering without reading it can reset the connection under the
+            // client while it is still writing. A short read means the whole
+            // request has arrived, and 0 means the peer gave up.
             let mut scratch = [0_u8; 1024];
-            stream.read(&mut scratch).ok();
+            while let Ok(n) = stream.read(&mut scratch) {
+                if n < scratch.len() {
+                    break;
+                }
+            }
 
             let header = format!(
                 "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
