@@ -397,12 +397,19 @@ export function ChapterTable({
 					clearSelection();
 				}}
 				onDownload={(ids) => {
+					// Queued oldest chapter first, whichever way the table is sorted.
+					// `ids` follows the visible order, which defaults to newest first,
+					// and the queue is strictly first-in-first-out — so without this a
+					// "download everything" run works backwards from the latest chapter.
 					const targets = ids
 						.filter((id) => !downloadedSet.has(id))
-						.map((id) => {
-							const chapter = chapters.find((c) => c.id === id);
-							return { chapter_id: id, title: chapter?.title ?? id };
-						});
+						.map((id) => chapters.find((c) => c.id === id))
+						.filter((chapter) => chapter !== undefined)
+						.sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
+						.map((chapter) => ({
+							chapter_id: chapter.id,
+							title: chapter.title,
+						}));
 					if (targets.length > 0) {
 						queueDownloads.mutate({ sourceId, mangaId, mangaTitle, targets });
 					}
