@@ -252,7 +252,7 @@ function HistoryRow({
 			</TableCell>
 
 			<TableCell className="hidden max-w-0 truncate text-muted-foreground text-sm md:table-cell">
-				{item.last_chapter_id}
+				{item.last_chapter_title || item.last_chapter_id}
 			</TableCell>
 
 			<TableCell className="hidden text-muted-foreground text-sm sm:table-cell">

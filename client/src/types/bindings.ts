@@ -282,6 +282,11 @@ export type ContinueReadingItem = {
 	title: string,
 	cover_url: string,
 	last_chapter_id: string,
+	/**
+	 *  Only known for chapters the library sync has cached, so callers still
+	 *  need the id as a fallback.
+	 */
+	last_chapter_title: string | null,
 	last_page: number,
 	last_chapter_done: boolean,
 	updated_at: string,

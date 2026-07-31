@@ -23,6 +23,9 @@ pub struct ContinueReadingItem {
     pub title: String,
     pub cover_url: String,
     pub last_chapter_id: String,
+    /// Only known for chapters the library sync has cached, so callers still
+    /// need the id as a fallback.
+    pub last_chapter_title: Option<String>,
     pub last_page: i32,
     pub last_chapter_done: bool,
     pub updated_at: DateTime<Utc>,
@@ -175,10 +178,15 @@ pub async fn continue_reading(
     let rows = sqlx::query!(
         r#"SELECT rp.source_id, rp.manga_id, m.title, m.cover_url,
                   rp.last_chapter_id, rp.last_page, rp.last_chapter_done,
+                  cc.title AS "last_chapter_title?: String",
                   rp.updated_at AS "updated_at: DateTime<Utc>"
            FROM read_progress rp
            JOIN manga m
              ON m.source_id = rp.source_id AND m.manga_id = rp.manga_id
+           LEFT JOIN cached_chapter cc
+             ON cc.source_id = rp.source_id
+            AND cc.manga_id = rp.manga_id
+            AND cc.chapter_id = rp.last_chapter_id
            LEFT JOIN source_preference sp
              ON sp.source_id = rp.source_id
            WHERE COALESCE(sp.private, 0) = 0
@@ -203,6 +211,7 @@ pub async fn continue_reading(
             title: r.title,
             cover_url: r.cover_url,
             last_chapter_id: r.last_chapter_id,
+            last_chapter_title: r.last_chapter_title,
             last_page: r.last_page as i32,
             last_chapter_done: r.last_chapter_done != 0,
             updated_at: r.updated_at,
