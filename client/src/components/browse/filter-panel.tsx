@@ -69,6 +69,11 @@ function FilterControl({
 	setValue: (value: FilterValue) => void;
 	clearValue: (id: string) => void;
 }) {
+	// A source may build its options from the network, and a failed fetch reaches
+	// us as an option-less filter. Rendering one leaves a label with nothing under
+	// it, which reads as a broken layout rather than an unavailable filter.
+	if ("options" in filter && filter.options.length === 0) return null;
+
 	switch (filter.type) {
 		case "Sort": {
 			const current = value?.type === "Sort" ? value : undefined;

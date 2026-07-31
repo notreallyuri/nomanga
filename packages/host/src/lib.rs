@@ -9,6 +9,7 @@ use nomanga_core::{
     },
     extension::{
         error::SourceResult,
+        filter::Filter,
         info::ExtensionInfo,
         query::{ChapterRef, MangaPage, MangaRef, SearchQuery, SectionRef},
         source::{SourceInfo, Sourced},
@@ -111,6 +112,26 @@ impl LoadedExtension {
         };
         let Json(result): Json<SourceResult<T>> = self.plugin.call(export, Json(input))?;
         Ok(result?)
+    }
+
+    // Not served from the snapshot like the other declarations: a source may
+    // build its options from the network (nhentai's tag list), and the snapshot
+    // is taken with the transport denied, so anything fetched there comes back
+    // empty and stays that way until the wasm changes. `get_filters` answers
+    // outside `SourceResult`, hence the hand-rolled call.
+    pub fn filters(&mut self, source_id: &str) -> HostResult<Vec<Filter>> {
+        self.ensure_source(source_id)?;
+        crate::transport::set_source(&self.transport_data, source_id);
+
+        let Json(filters): Json<Vec<Filter>> = self.plugin.call(
+            "get_filters",
+            Json(Sourced {
+                source_id: source_id.to_owned(),
+                payload: (),
+            }),
+        )?;
+
+        Ok(filters)
     }
 
     pub fn homepage(&mut self, source_id: &str) -> HostResult<Homepage> {
