@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM download_queue AS q\n                   WHERE EXISTS (SELECT 1 FROM downloaded_chapter dc\n                                  WHERE dc.source_id = q.source_id\n                                    AND dc.manga_id = q.manga_id\n                                    AND dc.chapter_id = q.chapter_id)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "e87fdb624634233db54e8d983d6c4ced8b6224f1af4c3e77476b41e0a2d2c6ca"
+}

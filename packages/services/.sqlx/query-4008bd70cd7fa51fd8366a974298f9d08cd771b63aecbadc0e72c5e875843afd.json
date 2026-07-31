@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT source_id, manga_id, manga_title, chapter_id, title\n           FROM download_queue ORDER BY seq",
+  "describe": {
+    "columns": [
+      {
+        "name": "source_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "download_queue",
+            "name": "source_id"
+          }
+        }
+      },
+      {
+        "name": "manga_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "download_queue",
+            "name": "manga_id"
+          }
+        }
+      },
+      {
+        "name": "manga_title",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "download_queue",
+            "name": "manga_title"
+          }
+        }
+      },
+      {
+        "name": "chapter_id",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "download_queue",
+            "name": "chapter_id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "download_queue",
+            "name": "title"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4008bd70cd7fa51fd8366a974298f9d08cd771b63aecbadc0e72c5e875843afd"
+}

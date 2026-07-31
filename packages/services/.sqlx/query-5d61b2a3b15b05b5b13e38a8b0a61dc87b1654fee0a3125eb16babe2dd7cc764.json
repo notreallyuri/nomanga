@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM download_queue",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "5d61b2a3b15b05b5b13e38a8b0a61dc87b1654fee0a3125eb16babe2dd7cc764"
+}

@@ -111,6 +111,14 @@ export const commands = {
 	 */
 	installFromRepository: (url: string, extensionId: string) => typedError<string, CommandError>(__TAURI_INVOKE("install_from_repository", { url, extensionId })),
 	queueDownloads: (sourceId: string, mangaId: string, mangaTitle: string, targets: DownloadTarget[]) => typedError<null, CommandError>(__TAURI_INVOKE("queue_downloads", { sourceId, mangaId, mangaTitle, targets })),
+	/**
+	 *  Everything queued or downloading right now.
+	 * 
+	 *  Progress events are sent once and never replayed, so a frontend that has just
+	 *  started — or reloaded mid-queue — reads this to see the work already under
+	 *  way instead of learning about a chapter only when its turn comes.
+	 */
+	downloadQueue: () => typedError<DownloadProgress[], CommandError>(__TAURI_INVOKE("download_queue")),
 	setDownloadsPaused: (paused: boolean) => typedError<null, CommandError>(__TAURI_INVOKE("set_downloads_paused", { paused })),
 	downloadsPaused: () => typedError<boolean, CommandError>(__TAURI_INVOKE("downloads_paused")),
 	cancelDownload: (sourceId: string, mangaId: string, chapterId: string) => typedError<null, CommandError>(__TAURI_INVOKE("cancel_download", { sourceId, mangaId, chapterId })),

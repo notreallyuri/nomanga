@@ -1,4 +1,4 @@
-use crate::downloads::DownloadTarget;
+use crate::downloads::{DownloadProgress, DownloadTarget};
 use crate::{error::CommandResult, AppState};
 use nomanga_core::data::chapter::Page;
 use nomanga_services::downloads::{self, DownloadedManga};
@@ -21,10 +21,38 @@ pub async fn queue_downloads(
     manga_title: String,
     targets: Vec<DownloadTarget>,
 ) -> CommandResult<()> {
+    // Written down before the queue takes them: a batch interrupted by closing
+    // the app is restored on the next start rather than silently lost.
+    let pending: Vec<downloads::PendingDownload> = targets
+        .iter()
+        .map(|target| downloads::PendingDownload {
+            source_id: source_id.clone(),
+            manga_id: manga_id.clone(),
+            manga_title: manga_title.clone(),
+            chapter_id: target.chapter_id.clone(),
+            title: target.title.clone(),
+        })
+        .collect();
+
+    downloads::remember_pending(&state.pool, &pending).await?;
+
     state
         .downloads
         .enqueue(source_id, manga_id, manga_title, targets);
     Ok(())
+}
+
+/// Everything queued or downloading right now.
+///
+/// Progress events are sent once and never replayed, so a frontend that has just
+/// started — or reloaded mid-queue — reads this to see the work already under
+/// way instead of learning about a chapter only when its turn comes.
+#[tauri::command]
+#[specta::specta]
+pub async fn download_queue(
+    state: State<'_, AppState>,
+) -> CommandResult<Vec<DownloadProgress>> {
+    Ok(state.downloads.snapshot())
 }
 
 #[tauri::command]
@@ -51,6 +79,7 @@ pub async fn cancel_download(
     manga_id: String,
     chapter_id: String,
 ) -> CommandResult<()> {
+    downloads::forget_pending(&state.pool, &source_id, &manga_id, &chapter_id).await?;
     state.downloads.cancel(source_id, manga_id, chapter_id);
     Ok(())
 }
@@ -58,6 +87,9 @@ pub async fn cancel_download(
 #[tauri::command]
 #[specta::specta]
 pub async fn cancel_all_downloads(state: State<'_, AppState>) -> CommandResult<()> {
+    // Dropped here as well as in the worker: a cancelled job only clears its own
+    // row when the worker reaches it, and the app may close first.
+    downloads::forget_all_pending(&state.pool).await?;
     state.downloads.cancel_all();
     Ok(())
 }

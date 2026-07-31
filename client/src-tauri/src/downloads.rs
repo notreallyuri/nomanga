@@ -49,10 +49,32 @@ struct Job {
 
 type Key = (String, String, String);
 
+/// The queue as it stands right now, in the order chapters were asked for.
+///
+/// The frontend rebuilds its view from `DownloadProgress` events, and an event
+/// is only sent once — so a webview that reloads mid-queue would otherwise never
+/// hear about the chapters still waiting. This is what `download_queue` hands
+/// back so it can catch up. Entries leave as they reach a terminal state; the
+/// finished ones are the client's own session history.
+type Live = Arc<Mutex<Vec<DownloadProgress>>>;
+
+fn position(live: &[DownloadProgress], key: &Key) -> Option<usize> {
+    live.iter().position(|p| {
+        p.source_id == key.0 && p.manga_id == key.1 && p.chapter_id == key.2
+    })
+}
+
+fn is_terminal(state: &DownloadState) -> bool {
+    matches!(
+        state,
+        DownloadState::Done | DownloadState::Failed | DownloadState::Cancelled
+    )
+}
+
 pub struct DownloadManager {
     app: AppHandle,
     tx: mpsc::UnboundedSender<Job>,
-    queued: Arc<Mutex<HashSet<Key>>>,
+    queued: Live,
     /// Keys the user asked to drop. The queue is an unbounded channel, so a
     /// job cannot be pulled back out of the middle of it — the worker checks
     /// this when the job surfaces, and `process` checks it between pages to
@@ -68,7 +90,7 @@ impl DownloadManager {
         jar: Arc<reqwest::cookie::Jar>,
     ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
-        let queued: Arc<Mutex<HashSet<Key>>> = Arc::new(Mutex::new(HashSet::new()));
+        let queued: Live = Arc::new(Mutex::new(Vec::new()));
         let cancelled: Arc<Mutex<HashSet<Key>>> = Arc::new(Mutex::new(HashSet::new()));
         let (paused, paused_rx) = watch::channel(false);
 
@@ -105,20 +127,39 @@ impl DownloadManager {
         *self.paused.borrow()
     }
 
+    /// Everything still queued or downloading, for a frontend that has just
+    /// started up or reloaded.
+    pub fn snapshot(&self) -> Vec<DownloadProgress> {
+        self.queued.lock().unwrap().clone()
+    }
+
     /// Marks one chapter for cancellation whether it is waiting or already
     /// downloading. A job that has already finished is simply not in `queued`,
     /// so this is a no-op for it rather than an error.
     pub fn cancel(&self, source_id: String, manga_id: String, chapter_id: String) {
         let key = (source_id, manga_id, chapter_id);
 
-        if self.queued.lock().unwrap().contains(&key) {
+        if position(&self.queued.lock().unwrap(), &key).is_some() {
             self.cancelled.lock().unwrap().insert(key);
         }
     }
 
     pub fn cancel_all(&self) {
-        let queued = self.queued.lock().unwrap().clone();
-        self.cancelled.lock().unwrap().extend(queued);
+        let keys: Vec<Key> = self
+            .queued
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|p| {
+                (
+                    p.source_id.clone(),
+                    p.manga_id.clone(),
+                    p.chapter_id.clone(),
+                )
+            })
+            .collect();
+
+        self.cancelled.lock().unwrap().extend(keys);
     }
 
     pub fn enqueue(
@@ -131,25 +172,29 @@ impl DownloadManager {
         for target in targets {
             let key = (source_id.clone(), manga_id.clone(), target.chapter_id.clone());
 
+            let progress = DownloadProgress {
+                source_id: source_id.clone(),
+                manga_id: manga_id.clone(),
+                manga_title: manga_title.clone(),
+                chapter_id: target.chapter_id.clone(),
+                title: target.title.clone(),
+                state: DownloadState::Queued,
+                done: 0,
+                total: 0,
+                error: None,
+            };
+
+            // The check and the insert share one lock: two callers queueing the
+            // same chapter at once must not both get through to the worker.
             {
                 let mut queued = self.queued.lock().unwrap();
-                if !queued.insert(key) {
+                if position(&queued, &key).is_some() {
                     continue;
                 }
+                queued.push(progress.clone());
             }
 
-            emit(
-                &self.app,
-                &source_id,
-                &manga_id,
-                &manga_title,
-                &target.chapter_id,
-                &target.title,
-                DownloadState::Queued,
-                0,
-                0,
-                None,
-            );
+            let _ = progress.emit(&self.app);
 
             let _ = self.tx.send(Job {
                 source_id: source_id.clone(),
@@ -161,6 +206,45 @@ impl DownloadManager {
     }
 }
 
+/// Puts a queue that outlived the last shutdown back on the worker.
+///
+/// Runs once at startup, after the state is managed — the worker reaches for
+/// `AppState` as soon as it picks a job up. Consecutive chapters of the same
+/// series are enqueued together so the stored order survives the round trip.
+pub async fn restore(app: AppHandle) {
+    let pool = app.state::<AppState>().pool.clone();
+
+    let Ok(pending) = downloads::pending_downloads(&pool).await else {
+        return;
+    };
+
+    let manager = &app.state::<AppState>().downloads;
+    let mut index = 0;
+
+    while index < pending.len() {
+        let head = &pending[index];
+        let mut targets = Vec::new();
+
+        while let Some(entry) = pending.get(index) {
+            if entry.source_id != head.source_id || entry.manga_id != head.manga_id {
+                break;
+            }
+            targets.push(DownloadTarget {
+                chapter_id: entry.chapter_id.clone(),
+                title: entry.title.clone(),
+            });
+            index += 1;
+        }
+
+        manager.enqueue(
+            head.source_id.clone(),
+            head.manga_id.clone(),
+            head.manga_title.clone(),
+            targets,
+        );
+    }
+}
+
 /// Pauses between chapters rather than mid-chapter: a job already running is
 /// left to finish, which keeps pause free of the partial-file question that
 /// cancel has to answer.
@@ -169,7 +253,7 @@ async fn worker(
     mut rx: mpsc::UnboundedReceiver<Job>,
     downloads_dir: PathBuf,
     client: reqwest::Client,
-    queued: Arc<Mutex<HashSet<Key>>>,
+    queued: Live,
     cancelled: Arc<Mutex<HashSet<Key>>>,
     mut paused: watch::Receiver<bool>,
 ) {
@@ -189,7 +273,16 @@ async fn worker(
         let outcome = if cancelled.lock().unwrap().contains(&key) {
             Err(Stopped::Cancelled)
         } else {
-            process(&app, &downloads_dir, &client, &cancelled, &key, &job).await
+            process(
+                &app,
+                &downloads_dir,
+                &client,
+                &queued,
+                &cancelled,
+                &key,
+                &job,
+            )
+            .await
         };
 
         if let Err(stopped) = outcome {
@@ -211,6 +304,7 @@ async fn worker(
 
             emit(
                 &app,
+                &queued,
                 &job.source_id,
                 &job.manga_id,
                 &job.manga_title,
@@ -223,8 +317,26 @@ async fn worker(
             );
         }
 
-        queued.lock().unwrap().remove(&key);
+        // A terminal emit has already dropped the entry; this covers the paths
+        // that end without one.
+        {
+            let mut live = queued.lock().unwrap();
+            if let Some(index) = position(&live, &key) {
+                live.remove(index);
+            }
+        }
         cancelled.lock().unwrap().remove(&key);
+
+        // The chapter is settled either way — a failure is reported to the user
+        // to retry, not carried over to the next launch.
+        let pool = app.state::<AppState>().pool.clone();
+        let _ = downloads::forget_pending(
+            &pool,
+            &job.source_id,
+            &job.manga_id,
+            &job.target.chapter_id,
+        )
+        .await;
     }
 }
 
@@ -243,6 +355,7 @@ async fn process(
     app: &AppHandle,
     downloads_dir: &PathBuf,
     client: &reqwest::Client,
+    queued: &Live,
     cancelled: &Arc<Mutex<HashSet<Key>>>,
     key: &Key,
     job: &Job,
@@ -264,6 +377,7 @@ async fn process(
     let progress = |state: DownloadState, done: u32| {
         emit(
             app,
+            queued,
             &source_id,
             &manga_id,
             &job.manga_title,
@@ -440,8 +554,14 @@ fn pick_extension(url: &str, headers: &reqwest::header::HeaderMap) -> String {
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Records the step against the live queue and sends it on to the frontend.
+///
+/// Both happen here so a snapshot and the event stream can never disagree: the
+/// stored entry is what a reloading frontend catches up from, and it is dropped
+/// once the chapter reaches a state it cannot leave.
 fn emit(
     app: &AppHandle,
+    queued: &Live,
     source_id: &str,
     manga_id: &str,
     manga_title: &str,
@@ -452,7 +572,7 @@ fn emit(
     total: u32,
     error: Option<String>,
 ) {
-    let _ = DownloadProgress {
+    let progress = DownloadProgress {
         source_id: source_id.to_owned(),
         manga_id: manga_id.to_owned(),
         manga_title: manga_title.to_owned(),
@@ -462,6 +582,25 @@ fn emit(
         done,
         total,
         error,
+    };
+
+    {
+        let key = (
+            progress.source_id.clone(),
+            progress.manga_id.clone(),
+            progress.chapter_id.clone(),
+        );
+        let mut live = queued.lock().unwrap();
+
+        match position(&live, &key) {
+            Some(index) if is_terminal(&progress.state) => {
+                live.remove(index);
+            }
+            Some(index) => live[index] = progress.clone(),
+            None if !is_terminal(&progress.state) => live.push(progress.clone()),
+            None => {}
+        }
     }
-    .emit(app);
+
+    let _ = progress.emit(app);
 }

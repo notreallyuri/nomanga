@@ -91,6 +91,113 @@ pub async fn record_chapter(
     Ok(())
 }
 
+/// One chapter waiting to be downloaded, as it survives a restart.
+#[derive(Debug, Clone)]
+pub struct PendingDownload {
+    pub source_id: String,
+    pub manga_id: String,
+    pub manga_title: String,
+    pub chapter_id: String,
+    pub title: String,
+}
+
+/// Records chapters as waiting so the queue outlives the process.
+///
+/// The queue itself is an in-memory channel: without this, closing the app
+/// halfway through a hundred-chapter batch loses every chapter that had not
+/// started. Rows are dropped as each chapter reaches a state it cannot leave.
+pub async fn remember_pending(
+    pool: &SqlitePool,
+    entries: &[PendingDownload],
+) -> ServiceResult<()> {
+    if entries.is_empty() {
+        return Ok(());
+    }
+
+    let queued_at = now();
+    let mut tx = pool.begin().await?;
+
+    for entry in entries {
+        sqlx::query!(
+            "INSERT INTO download_queue
+                (source_id, manga_id, manga_title, chapter_id, title, queued_at)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON CONFLICT (source_id, manga_id, chapter_id) DO NOTHING",
+            entry.source_id,
+            entry.manga_id,
+            entry.manga_title,
+            entry.chapter_id,
+            entry.title,
+            queued_at
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn forget_pending(
+    pool: &SqlitePool,
+    source_id: &str,
+    manga_id: &str,
+    chapter_id: &str,
+) -> ServiceResult<()> {
+    sqlx::query!(
+        "DELETE FROM download_queue
+          WHERE source_id = ? AND manga_id = ? AND chapter_id = ?",
+        source_id,
+        manga_id,
+        chapter_id
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn forget_all_pending(pool: &SqlitePool) -> ServiceResult<()> {
+    sqlx::query!("DELETE FROM download_queue")
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
+/// The queue to restore on startup, in the order it was asked for.
+///
+/// Chapters that made it to disk are skipped and their rows dropped: the app can
+/// die between recording a chapter and clearing its row, and re-downloading what
+/// is already saved would waste a source's rate limit.
+pub async fn pending_downloads(pool: &SqlitePool) -> ServiceResult<Vec<PendingDownload>> {
+    sqlx::query!("DELETE FROM download_queue AS q
+                   WHERE EXISTS (SELECT 1 FROM downloaded_chapter dc
+                                  WHERE dc.source_id = q.source_id
+                                    AND dc.manga_id = q.manga_id
+                                    AND dc.chapter_id = q.chapter_id)")
+        .execute(pool)
+        .await?;
+
+    let rows = sqlx::query!(
+        "SELECT source_id, manga_id, manga_title, chapter_id, title
+           FROM download_queue ORDER BY seq"
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|r| PendingDownload {
+            source_id: r.source_id,
+            manga_id: r.manga_id,
+            manga_title: r.manga_title,
+            chapter_id: r.chapter_id,
+            title: r.title,
+        })
+        .collect())
+}
+
 pub async fn is_downloaded(
     pool: &SqlitePool,
     source_id: &str,

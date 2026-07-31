@@ -16,6 +16,7 @@ pub const TABLES: &[&str] = &[
     "reader_override",
     "downloaded_chapter",
     "downloaded_page",
+    "download_queue",
     "cached_chapter",
     "source_cache",
     "image_cache",

@@ -19,6 +19,11 @@ export function NavDownloads() {
 	const [open, setOpen] = useState(false);
 
 	const current = items.find((i) => i.state === "Downloading");
+	// A chapter's page list is fetched before its first Downloading event, and
+	// that fetch is rate limited — so between chapters nothing is downloading.
+	// Falling back to the next queued one keeps the block on screen instead of
+	// letting it blink out for seconds at a time.
+	const showing = current ?? items.find((i) => i.state === "Queued");
 	const label = active > 0 ? `Downloading ${active}` : "Downloads";
 
 	const percent =
@@ -52,7 +57,7 @@ export function NavDownloads() {
 				</SidebarMenuItem>
 			</SidebarMenu>
 
-			{active > 0 && state === "expanded" && current && (
+			{active > 0 && state === "expanded" && showing && (
 				<button
 					className="block w-full min-w-0 space-y-1 overflow-hidden px-2 pt-1 text-left"
 					onClick={() => setOpen(true)}
@@ -60,8 +65,9 @@ export function NavDownloads() {
 				>
 					<Progress value={percent} />
 					<p className="truncate text-[10px] text-sidebar-foreground/60 tabular-nums">
-						{current.manga_title} · {current.title} ({current.done}/
-						{current.total})
+						{current
+							? `${current.manga_title} · ${current.title} (${current.done}/${current.total})`
+							: `Preparing ${showing.title}…`}
 					</p>
 				</button>
 			)}

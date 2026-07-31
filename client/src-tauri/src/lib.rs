@@ -76,6 +76,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             // sources
             source::list_sources,
             source::source_filters,
+            source::invalidate_source_filters,
             source::source_homepage,
             source::source_search,
             source::source_section,
@@ -109,6 +110,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::repository::install_from_repository,
             // downloads
             commands::downloads::queue_downloads,
+            commands::downloads::download_queue,
             commands::downloads::set_downloads_paused,
             commands::downloads::downloads_paused,
             commands::downloads::cancel_download,
@@ -351,6 +353,7 @@ pub fn run() {
                 downloads_dir,
             });
 
+            tauri::async_runtime::spawn(downloads::restore(handle.clone()));
             tauri::async_runtime::spawn(background::run_loop(handle.clone()));
             tauri::async_runtime::spawn(background::evict_loop(handle.clone()));
 

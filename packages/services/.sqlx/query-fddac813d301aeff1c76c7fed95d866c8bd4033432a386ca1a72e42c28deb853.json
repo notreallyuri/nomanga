@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO download_queue\n                (source_id, manga_id, manga_title, chapter_id, title, queued_at)\n             VALUES (?, ?, ?, ?, ?, ?)\n             ON CONFLICT (source_id, manga_id, chapter_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "fddac813d301aeff1c76c7fed95d866c8bd4033432a386ca1a72e42c28deb853"
+}
