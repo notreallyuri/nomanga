@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO source_preference\n            (source_id, enabled, private, blur_covers, skip_updates, hide_from_search,\n             default_category_id)\n         VALUES (?, ?, ?, ?, ?, ?, ?)\n         ON CONFLICT (source_id) DO UPDATE SET\n             enabled = excluded.enabled,\n             private = excluded.private,\n             blur_covers = excluded.blur_covers,\n             skip_updates = excluded.skip_updates,\n             hide_from_search = excluded.hide_from_search,\n             default_category_id = excluded.default_category_id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "cadd29bc823aa9948e4a25bf77ebba5e96e7989ef38e477d2acc29c598b64957"
+}

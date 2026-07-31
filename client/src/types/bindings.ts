@@ -638,6 +638,7 @@ export type SourcePreference = {
 	private: boolean,
 	blur_covers: boolean,
 	skip_updates: boolean,
+	hide_from_search: boolean,
 	default_category_id: string | null,
 };
 

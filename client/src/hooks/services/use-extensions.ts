@@ -30,6 +30,7 @@ const DEFAULT_PREFERENCE: Omit<SourcePreference, "source_id"> = {
 	private: false,
 	blur_covers: false,
 	skip_updates: false,
+	hide_from_search: false,
 	default_category_id: null,
 };
 

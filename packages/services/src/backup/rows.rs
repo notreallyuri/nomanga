@@ -69,6 +69,10 @@ pub struct SourcePreferenceRow {
     pub private: i64,
     pub blur_covers: i64,
     pub skip_updates: i64,
+    // Added after the first backups were written, so an older archive that
+    // predates the column still imports instead of failing the whole restore.
+    #[serde(default)]
+    pub hide_from_search: i64,
     pub default_category_id: Option<String>,
 }
 

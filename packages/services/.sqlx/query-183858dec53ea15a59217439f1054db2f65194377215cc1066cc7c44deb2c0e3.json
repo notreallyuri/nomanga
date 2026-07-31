@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT source_id, enabled, private, blur_covers, skip_updates, default_category_id\n         FROM source_preference",
+  "query": "SELECT source_id, enabled, private, blur_covers, skip_updates, hide_from_search,\n                default_category_id\n         FROM source_preference",
   "describe": {
     "columns": [
       {
@@ -59,8 +59,19 @@
         }
       },
       {
-        "name": "default_category_id",
+        "name": "hide_from_search",
         "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "source_preference",
+            "name": "hide_from_search"
+          }
+        }
+      },
+      {
+        "name": "default_category_id",
+        "ordinal": 6,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -79,8 +90,9 @@
       false,
       false,
       false,
+      false,
       true
     ]
   },
-  "hash": "87b9912b2f6d99019fc5ed5e0c5f12a182304cc423c544277b4cd9d7b890d15e"
+  "hash": "183858dec53ea15a59217439f1054db2f65194377215cc1066cc7c44deb2c0e3"
 }

@@ -74,7 +74,9 @@
 ### Browse
 
 - [ ] Allow name-searching in all sources (does not include source-specific
-  filters) — search-all bar stubbed in the browse landing; backend pending.
+  filters) — search-all bar stubbed in the browse landing; backend pending. The
+  per-source opt-out is already stored: honour `source_preference.hide_from_search`
+  when picking which sources the query fans out to.
 
 ### Updates
 

@@ -69,7 +69,8 @@ pub async fn export(
 
     let source_preferences = sqlx::query_as!(
         SourcePreferenceRow,
-        "SELECT source_id, enabled, private, blur_covers, skip_updates, default_category_id
+        "SELECT source_id, enabled, private, blur_covers, skip_updates, hide_from_search,
+                default_category_id
          FROM source_preference"
     )
     .fetch_all(pool)

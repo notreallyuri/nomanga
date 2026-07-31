@@ -193,19 +193,21 @@ pub async fn import(
     for row in &backup.source_preferences {
         sqlx::query!(
             "INSERT INTO source_preference (source_id, enabled, private, blur_covers,
-                                            skip_updates, default_category_id)
-             VALUES (?, ?, ?, ?, ?, ?)
+                                            skip_updates, hide_from_search, default_category_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT (source_id) DO UPDATE SET
                  enabled = excluded.enabled,
                  private = excluded.private,
                  blur_covers = excluded.blur_covers,
                  skip_updates = excluded.skip_updates,
+                 hide_from_search = excluded.hide_from_search,
                  default_category_id = excluded.default_category_id",
             row.source_id,
             row.enabled,
             row.private,
             row.blur_covers,
             row.skip_updates,
+            row.hide_from_search,
             row.default_category_id
         )
         .execute(&mut *tx)

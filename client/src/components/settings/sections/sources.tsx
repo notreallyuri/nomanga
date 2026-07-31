@@ -193,6 +193,15 @@ function SourceDetail({
 						onCheckedChange={(v) => toggle({ skip_updates: v })}
 					/>
 				</SettingRow>
+				<SettingRow
+					description="Leave this source out of the search-all-sources results on Browse (coming soon)"
+					label="Hide from search"
+				>
+					<Switch
+						checked={preference.hide_from_search}
+						onCheckedChange={(v) => toggle({ hide_from_search: v })}
+					/>
+				</SettingRow>
 				<DefaultCategoryRow
 					onChange={(default_category_id) => toggle({ default_category_id })}
 					value={preference.default_category_id}

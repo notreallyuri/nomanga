@@ -11,6 +11,7 @@ pub struct SourcePreference {
     pub private: bool,
     pub blur_covers: bool,
     pub skip_updates: bool,
+    pub hide_from_search: bool,
     pub default_category_id: Option<String>,
 }
 
@@ -22,6 +23,7 @@ impl SourcePreference {
             private: false,
             blur_covers: false,
             skip_updates: false,
+            hide_from_search: false,
             default_category_id: None,
         }
     }
@@ -29,7 +31,8 @@ impl SourcePreference {
 
 pub async fn get(pool: &SqlitePool, source_id: &str) -> ServiceResult<SourcePreference> {
     let row = sqlx::query!(
-        "SELECT source_id, enabled, private, blur_covers, skip_updates, default_category_id
+        "SELECT source_id, enabled, private, blur_covers, skip_updates, hide_from_search,
+                default_category_id
          FROM source_preference
          WHERE source_id = ?",
         source_id
@@ -44,6 +47,7 @@ pub async fn get(pool: &SqlitePool, source_id: &str) -> ServiceResult<SourcePref
             private: r.private != 0,
             blur_covers: r.blur_covers != 0,
             skip_updates: r.skip_updates != 0,
+            hide_from_search: r.hide_from_search != 0,
             default_category_id: r.default_category_id,
         },
         None => SourcePreference::default_for(source_id),
@@ -52,7 +56,8 @@ pub async fn get(pool: &SqlitePool, source_id: &str) -> ServiceResult<SourcePref
 
 pub async fn list(pool: &SqlitePool) -> ServiceResult<Vec<SourcePreference>> {
     let rows = sqlx::query!(
-        "SELECT source_id, enabled, private, blur_covers, skip_updates, default_category_id
+        "SELECT source_id, enabled, private, blur_covers, skip_updates, hide_from_search,
+                default_category_id
          FROM source_preference"
     )
     .fetch_all(pool)
@@ -66,6 +71,7 @@ pub async fn list(pool: &SqlitePool) -> ServiceResult<Vec<SourcePreference>> {
             private: r.private != 0,
             blur_covers: r.blur_covers != 0,
             skip_updates: r.skip_updates != 0,
+            hide_from_search: r.hide_from_search != 0,
             default_category_id: r.default_category_id,
         })
         .collect())
@@ -87,22 +93,26 @@ pub async fn set(pool: &SqlitePool, pref: &SourcePreference) -> ServiceResult<()
     let private = pref.private as i64;
     let blur_covers = pref.blur_covers as i64;
     let skip_updates = pref.skip_updates as i64;
+    let hide_from_search = pref.hide_from_search as i64;
 
     sqlx::query!(
         "INSERT INTO source_preference
-            (source_id, enabled, private, blur_covers, skip_updates, default_category_id)
-         VALUES (?, ?, ?, ?, ?, ?)
+            (source_id, enabled, private, blur_covers, skip_updates, hide_from_search,
+             default_category_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (source_id) DO UPDATE SET
              enabled = excluded.enabled,
              private = excluded.private,
              blur_covers = excluded.blur_covers,
              skip_updates = excluded.skip_updates,
+             hide_from_search = excluded.hide_from_search,
              default_category_id = excluded.default_category_id",
         pref.source_id,
         enabled,
         private,
         blur_covers,
         skip_updates,
+        hide_from_search,
         pref.default_category_id
     )
     .execute(pool)
@@ -142,6 +152,7 @@ mod tests {
                 private: true,
                 blur_covers: false,
                 skip_updates: false,
+                hide_from_search: false,
                 default_category_id: None,
             },
         )
