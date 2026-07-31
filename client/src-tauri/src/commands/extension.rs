@@ -129,8 +129,17 @@ pub async fn save_source_settings(
 
     let config = config::config_for(&state.pool, &source_id).await?;
 
-    let registry = state.registry.read()?;
-    registry.set_config(&source_id, config)?;
+    // Scoped so the guard is gone before the next await: the registry lock is a
+    // std RwLock and its guard cannot be held across one.
+    {
+        let registry = state.registry.read()?;
+        registry.set_config(&source_id, config)?;
+    }
+
+    // A source may build its filter options out of its own settings -- a
+    // language, an enabled tag group -- so what is cached describes the
+    // configuration that was just replaced.
+    source_cache::invalidate(&state.pool, &source_id, source_cache::KIND_FILTERS).await?;
 
     Ok(())
 }

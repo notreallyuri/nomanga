@@ -57,6 +57,7 @@ export const commands = {
 	finishChapter: (sourceId: string, mangaId: string, chapterId: string, lastPage: number) => typedError<null, CommandError>(__TAURI_INVOKE("finish_chapter", { sourceId, mangaId, chapterId, lastPage })),
 	listSources: () => typedError<SourceInfo[], CommandError>(__TAURI_INVOKE("list_sources")),
 	sourceFilters: (sourceId: string) => typedError<Filter[], CommandError>(__TAURI_INVOKE("source_filters", { sourceId })),
+	invalidateSourceFilters: (sourceId: string) => typedError<null, CommandError>(__TAURI_INVOKE("invalidate_source_filters", { sourceId })),
 	sourceHomepage: (sourceId: string) => typedError<Homepage, CommandError>(__TAURI_INVOKE("source_homepage", { sourceId })),
 	sourceSearch: (sourceId: string, query: SearchQuery) => typedError<MangaPage, CommandError>(__TAURI_INVOKE("source_search", { sourceId, query })),
 	sourceSection: (sourceId: string, section: SectionRef) => typedError<MangaPage, CommandError>(__TAURI_INVOKE("source_section", { sourceId, section })),

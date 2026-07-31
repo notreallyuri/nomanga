@@ -33,6 +33,10 @@ export const sourceKeys = {
  * The key is the source's whole prefix — homepage, search, sections, and any
  * titles opened from it. Only the mounted queries refetch; the rest are just
  * marked stale for their next visit.
+ *
+ * Filters are the exception. They sit behind a day-long sqlite cache that this
+ * does not touch, so a refetch here answers from the stored list — see
+ * `useRefreshSourceFilters` for the way past it.
  */
 export function useSourceRefresh(sourceId: string) {
 	const queryClient = useQueryClient();
@@ -42,6 +46,25 @@ export function useSourceRefresh(sourceId: string) {
 		isRefreshing: useIsFetching({ queryKey: key }) > 0,
 		refresh: () => queryClient.invalidateQueries({ queryKey: key }),
 	};
+}
+
+/**
+ * Drops the stored filter list so the next read goes back to the source.
+ *
+ * Deliberately not part of `useSourceRefresh`: a source's filters change far
+ * more rarely than its homepage, and a source that builds them from the network
+ * — nhentai fetches its tag list — would spend a request against its rate limit
+ * on every refresh click to be told the same thing. The day-long cache and a
+ * version bump cover the normal case; this covers the rest.
+ */
+export function useRefreshSourceFilters(sourceId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: () => unwrap(commands.invalidateSourceFilters(sourceId)),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: sourceKeys.filters(sourceId) }),
+	});
 }
 
 export function useSources() {

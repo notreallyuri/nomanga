@@ -30,6 +30,9 @@ export function useSaveSourceSettings(sourceId: string) {
 				queryKey: sourceSettingsKeys.forSource(sourceId),
 			});
 
+			// Everything a source produced under the old settings, filters
+			// included — saving drops their sqlite row too, so the refetch that
+			// this triggers goes back to the source rather than to that cache.
 			queryClient.invalidateQueries({ queryKey: sourceKeys.all });
 		},
 	});

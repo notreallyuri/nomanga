@@ -106,6 +106,23 @@ pub async fn source_filters(
     }
 }
 
+// The only way to retire a cached filter list early. Refetching `source_filters`
+// answers from the same row until the TTL or a version bump retires it, so a
+// source that builds its options from the network — nhentai's tag list — would
+// otherwise be stuck with a day-old list and no way to ask again. Exposed as a
+// deliberate action in the source's settings rather than folded into the browse
+// refresh, which fires far more often than filters change.
+#[tauri::command]
+#[specta::specta]
+pub async fn invalidate_source_filters(
+    state: State<'_, AppState>,
+    source_id: String,
+) -> CommandResult<()> {
+    source_cache::invalidate(&state.pool, &source_id, source_cache::KIND_FILTERS).await?;
+
+    Ok(())
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn source_homepage(
