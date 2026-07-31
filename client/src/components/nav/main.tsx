@@ -4,7 +4,6 @@ import {
 	CompassIcon,
 	HouseIcon,
 	type Icon,
-	PushPinSlashIcon,
 	SlidersHorizontalIcon,
 } from "@phosphor-icons/react";
 import { Link, useLocation } from "@tanstack/react-router";
@@ -14,13 +13,9 @@ import { usePinnedSources } from "@/hooks/services/use-settings";
 import { cn } from "@/lib/utils";
 import type { FileRouteTypes } from "@/routeTree.gen";
 import type { SourceInfo } from "@/types/bindings";
+import { SourceMenuContent } from "../browse/source-menu";
 import { SourceIcon } from "../source-icon";
-import {
-	ContextMenu,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuTrigger,
-} from "../ui/context-menu";
+import { ContextMenu, ContextMenuTrigger } from "../ui/context-menu";
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
@@ -127,7 +122,7 @@ export function NavMain() {
 
 function NavPinnedSources() {
 	const { pathname } = useLocation();
-	const { pinned, toggle } = usePinnedSources();
+	const { pinned } = usePinnedSources();
 	const { data: rows } = useSourcesWithPreferences();
 
 	if (!rows) return null;
@@ -146,20 +141,11 @@ function NavPinnedSources() {
 			active={pathname === `/browse/${info.id}`}
 			info={info}
 			key={info.id}
-			onUnpin={() => toggle(info.id)}
 		/>
 	));
 }
 
-function PinnedSource({
-	info,
-	active,
-	onUnpin,
-}: {
-	info: SourceInfo;
-	active: boolean;
-	onUnpin: () => void;
-}) {
+function PinnedSource({ info, active }: { info: SourceInfo; active: boolean }) {
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger
@@ -184,12 +170,7 @@ function PinnedSource({
 					</SidebarMenuItem>
 				}
 			/>
-			<ContextMenuContent>
-				<ContextMenuItem onClick={onUnpin}>
-					<PushPinSlashIcon />
-					Unpin
-				</ContextMenuItem>
-			</ContextMenuContent>
+			<SourceMenuContent info={info} showOpen={false} />
 		</ContextMenu>
 	);
 }

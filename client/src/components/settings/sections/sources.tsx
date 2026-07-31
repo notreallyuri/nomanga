@@ -1,17 +1,22 @@
 import {
 	ArrowLeftIcon,
 	CaretRightIcon,
+	MagnifyingGlassIcon,
 	ShieldCheckIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { ChallengeDialog } from "@/components/challenge-dialog";
 import {
+	SettingAction,
 	SettingGroup,
 	SettingRow,
 } from "@/components/settings/components/parts";
+import { useSettingsUI } from "@/components/settings/context";
 import { ExtensionSettings } from "@/components/settings/sections/source-settings-form";
 import { SourceIcon } from "@/components/source-icon";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -22,37 +27,30 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
+	useExtensions,
 	useSetSourcePreference,
 	useSourcePreference,
 	useSourcesWithPreferences,
 } from "@/hooks/services/use-extensions";
 import { useCategories } from "@/hooks/services/use-library";
-import type { SourceInfo } from "@/types/bindings";
+import { useRefreshSourceFilters } from "@/hooks/services/use-sources";
+import type {
+	InstalledExtension,
+	SourceInfo,
+	SourceWithPreference,
+} from "@/types/bindings";
 
 export function SourceSection() {
 	const { data: rows, isPending, error } = useSourcesWithPreferences();
+	const extensions = useExtensions();
+	const { sourceTarget, setSourceTarget } = useSettingsUI();
+	const [query, setQuery] = useState("");
 
-	const [configuring, setConfiguring] = useState<SourceInfo | null>(null);
+	if (isPending) return <ListSkeleton />;
+	if (extensions.isPending) return <ListSkeleton />;
 
-	if (configuring) {
-		return (
-			<SourceDetail info={configuring} onBack={() => setConfiguring(null)} />
-		);
-	}
-
-	if (isPending) {
-		return (
-			<div className="space-y-3">
-				{["a", "b"].map((k) => (
-					<Skeleton className="h-16" key={k} />
-				))}
-			</div>
-		);
-	}
-
-	if (error) {
-		return <p className="text-destructive text-sm">{error.message}</p>;
-	}
+	if (error) return <ErrorText message={error.message} />;
+	if (extensions.error) return <ErrorText message={extensions.error.message} />;
 
 	if (rows.length === 0) {
 		return (
@@ -62,17 +60,117 @@ export function SourceSection() {
 		);
 	}
 
-	return (
-		<SettingGroup title="Installed sources">
-			{rows.map((row) => (
-				<SourceListRow
-					info={row.info}
-					key={row.info.id}
-					onConfigure={() => setConfiguring(row.info)}
-				/>
-			))}
-		</SettingGroup>
+	// The target can outlive the source it names — an extension uninstalled
+	// while the dialog is open, say — so a miss falls back to the list.
+	const configuring = rows.find((row) => row.info.id === sourceTarget)?.info;
+
+	if (configuring) {
+		return (
+			<SourceDetail info={configuring} onBack={() => setSourceTarget(null)} />
+		);
+	}
+
+	const needle = query.trim().toLowerCase();
+	const matches = rows.filter(
+		({ info }) =>
+			info.name.toLowerCase().includes(needle) ||
+			info.language.toLowerCase().includes(needle),
 	);
+
+	const groups = groupByExtension(matches, extensions.data);
+
+	return (
+		<>
+			<div className="relative mb-4">
+				<MagnifyingGlassIcon
+					className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+					size={16}
+				/>
+				<Input
+					aria-label="Search sources"
+					className="pl-9"
+					onChange={(e) => setQuery(e.target.value)}
+					placeholder="Search sources…"
+					value={query}
+				/>
+			</div>
+
+			{groups.length === 0 ? (
+				<p className="py-10 text-center text-muted-foreground text-sm">
+					No source matches “{query}”.
+				</p>
+			) : (
+				groups.map((group) => (
+					<SettingGroup key={group.key} title={group.title}>
+						{group.rows.map((row) => (
+							<SourceListRow
+								info={row.info}
+								key={row.info.id}
+								onConfigure={() => setSourceTarget(row.info.id)}
+							/>
+						))}
+					</SettingGroup>
+				))
+			)}
+		</>
+	);
+}
+
+function ErrorText({ message }: { message: string }) {
+	return <p className="text-destructive text-sm">{message}</p>;
+}
+
+function ListSkeleton() {
+	return (
+		<div className="space-y-3">
+			{["a", "b"].map((k) => (
+				<Skeleton className="h-16" key={k} />
+			))}
+		</div>
+	);
+}
+
+interface SourceGroup {
+	key: string;
+	title: string;
+	rows: SourceWithPreference[];
+}
+
+/**
+ * One group per installed extension, since a single extension can ship several
+ * sources and the flat list gives no hint of which one to uninstall. Sources no
+ * installed extension claims are kept rather than dropped — they are still
+ * loaded and still configurable, so hiding them would strand their settings.
+ */
+function groupByExtension(
+	rows: SourceWithPreference[],
+	extensions: InstalledExtension[],
+): SourceGroup[] {
+	const byId = new Map(rows.map((row) => [row.info.id, row]));
+
+	const groups = extensions
+		.map((extension) => ({
+			key: extension.info.id,
+			title: extension.info.name,
+			rows: extension.sources
+				.map((source) => byId.get(source.id))
+				.filter((row) => row !== undefined),
+		}))
+		.filter((group) => group.rows.length > 0)
+		.sort((a, b) => a.title.localeCompare(b.title));
+
+	const claimed = new Set(
+		extensions.flatMap((extension) =>
+			extension.sources.map((source) => source.id),
+		),
+	);
+	const orphans = rows.filter((row) => !claimed.has(row.info.id));
+
+	if (orphans.length > 0) {
+		groups.push({ key: "unclaimed", title: "Other sources", rows: orphans });
+	}
+
+	return groups;
 }
 
 function SourceListRow({
@@ -126,6 +224,8 @@ function SourceDetail({
 }) {
 	const preference = useSourcePreference(info.id);
 	const { mutate } = useSetSourcePreference();
+	const { mutate: refreshFilters, isPending: isRefreshingFilters } =
+		useRefreshSourceFilters(info.id);
 	const [solving, setSolving] = useState(false);
 
 	const toggle = (patch: Partial<typeof preference>) =>
@@ -227,6 +327,19 @@ function SourceDetail({
 			)}
 
 			<SettingGroup title="Source settings">
+				<SettingAction
+					actionLabel={isRefreshingFilters ? "Refreshing…" : "Refresh"}
+					description="Ask the source for its filter options again. They are cached for a day, so this is only needed when the source changes them sooner."
+					disabled={isRefreshingFilters}
+					label="Filters"
+					onAction={() =>
+						refreshFilters(undefined, {
+							onSuccess: () => toast.success("Filters refreshed"),
+							onError: (e) => toast.error(e.message),
+						})
+					}
+				/>
+
 				<div className="pt-2">
 					<p className="mb-4 text-muted-foreground text-xs">
 						Options provided by the extension itself — API keys, tag filters,

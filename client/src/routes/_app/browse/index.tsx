@@ -8,9 +8,11 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { PinToggle } from "@/components/browse/pin-toggle";
+import { SourceMenuContent } from "@/components/browse/source-menu";
 import { useSettingsUI } from "@/components/settings/context";
 import { SourceIcon } from "@/components/source-icon";
 import { Badge } from "@/components/ui/badge";
+import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSourcesWithPreferences } from "@/hooks/services/use-extensions";
@@ -146,34 +148,46 @@ function SearchAllBar({ disabled }: { disabled?: boolean }) {
 
 function SourceCard({ info }: { info: SourceInfo }) {
 	return (
-		<Link
-			className="group relative flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-muted"
-			params={{ sourceId: info.id }}
-			to="/browse/$sourceId"
-		>
-			<SourceIcon className="size-10" name={info.name} url={info.icon_url} />
+		<ContextMenu>
+			<ContextMenuTrigger
+				render={
+					<Link
+						className="group relative flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-muted"
+						params={{ sourceId: info.id }}
+						to="/browse/$sourceId"
+					>
+						<SourceIcon
+							className="size-10"
+							name={info.name}
+							url={info.icon_url}
+						/>
 
-			<div className="min-w-0 flex-1">
-				<div className="flex items-center gap-1.5">
-					<p className="truncate font-medium">{info.name}</p>
-					{info.nsfw && (
-						<Badge className="shrink-0" variant="destructive">
-							18+
-						</Badge>
-					)}
-				</div>
-				<p className="text-muted-foreground text-xs uppercase tracking-wide">
-					{info.language}
-				</p>
-			</div>
+						<div className="min-w-0 flex-1">
+							<div className="flex items-center gap-1.5">
+								<p className="truncate font-medium">{info.name}</p>
+								{info.nsfw && (
+									<Badge className="shrink-0" variant="destructive">
+										18+
+									</Badge>
+								)}
+							</div>
+							<p className="text-muted-foreground text-xs uppercase tracking-wide">
+								{info.language}
+							</p>
+						</div>
 
-			<PinToggle sourceId={info.id} />
+						<PinToggle sourceId={info.id} />
 
-			<CaretRightIcon
-				className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
-				size={16}
+						<CaretRightIcon
+							className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+							size={16}
+						/>
+					</Link>
+				}
 			/>
-		</Link>
+
+			<SourceMenuContent info={info} />
+		</ContextMenu>
 	);
 }
 
