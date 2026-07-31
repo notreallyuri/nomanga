@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { FilterSheet } from "@/components/browse/filter-sheet";
 import { HomepageSections } from "@/components/browse/homepage-sections";
+import { RefreshButton } from "@/components/browse/refresh-button";
 import { SearchResults } from "@/components/browse/search-result";
 import { SectionView } from "@/components/browse/section-view";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ function BrowseSource() {
 
 	if (section) {
 		return (
-			<div className="h-full overflow-y-auto px-6 py-6">
+			<div className="h-full overflow-y-auto">
 				<SectionView
 					onBack={() =>
 						navigate({
@@ -117,6 +118,8 @@ function BrowseSource() {
 						onChange={setFilters}
 						sourceId={sourceId}
 					/>
+
+					<RefreshButton sourceId={sourceId} />
 
 					<PinButton sourceId={sourceId} />
 				</div>

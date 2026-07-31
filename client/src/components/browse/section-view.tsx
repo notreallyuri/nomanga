@@ -8,6 +8,7 @@ import { useSourceHomepage } from "@/hooks/services/use-sources";
 import { MangaGrid, MangaGridSkeleton } from "../manga/manga-grid";
 import { Button } from "../ui/button";
 import { BrowseCard } from "./browse-card";
+import { RefreshButton } from "./refresh-button";
 
 export function SectionView({
 	sourceId,
@@ -39,7 +40,10 @@ export function SectionView({
 
 	return (
 		<div>
-			<div className="mb-4 flex items-center gap-2">
+			{/* Padding lives here rather than on the scroll container, so the bar
+			    covers the full width as rows pass under it -- the same arrangement
+			    the search toolbar on this route uses. */}
+			<div className="sticky top-0 z-10 flex items-center gap-2 bg-background/95 px-6 pt-6 pb-4 backdrop-blur">
 				<Button
 					aria-label="Back to source"
 					onClick={onBack}
@@ -48,35 +52,39 @@ export function SectionView({
 				>
 					<ArrowLeftIcon />
 				</Button>
-				<h1 className="min-w-0 truncate font-bold font-heading text-xl">
+				<h1 className="min-w-0 flex-1 truncate font-bold font-heading text-xl">
 					{title}
 				</h1>
+
+				<RefreshButton sourceId={sourceId} />
 			</div>
 
-			{isPending && <MangaGridSkeleton />}
-			{error && <p className="text-destructive">{error.message}</p>}
+			<div className="px-6 pb-6">
+				{isPending && <MangaGridSkeleton />}
+				{error && <p className="text-destructive">{error.message}</p>}
 
-			{data && (
-				<>
-					<MangaGrid>
-						{data.pages
-							.flatMap((page) => page.items)
-							.map((item) => (
-								<BrowseCard item={item} key={item.id} sourceId={sourceId} />
-							))}
-					</MangaGrid>
+				{data && (
+					<>
+						<MangaGrid>
+							{data.pages
+								.flatMap((page) => page.items)
+								.map((item) => (
+									<BrowseCard item={item} key={item.id} sourceId={sourceId} />
+								))}
+						</MangaGrid>
 
-					<div className="h-px" ref={sentinelRef} />
+						<div className="h-px" ref={sentinelRef} />
 
-					{isFetchingNextPage && <MangaGridSkeleton count={6} />}
+						{isFetchingNextPage && <MangaGridSkeleton count={6} />}
 
-					{!hasNextPage && (
-						<p className="py-8 text-center text-muted-foreground text-sm">
-							End of section
-						</p>
-					)}
-				</>
-			)}
+						{!hasNextPage && (
+							<p className="py-8 text-center text-muted-foreground text-sm">
+								End of section
+							</p>
+						)}
+					</>
+				)}
+			</div>
 		</div>
 	);
 }

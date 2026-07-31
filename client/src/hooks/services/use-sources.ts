@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	useIsFetching,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { unwrap } from "@/lib/unwrap";
 import type { SearchQuery, SectionRef } from "@/types/bindings";
 import { commands } from "@/types/bindings";
@@ -19,6 +24,25 @@ export const sourceKeys = {
 	pages: (sourceId: string, mangaId: string, chapterId: string) =>
 		[...sourceKeys.all, sourceId, "pages", mangaId, chapterId] as const,
 };
+
+/**
+ * Drops everything cached for one source and refetches whatever is on screen.
+ * Queries default to a five-minute `staleTime` with no refetch on focus, so
+ * without this a source's homepage cannot be reloaded short of restarting.
+ *
+ * The key is the source's whole prefix — homepage, search, sections, and any
+ * titles opened from it. Only the mounted queries refetch; the rest are just
+ * marked stale for their next visit.
+ */
+export function useSourceRefresh(sourceId: string) {
+	const queryClient = useQueryClient();
+	const key = [...sourceKeys.all, sourceId];
+
+	return {
+		isRefreshing: useIsFetching({ queryKey: key }) > 0,
+		refresh: () => queryClient.invalidateQueries({ queryKey: key }),
+	};
+}
 
 export function useSources() {
 	return useQuery({
