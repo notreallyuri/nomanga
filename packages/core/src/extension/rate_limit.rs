@@ -14,7 +14,7 @@ pub enum SourceMethod {
 /// At most `requests` calls to `method` per `per_ms`. The host enforces it by
 /// delaying calls that would exceed the budget, never dropping them.
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct RateLimit {
     pub method: SourceMethod,
     pub requests: u32,

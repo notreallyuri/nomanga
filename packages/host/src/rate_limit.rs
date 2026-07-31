@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 pub struct RateLimiter {
+    limits: Vec<RateLimit>,
     buckets: HashMap<SourceMethod, TokenBucket>,
 }
 
@@ -13,7 +14,23 @@ impl RateLimiter {
             .filter(|l| l.requests > 0 && l.per_ms > 0)
             .map(|l| (l.method, TokenBucket::new(l.requests, l.per_ms)))
             .collect();
-        Self { buckets }
+
+        Self {
+            limits: limits.to_vec(),
+            buckets,
+        }
+    }
+
+    // Fresh buckets start full, so an unconditional swap would hand out a free
+    // burst every time the budget is re-read. Re-reading usually confirms what
+    // is already installed, and that case has to leave the spent tokens alone.
+    pub fn replace(&mut self, limits: &[RateLimit]) -> bool {
+        if self.limits == limits {
+            return false;
+        }
+
+        *self = Self::new(limits);
+        true
     }
 
     pub fn reserve(&mut self, method: SourceMethod) -> Duration {
@@ -78,6 +95,37 @@ mod tests {
     #[test]
     fn unlimited_method_never_waits() {
         let mut limiter = RateLimiter::new(&[]);
+        assert!(limiter.reserve(SourceMethod::Search).is_zero());
+    }
+
+    #[test]
+    fn re_reading_the_same_budget_does_not_refill() {
+        let limits = vec![RateLimit::new(SourceMethod::Search, 2, 1_000)];
+        let mut limiter = RateLimiter::new(&limits);
+
+        assert!(limiter.reserve(SourceMethod::Search).is_zero());
+        assert!(limiter.reserve(SourceMethod::Search).is_zero());
+
+        assert!(
+            !limiter.replace(&limits),
+            "an unchanged budget should not be reinstalled"
+        );
+        assert!(
+            !limiter.reserve(SourceMethod::Search).is_zero(),
+            "re-reading the same budget handed out a free burst"
+        );
+    }
+
+    #[test]
+    fn a_raised_budget_takes_effect() {
+        let mut limiter = RateLimiter::new(&[RateLimit::new(SourceMethod::Search, 1, 60_000)]);
+
+        assert!(limiter.reserve(SourceMethod::Search).is_zero());
+        assert!(!limiter.reserve(SourceMethod::Search).is_zero());
+
+        // What an API key that lifts the ceiling looks like once the configured
+        // instance reports its real budget.
+        assert!(limiter.replace(&[RateLimit::new(SourceMethod::Search, 4, 60_000)]));
         assert!(limiter.reserve(SourceMethod::Search).is_zero());
     }
 }

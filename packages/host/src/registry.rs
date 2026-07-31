@@ -22,6 +22,7 @@ pub struct SourceHandle {
     enabled: Arc<AtomicBool>,
     plugin: Arc<Mutex<Option<Loaded>>>,
     limiter: Arc<Mutex<RateLimiter>>,
+    limits_fresh: Arc<AtomicBool>,
 }
 
 // The instant lives with the instance rather than beside it so the two can
@@ -58,6 +59,9 @@ impl SourceHandle {
         }
 
         let loaded = guard.as_mut().expect("just built");
+
+        self.refresh_limits(&mut loaded.plugin);
+
         let result = f(&mut loaded.plugin);
 
         // Stamped on the way out, and for failures too: a call that errored
@@ -66,6 +70,30 @@ impl SourceHandle {
         loaded.last_used = Instant::now();
 
         result
+    }
+
+    // A source may scale its budget by its own settings -- an API key that lifts
+    // the ceiling -- and the snapshot is taken with no config at all, so what it
+    // recorded is the anonymous floor. This is the first moment a configured
+    // instance exists, so the real budget is read here and then left alone until
+    // `set_config` says the settings moved.
+    //
+    // Failure keeps the floor rather than propagating: a source whose
+    // `get_rate_limits` errors still works, and throttling it conservatively is
+    // the safe outcome. The flag stays down so the next call retries.
+    fn refresh_limits(&self, plugin: &mut LoadedExtension) {
+        if self.limits_fresh.load(Ordering::Relaxed) {
+            return;
+        }
+
+        let Ok(limits) = plugin.rate_limits(&self.info.id) else {
+            return;
+        };
+
+        if let Ok(mut limiter) = self.limiter.lock() {
+            limiter.replace(&limits);
+            self.limits_fresh.store(true, Ordering::Relaxed);
+        }
     }
 
     // `try_lock` because a source mid-call is in use by definition, and the
@@ -120,6 +148,10 @@ impl SourceHandle {
             let mut current = self.config.lock().map_err(|_| HostError::Poisoned)?;
             *current = config;
         }
+
+        // The budget may have been keyed to whatever just changed, so it is
+        // re-read on the next call rather than carried over.
+        self.limits_fresh.store(false, Ordering::Relaxed);
 
         let mut plugin = self.plugin.lock().map_err(|_| HostError::Poisoned)?;
         *plugin = None;
@@ -298,7 +330,12 @@ impl Registry {
                 // registry where nothing works.
                 enabled: Arc::new(AtomicBool::new(true)),
                 plugin: Arc::new(Mutex::new(None)),
+                // Seeded from the snapshot, which is the source's unconfigured
+                // answer. `throttled` reserves before the plugin exists, so the
+                // very first call is metered by this -- which is why the static
+                // declaration has to be the floor, not the optimistic ceiling.
                 limiter: Arc::new(Mutex::new(RateLimiter::new(&source.rate_limits))),
+                limits_fresh: Arc::new(AtomicBool::new(false)),
             })
             .collect();
 

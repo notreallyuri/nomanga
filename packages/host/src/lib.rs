@@ -12,6 +12,7 @@ use nomanga_core::{
         filter::Filter,
         info::ExtensionInfo,
         query::{ChapterRef, MangaPage, MangaRef, SearchQuery, SectionRef},
+        rate_limit::RateLimit,
         source::{SourceInfo, Sourced},
     },
 };
@@ -132,6 +133,24 @@ impl LoadedExtension {
         )?;
 
         Ok(filters)
+    }
+
+    // Like `filters`, read live rather than off the snapshot: the snapshot plugin
+    // is built with no config, so a source that scales its budget by a setting --
+    // an API key that doubles the ceiling -- always declares the anonymous
+    // numbers there. Answers outside `SourceResult`.
+    pub fn rate_limits(&mut self, source_id: &str) -> HostResult<Vec<RateLimit>> {
+        self.ensure_source(source_id)?;
+
+        let Json(limits): Json<Vec<RateLimit>> = self.plugin.call(
+            "get_rate_limits",
+            Json(Sourced {
+                source_id: source_id.to_owned(),
+                payload: (),
+            }),
+        )?;
+
+        Ok(limits)
     }
 
     pub fn homepage(&mut self, source_id: &str) -> HostResult<Homepage> {
