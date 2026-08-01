@@ -40,6 +40,7 @@ pub struct Category {
     pub hidden: bool,
     pub locked: bool,
     pub is_default: bool,
+    pub skip_updates: bool,
     pub sort_mode: CategorySort,
     pub color: Option<String>,
     pub icon: Option<String>,
@@ -51,6 +52,7 @@ pub struct CategoryOptions {
     pub hidden: bool,
     pub locked: bool,
     pub is_default: bool,
+    pub skip_updates: bool,
     pub sort_mode: CategorySort,
     pub color: Option<String>,
     pub icon: Option<String>,
@@ -82,6 +84,7 @@ pub async fn create_category(pool: &SqlitePool, name: &str) -> ServiceResult<Cat
         hidden: false,
         locked: false,
         is_default: false,
+        skip_updates: false,
         sort_mode: CategorySort::Added,
         color: None,
         icon: None,
@@ -108,11 +111,13 @@ pub async fn update_category_options(
 
     let result = sqlx::query!(
         "UPDATE category
-            SET hidden = ?, locked = ?, is_default = ?, sort_mode = ?, color = ?, icon = ?
+            SET hidden = ?, locked = ?, is_default = ?, skip_updates = ?,
+                sort_mode = ?, color = ?, icon = ?
           WHERE id = ?",
         options.hidden,
         options.locked,
         options.is_default,
+        options.skip_updates,
         sort_mode,
         options.color,
         options.icon,
@@ -187,7 +192,8 @@ pub async fn list_categories(pool: &SqlitePool) -> ServiceResult<Vec<Category>> 
     let rows = sqlx::query!(
         r#"SELECT id, name, sort_order AS "sort_order: i32",
                   hidden AS "hidden: bool", locked AS "locked: bool",
-                  is_default AS "is_default: bool", sort_mode, color, icon
+                  is_default AS "is_default: bool",
+                  skip_updates AS "skip_updates: bool", sort_mode, color, icon
              FROM category ORDER BY sort_order, name"#
     )
     .fetch_all(pool)
@@ -202,6 +208,7 @@ pub async fn list_categories(pool: &SqlitePool) -> ServiceResult<Vec<Category>> 
             hidden: r.hidden,
             locked: r.locked,
             is_default: r.is_default,
+            skip_updates: r.skip_updates,
             sort_mode: CategorySort::from_db(&r.sort_mode),
             color: r.color,
             icon: r.icon,

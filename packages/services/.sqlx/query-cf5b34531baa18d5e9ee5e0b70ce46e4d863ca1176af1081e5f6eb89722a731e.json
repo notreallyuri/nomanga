@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name, sort_order AS \"sort_order: i32\",\n                  hidden AS \"hidden: bool\", locked AS \"locked: bool\",\n                  is_default AS \"is_default: bool\", sort_mode, color, icon\n             FROM category ORDER BY sort_order, name",
+  "query": "SELECT id, name, sort_order, hidden, locked, is_default, skip_updates,\n                  sort_mode, color, icon\n           FROM category",
   "describe": {
     "columns": [
       {
@@ -26,7 +26,7 @@
         }
       },
       {
-        "name": "sort_order: i32",
+        "name": "sort_order",
         "ordinal": 2,
         "type_info": "Integer",
         "origin": {
@@ -37,7 +37,7 @@
         }
       },
       {
-        "name": "hidden: bool",
+        "name": "hidden",
         "ordinal": 3,
         "type_info": "Integer",
         "origin": {
@@ -48,7 +48,7 @@
         }
       },
       {
-        "name": "locked: bool",
+        "name": "locked",
         "ordinal": 4,
         "type_info": "Bool",
         "origin": {
@@ -59,7 +59,7 @@
         }
       },
       {
-        "name": "is_default: bool",
+        "name": "is_default",
         "ordinal": 5,
         "type_info": "Integer",
         "origin": {
@@ -70,8 +70,19 @@
         }
       },
       {
-        "name": "sort_mode",
+        "name": "skip_updates",
         "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "category",
+            "name": "skip_updates"
+          }
+        }
+      },
+      {
+        "name": "sort_mode",
+        "ordinal": 7,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -82,7 +93,7 @@
       },
       {
         "name": "color",
-        "ordinal": 7,
+        "ordinal": 8,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -93,7 +104,7 @@
       },
       {
         "name": "icon",
-        "ordinal": 8,
+        "ordinal": 9,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -114,9 +125,10 @@
       false,
       false,
       false,
+      false,
       true,
       true
     ]
   },
-  "hash": "1b7dd77c500ee381ad44dd50c050ac9358688070269643329ad2c0b795550c1d"
+  "hash": "cf5b34531baa18d5e9ee5e0b70ce46e4d863ca1176af1081e5f6eb89722a731e"
 }

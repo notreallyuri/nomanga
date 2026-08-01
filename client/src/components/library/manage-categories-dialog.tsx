@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+	BellSlashIcon,
 	CheckIcon,
 	DotsSixVerticalIcon,
 	EyeSlashIcon,
@@ -253,6 +254,9 @@ function CategoryRow({ category }: { category: Category }) {
 			{category.locked && (
 				<LockKeyIcon className="shrink-0 text-muted-foreground" size={14} />
 			)}
+			{category.skip_updates && (
+				<BellSlashIcon className="shrink-0 text-muted-foreground" size={14} />
+			)}
 
 			<CategoryOptionsPopover category={category} />
 			<Button onClick={() => setEditing(true)} size="icon-sm" variant="ghost">
@@ -301,6 +305,7 @@ function optionsOf(c: Category): CategoryOptions {
 		hidden: c.hidden,
 		locked: c.locked,
 		is_default: c.is_default,
+		skip_updates: c.skip_updates,
 		sort_mode: c.sort_mode,
 		color: c.color,
 		icon: c.icon,
@@ -384,6 +389,20 @@ function CategoryOptionsPopover({ category }: { category: Category }) {
 					<Switch
 						checked={category.is_default}
 						onCheckedChange={(is_default) => apply({ is_default })}
+					/>
+				</div>
+
+				<div className="flex items-center justify-between gap-4">
+					<Label className="flex flex-col gap-0.5">
+						<span>Skip updates</span>
+						<span className="font-normal text-muted-foreground text-xs">
+							Leave its series out of update checks, unless they are also in a
+							category that is not skipped.
+						</span>
+					</Label>
+					<Switch
+						checked={category.skip_updates}
+						onCheckedChange={(skip_updates) => apply({ skip_updates })}
 					/>
 				</div>
 

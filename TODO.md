@@ -69,8 +69,6 @@ front of a page the app has to read.
 
 ### Library
 
-- [ ] Update Behavior customization
-
 #### Keep downloaded media compacted
 
 ### Browse
@@ -516,6 +514,25 @@ default.
     (ABI 3: `SearchQuery.query` renamed to `SearchQuery.term`.)
 
 ### Library
+
+- [x] Skip updates per category, alongside the existing per-source switch.
+  A `skip_updates` column on `category`, surfaced as a toggle in the category
+  options popover and a marker on the row beside default/hidden/locked.
+  Two rules, both deliberate and both tested:
+  - **All, not any.** An entry is muted only when *every* category it belongs to
+    is marked to skip. A series filed in both "Finished" and "Reading" is still
+    being read, and letting one archived shelf mute it wherever else it appears
+    would make the flag act at a distance — the failure would show up as
+    chapters silently never arriving, which is the hardest kind to notice. An
+    entry in no category is never muted; there is nothing to have said so.
+  - **Naming the target overrides it.** The skip applies to `RefreshScope::All`
+    only. Refreshing a specific category or a specific entry is the user
+    pointing at something, and refusing to check it would read as a broken
+    button. This differs from the per-source `skip_updates`, which applies to
+    every scope — worth reconciling one day, but changing source behaviour was
+    out of scope here.
+  Travels in backups: `CategoryRow` carries the column, and the field is
+  `#[serde(default)]` so a backup written before this still imports.
 
 - [x] Pause and cancel in the downloads queue dialog.
   Pause is a `watch::channel(bool)` the worker waits on **between chapters**, so

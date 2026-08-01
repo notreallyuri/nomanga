@@ -32,6 +32,8 @@ pub struct CategoryRow {
     pub hidden: i64,
     pub locked: i64,
     pub is_default: i64,
+    #[serde(default)]
+    pub skip_updates: i64,
     pub sort_mode: String,
     pub color: Option<String>,
     pub icon: Option<String>,

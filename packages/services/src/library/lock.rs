@@ -129,6 +129,7 @@ mod tests {
                 hidden: false,
                 locked: true,
                 is_default: false,
+                skip_updates: false,
                 sort_mode: categories::CategorySort::Added,
                 color: None,
                 icon: None,
