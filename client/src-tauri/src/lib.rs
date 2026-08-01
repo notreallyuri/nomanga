@@ -11,6 +11,7 @@ pub mod commands;
 pub mod downloads;
 pub mod error;
 pub mod image_proxy;
+pub mod memory;
 pub mod transport;
 
 pub struct AppState {

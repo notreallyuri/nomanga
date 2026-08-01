@@ -106,4 +106,13 @@ fn failed(message: &str) -> HostResponse {
 
 pub fn set_recording(shared: &TransportShared, on: bool) {
     shared.recording.store(on, Ordering::Relaxed);
+
+    // A full log is two hundred records each holding up to 256 KB of response
+    // body, and nothing else ever drops them -- so leaving recording on for a
+    // browse and turning it off again would otherwise cost tens of megabytes for
+    // the rest of the session. Switching it off is the user saying they are done
+    // with what was captured.
+    if !on {
+        shared.log.clear();
+    }
 }

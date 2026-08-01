@@ -1,6 +1,6 @@
 use crate::error::{HostError, HostResult};
 use crate::snapshot::ExtensionSnapshot;
-use extism::{Manifest, Plugin, Wasm, convert::Json};
+use extism::{CompiledPlugin, Manifest, Plugin, PluginBuilder, Wasm, convert::Json};
 use nomanga_core::{
     data::{
         chapter::{Chapter, Page},
@@ -56,12 +56,21 @@ impl ExtensionMetadata {
         hosts.dedup();
         hosts
     }
-    pub fn activate(
+    // Compiling and instantiating are separated because they cost very
+    // different things. Compiling is the expensive half -- cranelift turning the
+    // module into machine code -- and what it produces is read-only and good
+    // until the wasm or the config changes. Instantiating is the half that
+    // allocates the linear memory a call actually grows, and it is cheap enough
+    // (single-digit milliseconds against a network round trip) to redo per call.
+    // Keeping only the compiled half between calls is what stops a source that
+    // once parsed a huge chapter list from holding that high-water mark for as
+    // long as it stays loaded.
+    pub fn compile(
         &self,
         allowed_hosts: Vec<String>,
         config: HashMap<String, String>,
         transport: crate::transport::TransportContext,
-    ) -> HostResult<LoadedExtension> {
+    ) -> HostResult<CompiledExtension> {
         let bytes = std::fs::read(&self.wasm_path).map_err(|source| HostError::WasmRead {
             path: self.wasm_path.clone(),
             source,
@@ -70,17 +79,63 @@ impl ExtensionMetadata {
         let mut manifest =
             Manifest::new([Wasm::data(bytes)]).with_allowed_hosts(allowed_hosts.into_iter());
 
+        // Config reaches the guest through the manifest, which is baked into the
+        // compiled artefact -- so a settings change has to recompile, and
+        // `set_config` drops this rather than trying to patch it.
         for (k, v) in config {
             manifest = manifest.with_config_key(&k, v);
         }
 
         let (functions, transport_data) = crate::transport::functions(transport);
-        let plugin = Plugin::new(&manifest, functions, true)?;
+        let compiled = PluginBuilder::new(manifest)
+            .with_functions(functions)
+            .with_wasi(true)
+            .compile()?;
 
-        Ok(LoadedExtension {
-            plugin,
+        Ok(CompiledExtension {
+            compiled,
             transport_data,
             source_ids: self.sources.iter().map(|s| s.id.clone()).collect(),
+        })
+    }
+
+    /// Compiles and instantiates in one step.
+    ///
+    /// For callers that run a handful of calls and exit -- the CLI, tests --
+    /// where there is no second call to amortise a cached compilation over. The
+    /// app splits the two instead.
+    pub fn activate(
+        &self,
+        allowed_hosts: Vec<String>,
+        config: HashMap<String, String>,
+        transport: crate::transport::TransportContext,
+    ) -> HostResult<LoadedExtension> {
+        self.compile(allowed_hosts, config, transport)?.instantiate()
+    }
+}
+
+/// An extension compiled but not instantiated: machine code and nothing else.
+///
+/// The host functions -- and the transport context behind them -- are fixed at
+/// compile time, so every instance built from one of these shares them. That is
+/// safe here because a source's calls are serialised behind its own lock, and it
+/// is why this is cached per source rather than per extension.
+pub struct CompiledExtension {
+    compiled: CompiledPlugin,
+    transport_data: extism::UserData<crate::transport::TransportContext>,
+    source_ids: Vec<String>,
+}
+
+impl CompiledExtension {
+    /// Builds a throwaway instance to run one call on.
+    ///
+    /// Everything it allocates -- above all the linear memory the guest grows
+    /// while parsing -- goes back when the returned value is dropped.
+    pub fn instantiate(&self) -> HostResult<LoadedExtension> {
+        Ok(LoadedExtension {
+            plugin: Plugin::new_from_compiled(&self.compiled)?,
+            transport_data: self.transport_data.clone(),
+            source_ids: self.source_ids.clone(),
         })
     }
 }
