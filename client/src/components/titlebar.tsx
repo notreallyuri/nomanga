@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
+import { isMac } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
 const appWindow = getCurrentWindow();
@@ -14,6 +15,9 @@ export function Titlebar() {
 	const [maximized, setMaximized] = useState(false);
 
 	useEffect(() => {
+		// macOS draws its own traffic lights, so nothing here reads `maximized`.
+		if (isMac) return;
+
 		let unlisten: (() => void) | undefined;
 		appWindow.isMaximized().then(setMaximized);
 		appWindow
@@ -28,34 +32,49 @@ export function Titlebar() {
 
 	return (
 		<div
-			className="flex h-(--titlebar-h) shrink-0 select-none items-center border-border border-b bg-background pl-3 text-muted-foreground"
+			className={cn(
+				"flex h-(--titlebar-h) shrink-0 select-none items-center border-border border-b bg-background text-muted-foreground",
+				// The traffic lights float over the left edge of the webview under
+				// titleBarStyle: Overlay, so the title has to start clear of them --
+				// and gets the same gutter on the right to stay centred.
+				isMac ? "px-20" : "pl-3",
+			)}
 			data-tauri-drag-region
 		>
 			<span
-				className="pointer-events-none font-heading font-medium text-xs tracking-wide"
+				className={cn(
+					"pointer-events-none font-black font-heading text-xs tracking-wide",
+					isMac && "flex-1 text-center",
+				)}
 				data-tauri-drag-region
 			>
 				nomanga
 			</span>
 
-			<div className="ml-auto flex h-full">
-				<ControlButton label="Minimize" onClick={() => appWindow.minimize()}>
-					<MinusIcon size={14} />
-				</ControlButton>
-				<ControlButton
-					label={maximized ? "Restore" : "Maximize"}
-					onClick={() => appWindow.toggleMaximize()}
-				>
-					{maximized ? <CopySimpleIcon size={12} /> : <SquareIcon size={12} />}
-				</ControlButton>
-				<ControlButton
-					className="hover:bg-destructive hover:text-white"
-					label="Close"
-					onClick={() => appWindow.close()}
-				>
-					<XIcon size={14} />
-				</ControlButton>
-			</div>
+			{!isMac && (
+				<div className="ml-auto flex h-full">
+					<ControlButton label="Minimize" onClick={() => appWindow.minimize()}>
+						<MinusIcon size={14} />
+					</ControlButton>
+					<ControlButton
+						label={maximized ? "Restore" : "Maximize"}
+						onClick={() => appWindow.toggleMaximize()}
+					>
+						{maximized ? (
+							<CopySimpleIcon size={12} />
+						) : (
+							<SquareIcon size={12} />
+						)}
+					</ControlButton>
+					<ControlButton
+						className="hover:bg-destructive hover:text-white"
+						label="Close"
+						onClick={() => appWindow.close()}
+					>
+						<XIcon size={14} />
+					</ControlButton>
+				</div>
+			)}
 		</div>
 	);
 }

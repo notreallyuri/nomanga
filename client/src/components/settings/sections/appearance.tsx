@@ -154,7 +154,7 @@ function VisualOptions<T extends string>({
 							aria-label={option.label}
 							aria-pressed={active}
 							className={cn(
-								"group relative flex w-32 shrink-0 flex-col gap-1.5 rounded-lg border p-1.5 text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+								"group relative block w-32 shrink-0 rounded-lg border p-1.5 text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
 								active
 									? "border-primary ring-2 ring-primary/30"
 									: "border-border hover:border-foreground/30",
@@ -163,10 +163,14 @@ function VisualOptions<T extends string>({
 							onClick={() => onChange(option.value)}
 							type="button"
 						>
-							<div className="overflow-hidden rounded-md ring-1 ring-border/60">
-								{option.preview}
+							{/* The stack lives on a child: WebKit lays a button's children
+							    out itself and drops flex set on the button. */}
+							<div className="flex flex-col gap-1.5">
+								<div className="overflow-hidden rounded-md ring-1 ring-border/60">
+									{option.preview}
+								</div>
+								<span className="font-medium text-xs">{option.label}</span>
 							</div>
-							<span className="font-medium text-xs">{option.label}</span>
 							{active && (
 								<span className="absolute top-2.5 right-2.5 flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
 									<CheckIcon size={11} weight="bold" />

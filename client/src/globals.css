@@ -400,4 +400,51 @@ body:has([data-slot$="-overlay"]) [data-app-shell] * {
 	html {
 		@apply font-sans;
 	}
+
+	/*
+	 * Preflight hands every button `appearance: button`, which on WebKit is a
+	 * request for the native Aqua control -- it paints its own background and
+	 * lays the children out itself, so a bare <button> that carries its own
+	 * styling comes out wrong on macOS and nowhere else. The ones built on
+	 * base-ui survive only because they all set an explicit background.
+	 */
+	button,
+	input:where([type="button"], [type="reset"], [type="submit"]) {
+		-webkit-appearance: none;
+		appearance: none;
+	}
+
+	/*
+	 * WebView2 and WKWebView each draw the platform's own scrollbars, which look
+	 * nothing like each other or like the app. Replacing them costs macOS its
+	 * overlay bars -- the gutter is reserved from then on -- and that is the
+	 * trade for the two platforms finally matching.
+	 *
+	 * ::-webkit-scrollbar rather than scrollbar-width/-color: Chromium ignores
+	 * these pseudo-elements once either standard property is set, and WebKit
+	 * only learned the standard ones in Safari 18.2.
+	 */
+	::-webkit-scrollbar {
+		width: 10px;
+		height: 10px;
+	}
+	::-webkit-scrollbar-track,
+	::-webkit-scrollbar-corner {
+		background: transparent;
+	}
+	::-webkit-scrollbar-thumb {
+		background-color: color-mix(in oklch, var(--foreground) 20%, transparent);
+		background-clip: padding-box;
+		border: 3px solid transparent;
+		border-radius: 9999px;
+	}
+	::-webkit-scrollbar-thumb:hover {
+		background-color: color-mix(in oklch, var(--foreground) 32%, transparent);
+	}
+	::-webkit-scrollbar-thumb:active {
+		background-color: color-mix(in oklch, var(--foreground) 45%, transparent);
+	}
+	::-webkit-scrollbar-button {
+		display: none;
+	}
 }

@@ -15,6 +15,7 @@
     "opener:default",
     "dialog:default",
     "notification:default",
-    "deep-link:default"
+    "deep-link:default",
+    "os:default"
   ]
 }

@@ -209,6 +209,7 @@ pub fn run() {
     }
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
         // Must stay first, and must come before deep-link: on Linux and Windows
         // a nomanga:// link launches a fresh process with the URL in argv, so
         // without this the running app never sees it and a second copy opens on
