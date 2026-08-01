@@ -71,8 +71,6 @@ front of a page the app has to read.
 
 - [ ] Update Behavior customization
 
-#### Keep downloaded media compacted
-
 ### Browse
 
 - [ ] Allow name-searching in all sources (does not include source-specific
@@ -490,6 +488,27 @@ default.
     is *across restarts*, not within a session.
 
 ### Platform
+
+- [x] Downloaded pages are named after what the bytes are, not what the URL
+  claimed. `pick_extension` read the URL extension first and only fell back to
+  `Content-Type`; WeebCentral serves JPEG bytes from `.png` URLs, which misnamed
+  7465 of one library's 7874 "PNG" pages — 1.82 GB, 65% of that store. Nothing
+  broke visibly, because webviews sniff image content and ignore the extension,
+  which is also why the fix is forward-only: existing files render fine and
+  renaming them would rewrite user data to correct a hint nothing reads.
+
+- [x] Considered and dropped: recompressing downloads to save space. Measured
+  against a real 2.8 GB library on 2026-08-01, so it does not need re-deriving.
+  Pages already arrive at ~0.16 bytes/pixel, and re-encoding already-lossy JPEG
+  buys almost nothing:
+  - lossless WebP: **2.5x larger**
+  - WebP q90: 17% larger; q85: 1.6% smaller
+  - AVIF q80: 11.5% smaller; q70: 25% smaller, visibly lossy
+  - jpegtran `-optimize -progressive`: 8.3% smaller, pixel-identical — the only
+    genuinely lossless option, and not worth a mozjpeg dependency plus a pass
+    over thousands of files.
+  If download size becomes a problem, retention (dropping read chapters) is the
+  lever, not the encoder.
 
 - [x] Referer-gated image CDNs:
   - Affects two sources already: NatoManga (covers *and* pages) and WEBTOON
