@@ -84,6 +84,10 @@ body:has([data-slot$="-overlay"]) [data-app-shell] * {
 		--titlebar-h: 2rem;
 	}
 
+	:root[data-titlebar-hidden] {
+		--titlebar-h: 0px;
+	}
+
 	:root,
 	.default:not(.dark) {
 		--background: oklch(1 0 0);

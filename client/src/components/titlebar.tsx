@@ -5,7 +5,7 @@ import {
 	XIcon,
 } from "@phosphor-icons/react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { isMac } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
@@ -16,33 +16,25 @@ export function Titlebar() {
 	const [fullscreen, setFullscreen] = useState(false);
 
 	useEffect(() => {
-		// macOS draws its own traffic lights, so nothing here reads `maximized`.
-		if (isMac) return;
-
 		let unlisten: (() => void) | undefined;
-		appWindow.isMaximized().then(setMaximized);
-		appWindow
-			.onResized(() => {
-				appWindow.isMaximized().then(setMaximized);
-			})
-			.then((fn) => {
-				unlisten = fn;
-			});
+
+		const sync = () => {
+			appWindow.isFullscreen().then(setFullscreen);
+			if (!isMac) appWindow.isMaximized().then(setMaximized);
+		};
+
+		sync();
+		appWindow.onResized(sync).then((fn) => {
+			unlisten = fn;
+		});
 		return () => unlisten?.();
 	}, []);
 
-	useEffect(() => {
-		let unlisten: (() => void) | undefined;
-		appWindow.isFullscreen().then(setFullscreen);
-		appWindow
-			.onResized(() => {
-				appWindow.isFullscreen().then(setFullscreen);
-			})
-			.then((fn) => {
-				unlisten = fn;
-			});
-		return () => unlisten?.();
-	}, []);
+	useLayoutEffect(() => {
+		const root = document.documentElement;
+		root.toggleAttribute("data-titlebar-hidden", fullscreen);
+		return () => root.removeAttribute("data-titlebar-hidden");
+	}, [fullscreen]);
 
 	if (fullscreen) return null;
 
@@ -50,9 +42,6 @@ export function Titlebar() {
 		<div
 			className={cn(
 				"flex h-(--titlebar-h) shrink-0 select-none items-center border-border border-b bg-background text-muted-foreground",
-				// The traffic lights float over the left edge of the webview under
-				// titleBarStyle: Overlay, so the title has to start clear of them --
-				// and gets the same gutter on the right to stay centred.
 				isMac ? "px-20" : "pl-3",
 			)}
 			data-tauri-drag-region

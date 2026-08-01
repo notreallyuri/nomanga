@@ -148,13 +148,13 @@ function NavPinnedSources() {
 function PinnedSource({ info, active }: { info: SourceInfo; active: boolean }) {
 	return (
 		<ContextMenu>
-			<ContextMenuTrigger
-				render={
-					<SidebarMenuItem>
-						<SidebarMenuButton
-							className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
-							isActive={active}
-							tooltip={info.name}
+			<SidebarMenuItem>
+				<SidebarMenuButton
+					className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+					isActive={active}
+					tooltip={info.name}
+					render={
+						<ContextMenuTrigger
 							render={
 								<Link params={{ sourceId: info.id }} to="/browse/$sourceId">
 									<SourceIcon
@@ -167,9 +167,9 @@ function PinnedSource({ info, active }: { info: SourceInfo; active: boolean }) {
 								</Link>
 							}
 						/>
-					</SidebarMenuItem>
-				}
-			/>
+					}
+				/>
+			</SidebarMenuItem>
 			<SourceMenuContent info={info} showOpen={false} />
 		</ContextMenu>
 	);
