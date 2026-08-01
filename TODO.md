@@ -67,13 +67,6 @@ front of a page the app has to read.
   back), or swap the HTTP stack for one that reproduces a browser's TLS
   fingerprint.
 
-### Browse
-
-- [ ] Allow name-searching in all sources (does not include source-specific
-  filters) — search-all bar stubbed in the browse landing; backend pending. The
-  per-source opt-out is already stored: honour `source_preference.hide_from_search`
-  when picking which sources the query fans out to.
-
 ### Updates
 
 - [ ] Tray menu implementation.
@@ -257,6 +250,32 @@ default.
     the topic with a real security surface.
 
 ## Done
+
+### Browse
+
+- [x] Name-search across every source from the browse landing. The bar is no
+  longer a stub: it writes `q` into the route's search params and renders one
+  row per source, each with its own query, so a slow or broken source delays and
+  fails only its own row. `hide_from_search` is what picks the fan-out set.
+  No new command. Each `SourceHandle` owns its own wasm instance and its own
+  rate limiter, so the existing `source_search` already runs the sources in
+  parallel; a batch command would have had to block on the slowest one or grow
+  an event channel to stream partial results.
+  Two shapes deliberately rejected:
+  - A merged grid. Relevance is not comparable across sources, and the same
+    series carries a different id in each, so the duplicates cannot be collapsed
+    either. Per-source rows, "View all" handing off to the per-source page that
+    already does infinite scroll and filters.
+  - Debounce-as-you-type, which the per-source search uses. One source can
+    afford a request per typing pause; every source is a burst against a
+    different site each, and the per-source limiter would serialise them into
+    results arriving for a term already typed past. Submits on Enter.
+  Filters are excluded by design, not by omission — they are declared per source
+  with no shared vocabulary, so there is nothing to fan out.
+  Worth watching: N sources searched at once means N wasm instances compiled at
+  once, several MB resident each. The idle sweeper reclaims them, and browsing
+  each source in turn would have compiled the same set, but this is the first
+  thing that compiles them all at the same moment.
 
 ### Extension distribution
 

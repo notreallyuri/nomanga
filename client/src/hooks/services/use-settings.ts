@@ -118,6 +118,21 @@ export function usePinnedSources() {
 	};
 }
 
+/**
+ * The order sources appear in on the Browse landing. An empty list means the
+ * user has never arranged them, which reads as alphabetical — see
+ * `applySourceOrder`, which is where that fallback lives.
+ */
+export function useSourceOrder() {
+	const { data } = useSettings();
+	const update = useUpdateSettings();
+
+	return {
+		order: data?.browse?.source_order ?? [],
+		setOrder: (ids: string[]) => update("browse", { source_order: ids }),
+	};
+}
+
 export const SYSTEM_DEFAULTS: Required<SystemSettings> = {
 	update_on_startup: true,
 	background_updates: "Off",

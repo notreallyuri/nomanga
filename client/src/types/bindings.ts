@@ -175,6 +175,16 @@ export type AppearanceSettings = {
 	show_unread_badge?: boolean,
 };
 
+export type BrowseSettings = {
+	/**
+	 *  Source ids in the order the user arranged them. Empty means untouched,
+	 *  which the client reads as "alphabetical" -- it is not a snapshot of the
+	 *  installed set, so an id that no longer resolves is simply skipped and a
+	 *  source missing from it sorts in by name.
+	 */
+	source_order?: string[],
+};
+
 export type CallEntry = {
 	source_id: string,
 	method: string,
@@ -643,6 +653,7 @@ export type SettingKind = { type: "Text"; secret: boolean; placeholder: string |
 
 export type Settings = {
 	appearance?: AppearanceSettings,
+	browse?: BrowseSettings,
 	reader?: ReaderSettings,
 	sidebar?: SidebarSettings,
 	system?: SystemSettings,

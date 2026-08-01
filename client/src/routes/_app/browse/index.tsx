@@ -1,34 +1,47 @@
 import {
-	CaretRightIcon,
 	MagnifyingGlassIcon,
 	PlugsIcon,
-	PlusIcon,
 	WarningIcon,
+	XIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { PinToggle } from "@/components/browse/pin-toggle";
-import { SourceMenuContent } from "@/components/browse/source-menu";
-import { useSettingsUI } from "@/components/settings/context";
-import { SourceIcon } from "@/components/source-icon";
-import { Badge } from "@/components/ui/badge";
-import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { GlobalSearch } from "@/components/browse/global-search";
+import { SourceGrid } from "@/components/browse/source-grid";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSourcesWithPreferences } from "@/hooks/services/use-extensions";
-import type { SourceInfo } from "@/types/bindings";
+import { useSourceOrder } from "@/hooks/services/use-settings";
+import { applySourceOrder } from "@/lib/source-order";
+
+interface BrowseIndexSearch {
+	q?: string;
+}
 
 export const Route = createFileRoute("/_app/browse/")({
+	validateSearch: (search: Record<string, unknown>): BrowseIndexSearch => ({
+		q: typeof search.q === "string" && search.q ? search.q : undefined,
+	}),
 	component: BrowseIndex,
 });
 
 function BrowseIndex() {
+	const { q = "" } = Route.useSearch();
+	const navigate = Route.useNavigate();
+
 	const { data: rows, isPending, error } = useSourcesWithPreferences();
+	const { order } = useSourceOrder();
+
+	// Replace rather than push: the term is already in the URL, so a back press
+	// should leave Browse the way it does from any other page here, not walk
+	// backwards through the searches made along the way.
+	const search = (term: string) =>
+		navigate({ search: term ? { q: term } : {}, replace: true });
 
 	if (isPending) {
 		return (
 			<Page>
-				<SearchAllBar disabled />
+				<SearchAllBar disabled onSearch={search} term={q} />
 				<div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
 					{["a", "b", "c", "d", "e", "f"].map((k) => (
 						<Skeleton className="h-[4.5rem]" key={k} />
@@ -56,52 +69,34 @@ function BrowseIndex() {
 		return <EmptyState kind="all-disabled" />;
 	}
 
-	const hiddenCount = rows.length - enabled.length;
+	if (q) {
+		// `hide_from_search` is the opt-out for a source the user wants to keep
+		// browsable without it answering every cross-source query — the adult
+		// sources it was added for.
+		//
+		// Ordered the same way the grid is, so the rows arrive in the arrangement
+		// the user set rather than in a second, unrelated order.
+		const searchable = applySourceOrder(
+			enabled.filter((row) => !row.preference.hide_from_search),
+			order,
+			(row) => row.info.id,
+			(row) => row.info.name,
+		).map((row) => row.info);
+
+		return (
+			<Page>
+				<SearchAllBar onSearch={search} term={q} />
+				<GlobalSearch sources={searchable} term={q} />
+			</Page>
+		);
+	}
 
 	return (
 		<Page>
-			<SearchAllBar />
+			<SearchAllBar onSearch={search} term={q} />
 
-			<div className="mb-3 flex items-baseline justify-between">
-				<h2 className="font-heading font-semibold text-muted-foreground text-sm uppercase tracking-wide">
-					Sources
-				</h2>
-				{hiddenCount > 0 && (
-					<p className="text-muted-foreground text-xs">{hiddenCount} hidden</p>
-				)}
-			</div>
-
-			<div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
-				{enabled.map(({ info }) => (
-					<SourceCard info={info} key={info.id} />
-				))}
-				<AddMoreCard />
-			</div>
+			<SourceGrid rows={rows} />
 		</Page>
-	);
-}
-
-/**
- * Sends the user to the Extensions tab of the settings dialog, where sources
- * are installed — so the grid always offers a way to add to it.
- */
-function AddMoreCard() {
-	const { openSettings } = useSettingsUI();
-
-	return (
-		<button
-			className="group flex items-center gap-3 rounded-lg border border-border border-dashed p-3 text-left text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted hover:text-foreground"
-			onClick={() => openSettings("Extensions")}
-			type="button"
-		>
-			<div className="flex size-10 shrink-0 items-center justify-center rounded bg-muted transition-colors group-hover:bg-background">
-				<PlusIcon size={20} />
-			</div>
-			<div className="min-w-0 flex-1">
-				<p className="truncate font-medium">Add more</p>
-				<p className="text-xs">Install extensions</p>
-			</div>
-		</button>
 	);
 }
 
@@ -115,79 +110,59 @@ function Page({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Placeholder for cross-source search. The control is intentionally inert for
- * now — it reserves the layout and signals the coming capability rather than
- * pretending to work. Wire it to a search-all command when one exists.
+ * Submits on Enter rather than debouncing the way the per-source search does.
+ * One source can afford a request per typing pause; fanning the same keystrokes
+ * out to every installed source is a burst against a different site each, and
+ * the per-source rate limiter would serialise them into results arriving for a
+ * term the user has already typed past.
  */
-function SearchAllBar({ disabled }: { disabled?: boolean }) {
-	const [value, setValue] = useState("");
+function SearchAllBar({
+	term,
+	onSearch,
+	disabled,
+}: {
+	term: string;
+	onSearch: (term: string) => void;
+	disabled?: boolean;
+}) {
+	const [draft, setDraft] = useState(term);
+
+	useEffect(() => setDraft(term), [term]);
 
 	return (
-		<div className="relative mb-6">
+		<form
+			className="relative mb-6"
+			onSubmit={(e) => {
+				e.preventDefault();
+				onSearch(draft.trim());
+			}}
+		>
 			<MagnifyingGlassIcon
 				className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
 				size={18}
 			/>
 			<Input
 				aria-label="Search all sources"
-				className="h-11 pr-28 pl-10"
+				className="h-11 pr-10 pl-10"
 				disabled={disabled}
-				onChange={(e) => setValue(e.target.value)}
+				onChange={(e) => setDraft(e.target.value)}
 				placeholder="Search across all sources…"
-				value={value}
+				value={draft}
 			/>
-			<Badge
-				className="absolute top-1/2 right-3 -translate-y-1/2"
-				variant="secondary"
-			>
-				Coming soon
-			</Badge>
-		</div>
-	);
-}
-
-function SourceCard({ info }: { info: SourceInfo }) {
-	return (
-		<ContextMenu>
-			<ContextMenuTrigger
-				render={
-					<Link
-						className="group relative flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-muted"
-						params={{ sourceId: info.id }}
-						to="/browse/$sourceId"
-					>
-						<SourceIcon
-							className="size-10"
-							name={info.name}
-							url={info.icon_url}
-						/>
-
-						<div className="min-w-0 flex-1">
-							<div className="flex items-center gap-1.5">
-								<p className="truncate font-medium">{info.name}</p>
-								{info.nsfw && (
-									<Badge className="shrink-0" variant="destructive">
-										18+
-									</Badge>
-								)}
-							</div>
-							<p className="text-muted-foreground text-xs uppercase tracking-wide">
-								{info.language}
-							</p>
-						</div>
-
-						<PinToggle sourceId={info.id} />
-
-						<CaretRightIcon
-							className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-							size={16}
-						/>
-					</Link>
-				}
-			/>
-
-			<SourceMenuContent info={info} />
-		</ContextMenu>
+			{(draft || term) && (
+				<button
+					aria-label="Clear search"
+					className="absolute top-1/2 right-3 -translate-y-1/2 rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+					onClick={() => {
+						setDraft("");
+						onSearch("");
+					}}
+					type="button"
+				>
+					<XIcon size={16} />
+				</button>
+			)}
+		</form>
 	);
 }
 
