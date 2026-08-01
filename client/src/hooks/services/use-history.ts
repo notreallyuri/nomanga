@@ -167,6 +167,10 @@ export function useUpdateProgress(sourceId: string, mangaId: string) {
 					updated_at: new Date().toISOString(),
 				}),
 			);
+
+			queryClient.invalidateQueries({
+				queryKey: [...historyKeys.all, "continue"],
+			});
 		},
 	});
 }
