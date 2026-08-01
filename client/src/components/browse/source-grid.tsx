@@ -162,11 +162,6 @@ export function SourceGrid({ rows }: { rows: SourceWithPreference[] }) {
 	);
 }
 
-/**
- * Extensions by name, then each one's sources by name. Any installed source the
- * extension list does not account for keeps its current position at the end,
- * so a partially loaded list cannot drop ids from the order it writes.
- */
 function byExtension(
 	installedIds: string[],
 	extensions: InstalledExtension[],
@@ -269,10 +264,6 @@ function SourceCard({ info }: { info: SourceInfo }) {
 	);
 }
 
-/**
- * Sends the user to the Extensions tab of the settings dialog, where sources
- * are installed — so the grid always offers a way to add to it.
- */
 function AddMoreCard() {
 	const { openSettings } = useSettingsUI();
 

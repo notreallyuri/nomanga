@@ -11,11 +11,6 @@ export const repositoryKeys = {
 	catalog: () => [...repositoryKeys.all, "catalog"] as const,
 };
 
-/**
- * Every repository with the index it currently serves. Each row carries its own
- * `error`, so a repository that is unreachable renders as a failed row instead
- * of failing the query.
- */
 export function useRepositoryCatalog() {
 	return useQuery({
 		queryKey: repositoryKeys.catalog(),
@@ -30,11 +25,6 @@ export type RepositoryOffer = {
 	unsupported: boolean;
 };
 
-/**
- * What the added repositories offer, keyed by extension id. Two repositories
- * offering the same id collapse to one entry, so an extension is never listed
- * twice; the last one added wins.
- */
 export function useRepositoryOffers() {
 	const query = useRepositoryCatalog();
 

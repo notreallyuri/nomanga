@@ -22,11 +22,6 @@ import { useSourceRefresh } from "@/hooks/services/use-sources";
 import { usePinSource } from "@/hooks/use-pin-source";
 import type { SourceInfo } from "@/types/bindings";
 
-/**
- * The right-click menu for a source, wherever one is listed. Only the content —
- * each surface brings its own `ContextMenu`/`ContextMenuTrigger` so the trigger
- * can stay whatever that surface already renders.
- */
 export function SourceMenuContent({
 	info,
 	showOpen = true,

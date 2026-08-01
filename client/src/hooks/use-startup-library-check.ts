@@ -7,11 +7,6 @@ import { commands } from "@/types/bindings";
 // per series, so this is a no-op when everything was checked recently.
 let checked = false;
 
-/**
- * Runs the launch check from the app shell rather than a route, so turning
- * "Check library on start" on is honoured even when the app opens somewhere
- * other than Home.
- */
 export function useStartupLibraryCheck() {
 	const settings = useSettings();
 	const { check_library_on_start } = useSystem();

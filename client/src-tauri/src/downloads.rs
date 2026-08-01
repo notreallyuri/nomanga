@@ -49,13 +49,6 @@ struct Job {
 
 type Key = (String, String, String);
 
-/// The queue as it stands right now, in the order chapters were asked for.
-///
-/// The frontend rebuilds its view from `DownloadProgress` events, and an event
-/// is only sent once — so a webview that reloads mid-queue would otherwise never
-/// hear about the chapters still waiting. This is what `download_queue` hands
-/// back so it can catch up. Entries leave as they reach a terminal state; the
-/// finished ones are the client's own session history.
 type Live = Arc<Mutex<Vec<DownloadProgress>>>;
 
 fn position(live: &[DownloadProgress], key: &Key) -> Option<usize> {
@@ -74,10 +67,6 @@ pub struct DownloadManager {
     app: AppHandle,
     tx: mpsc::UnboundedSender<Job>,
     queued: Live,
-    /// Keys the user asked to drop. The queue is an unbounded channel, so a
-    /// job cannot be pulled back out of the middle of it — the worker checks
-    /// this when the job surfaces, and `process` checks it between pages to
-    /// stop one already running.
     cancelled: Arc<Mutex<HashSet<Key>>>,
     paused: watch::Sender<bool>,
 }
@@ -122,15 +111,10 @@ impl DownloadManager {
         *self.paused.borrow()
     }
 
-    /// Everything still queued or downloading, for a frontend that has just
-    /// started up or reloaded.
     pub fn snapshot(&self) -> Vec<DownloadProgress> {
         self.queued.lock().unwrap().clone()
     }
 
-    /// Marks one chapter for cancellation whether it is waiting or already
-    /// downloading. A job that has already finished is simply not in `queued`,
-    /// so this is a no-op for it rather than an error.
     pub fn cancel(&self, source_id: String, manga_id: String, chapter_id: String) {
         let key = (source_id, manga_id, chapter_id);
 
@@ -205,11 +189,6 @@ impl DownloadManager {
     }
 }
 
-/// Puts a queue that outlived the last shutdown back on the worker.
-///
-/// Runs once at startup, after the state is managed — the worker reaches for
-/// `AppState` as soon as it picks a job up. Consecutive chapters of the same
-/// series are enqueued together so the stored order survives the round trip.
 pub async fn restore(app: AppHandle) {
     let pool = app.state::<AppState>().pool.clone();
 
@@ -244,9 +223,6 @@ pub async fn restore(app: AppHandle) {
     }
 }
 
-/// Pauses between chapters rather than mid-chapter: a job already running is
-/// left to finish, which keeps pause free of the partial-file question that
-/// cancel has to answer.
 async fn worker(
     app: AppHandle,
     mut rx: mpsc::UnboundedReceiver<Job>,
@@ -487,12 +463,6 @@ pub fn source_base_url(registry: &Arc<RwLock<Registry>>, source_id: &str) -> Str
     as_referer(declared)
 }
 
-/// Sent as a Referer, so it has to look like one. A source declaring
-/// `https://host` with no path would otherwise produce a header no browser ever
-/// sends, and hotlink checks that string-match the site root reject it:
-/// manganato.gg's CDN serves `https://www.manganato.gg/` and 403s the same URL
-/// without the slash. Parsing and re-serialising supplies the empty path and
-/// leaves a declared path alone.
 fn as_referer(declared: String) -> String {
     declared
         .parse::<reqwest::Url>()
@@ -527,12 +497,6 @@ mod referer_tests {
     }
 }
 
-/// The format a body actually is, read from its signature.
-///
-/// Measured 2026-08-01: WeebCentral's CDN answers `0003-001.png` with
-/// `Content-Type: image/png` and a body starting `FF D8 FF` — a JPEG. Both the
-/// URL and the served type say PNG and both are wrong, so neither can decide
-/// this. Only the bytes can.
 fn sniff_format(bytes: &[u8]) -> Option<&'static str> {
     match bytes {
         [0xFF, 0xD8, 0xFF, ..] => Some("jpg"),
@@ -574,16 +538,6 @@ fn sniff_format(bytes: &[u8]) -> Option<&'static str> {
     }
 }
 
-/// Names the file after what the bytes are, falling back to what was claimed.
-///
-/// The signature is authoritative because the claims are not. WeebCentral
-/// disagrees with itself twice over — a `.png` URL, served as `image/png`,
-/// carrying JPEG — which misnamed 7465 of one library's 7874 "PNG" pages.
-/// Nothing broke visibly, since webviews sniff image content and ignore the
-/// extension, but a filename that lies is worth not writing.
-///
-/// `Content-Type` and then the URL still answer for anything the signature list
-/// does not cover, so an unrecognised but valid format keeps a sensible name.
 fn pick_extension(url: &str, headers: &reqwest::header::HeaderMap, bytes: &[u8]) -> String {
     const ALLOWED: [&str; 6] = ["jpg", "jpeg", "png", "webp", "gif", "avif"];
 
@@ -688,11 +642,6 @@ mod extension_tests {
 }
 
 #[allow(clippy::too_many_arguments)]
-/// Records the step against the live queue and sends it on to the frontend.
-///
-/// Both happen here so a snapshot and the event stream can never disagree: the
-/// stored entry is what a reloading frontend catches up from, and it is dropped
-/// once the chapter reaches a state it cannot leave.
 fn emit(
     app: &AppHandle,
     queued: &Live,

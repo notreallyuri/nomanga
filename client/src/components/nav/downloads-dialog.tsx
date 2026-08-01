@@ -198,11 +198,6 @@ function DownloadsEmpty({ onClose }: { onClose: () => void }) {
 	);
 }
 
-/**
- * Resume stays reachable whenever the queue is paused, even with nothing active
- * on screen: pausing is backend state, and a paused queue the UI has lost track
- * of would otherwise have no way back.
- */
 function QueueControls({ active }: { active: number }) {
 	const { data: paused } = useDownloadsPaused();
 	const setPaused = useSetDownloadsPaused();
@@ -235,12 +230,6 @@ function QueueControls({ active }: { active: number }) {
 	);
 }
 
-/**
- * Requeues everything that failed in the current view. A failed batch is usually
- * one outage rather than a series of unrelated problems, so retrying it chapter
- * by chapter is busywork. Cancelled chapters are left alone — the user stopped
- * those on purpose, and their own row still offers a retry.
- */
 function RetryFailed({ items }: { items: DownloadProgress[] }) {
 	const queue = useQueueDownloads();
 
@@ -322,7 +311,6 @@ function groupByManga(items: DownloadProgress[]): Group[] {
 	);
 }
 
-/** Chapters count as whole units, with the one downloading counted by pages. */
 function percent(items: DownloadProgress[]): number {
 	const sum = items.reduce((acc, i) => {
 		if (i.state === "Done") return acc + 1;

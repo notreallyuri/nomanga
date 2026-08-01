@@ -3,11 +3,6 @@ import { useSourceRefresh } from "@/hooks/services/use-sources";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
-/**
- * Refetches the source view currently on screen. Disabled while a fetch is in
- * flight, which also keeps a repeatedly clicked refresh from queueing up behind
- * a source's rate limiter — a homepage can cost several requests.
- */
 export function RefreshButton({ sourceId }: { sourceId: string }) {
 	const { isRefreshing, refresh } = useSourceRefresh(sourceId);
 

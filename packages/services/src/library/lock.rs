@@ -4,9 +4,6 @@ use argon2::Argon2;
 use chrono::Utc;
 use sqlx::SqlitePool;
 
-/// The password gate is an in-app access control, not encryption: the entries
-/// of a locked category are stored in the clear and remain readable to anyone
-/// holding the database file, a backup export, or a sync payload.
 pub async fn has_password(pool: &SqlitePool) -> ServiceResult<bool> {
     let row = sqlx::query_scalar!("SELECT password_hash FROM library_lock WHERE id = 1")
         .fetch_optional(pool)
@@ -32,8 +29,6 @@ pub async fn verify_password(pool: &SqlitePool, password: &str) -> ServiceResult
         .is_ok())
 }
 
-/// `current` is required once a password exists — changing it is only possible
-/// for someone who already knows it. The reset path is [`clear_password`].
 pub async fn set_password(
     pool: &SqlitePool,
     current: Option<&str>,
@@ -72,8 +67,6 @@ pub async fn set_password(
     Ok(())
 }
 
-/// Drops the password and unlocks every category with it — a forgotten
-/// password would otherwise strand its categories for good.
 pub async fn clear_password(pool: &SqlitePool) -> ServiceResult<()> {
     let mut tx = pool.begin().await?;
 

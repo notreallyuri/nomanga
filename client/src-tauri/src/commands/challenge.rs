@@ -9,32 +9,15 @@ const LABEL: &str = "cf-challenge";
 const POLL: Duration = Duration::from_millis(400);
 const TIMEOUT: Duration = Duration::from_secs(180);
 
-/// What the attempt actually saw. `solved` alone cannot distinguish "the user
-/// walked away" from "the cookie store never answered" from "the site never
-/// issued a clearance", and those want different fixes.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct ChallengeOutcome {
     pub solved: bool,
-    /// Cookie names present on the last successful read, whatever they were.
     pub seen: Vec<String>,
-    /// How many times the store answered at all.
     pub reads: u32,
-    /// Last read failure, if any.
     pub error: Option<String>,
-    /// Where the page ended up, in case it is not where it was sent.
     pub landed: String,
 }
 
-/// Opens the source's challenge page in a browser window and waits for the user
-/// to clear it.
-///
-/// Returns true once every cookie the source named has appeared and been copied
-/// into the shared jar, false on timeout or if the window was closed first.
-///
-/// A separate window rather than one embedded in the app: on Linux wry packs a
-/// child webview into the window's GtkBox, which ignores the bounds it is given
-/// and lays the view out as a sibling of the app — so the embedded shape cannot
-/// be built there at all.
 #[tauri::command]
 #[specta::specta]
 pub async fn solve_challenge(
@@ -175,8 +158,6 @@ pub async fn solve_challenge(
     })
 }
 
-/// Closes the challenge window without waiting for it to be solved. The pending
-/// `solve_challenge` call notices on its next poll and resolves false.
 #[tauri::command]
 #[specta::specta]
 pub async fn cancel_challenge(app: AppHandle) -> CommandResult<()> {

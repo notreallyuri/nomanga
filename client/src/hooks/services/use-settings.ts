@@ -84,11 +84,6 @@ export function useAppearance(): Required<AppearanceSettings> {
 
 export const MAX_PINNED_SOURCES = 5;
 
-/**
- * The sources pinned under Browse in the sidebar, in pin order. `toggle`
- * refuses a sixth pin rather than evicting one — silently dropping someone
- * else's pin is worse than saying no.
- */
 export function usePinnedSources() {
 	const { data } = useSettings();
 	const update = useUpdateSettings();
@@ -118,11 +113,6 @@ export function usePinnedSources() {
 	};
 }
 
-/**
- * The order sources appear in on the Browse landing. An empty list means the
- * user has never arranged them, which reads as alphabetical — see
- * `applySourceOrder`, which is where that fallback lives.
- */
 export function useSourceOrder() {
 	const { data } = useSettings();
 	const update = useUpdateSettings();

@@ -3,12 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
-/**
- * The scrolling area of a dialog that reports on background work. Its height is
- * fixed rather than content-driven: downloads and refreshes change their row
- * count and their footers while the user is reading them, and a dialog that
- * resizes under the cursor is hard to click.
- */
 export function DialogBody({
 	children,
 	className,
@@ -34,7 +28,6 @@ export interface Stat {
 	variant?: "secondary" | "destructive" | "default";
 }
 
-/** Counts as chips — scannable in a way a run-on "3 done · 1 failed" is not. */
 export function StatChips({ stats }: { stats: Stat[] }) {
 	const shown = stats.filter((stat) => stat.count > 0);
 
@@ -52,10 +45,6 @@ export function StatChips({ stats }: { stats: Stat[] }) {
 	);
 }
 
-/**
- * A labelled bar for the one thing currently running, with the counter and
- * percentage on the right.
- */
 export function HeadlineProgress({
 	label,
 	detail,

@@ -18,10 +18,6 @@ import {
 	SwordIcon,
 } from "@phosphor-icons/react";
 
-/**
- * The accent colours a category can wear. Stored raw (hex) in the DB so the
- * value is self-describing and survives palette changes.
- */
 export const CATEGORY_COLORS = [
 	"#ef4444", // red
 	"#f97316", // orange
@@ -33,10 +29,6 @@ export const CATEGORY_COLORS = [
 	"#ec4899", // pink
 ] as const;
 
-/**
- * Icons a category can carry, keyed by a stable string persisted in the DB.
- * Adding an entry here is enough to make it pickable and renderable.
- */
 export const CATEGORY_ICONS: Record<string, Icon> = {
 	book: BookOpenIcon,
 	bookmark: BookmarkSimpleIcon,
@@ -58,7 +50,6 @@ export const CATEGORY_ICONS: Record<string, Icon> = {
 
 export const CATEGORY_ICON_KEYS = Object.keys(CATEGORY_ICONS);
 
-/** Resolve a persisted icon key to its component, if it still maps to one. */
 export function categoryIcon(key: string | null | undefined): Icon | null {
 	if (!key) return null;
 	return CATEGORY_ICONS[key] ?? null;

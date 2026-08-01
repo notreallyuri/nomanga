@@ -4,10 +4,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Default, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BrowseSettings {
-    /// Source ids in the order the user arranged them. Empty means untouched,
-    /// which the client reads as "alphabetical" -- it is not a snapshot of the
-    /// installed set, so an id that no longer resolves is simply skipped and a
-    /// source missing from it sorts in by name.
     pub source_order: Vec<String>,
 }
 

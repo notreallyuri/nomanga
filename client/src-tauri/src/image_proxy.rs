@@ -1,15 +1,3 @@
-//! Serves remote source images through a custom URI scheme so the request can
-//! carry a `Referer` header.
-//!
-//! Several sources hotlink-protect their image CDNs and 403 anything that does
-//! not arrive with the site's own referer (NatoManga covers and pages, WEBTOON
-//! pages). The download worker already sets it, but an `<img src>` rendered in
-//! the webview sends the app's own origin, and `referrerPolicy` can only reduce
-//! a referer — never forge a cross-origin one. So the fetch has to happen in the
-//! backend, where the header is ours to set.
-//!
-//! Requests look like `srcimg://localhost/<source_id>?url=<encoded image url>`;
-//! the source id is what resolves the referer, via the registry's `base_url`.
 
 use crate::AppState;
 use nomanga_services::cache::image as image_cache;
@@ -129,9 +117,6 @@ fn image(bytes: Vec<u8>, content_type: String) -> Response<Vec<u8>> {
         .unwrap_or_else(|_| error(StatusCode::INTERNAL_SERVER_ERROR))
 }
 
-/// `srcimg://localhost/<source_id>?url=…` on Linux and macOS,
-/// `http://srcimg.localhost/<source_id>?url=…` on Windows — parsing the whole
-/// URI rather than the path alone keeps both shapes working.
 fn parse_request(uri: &tauri::http::Uri) -> Option<(String, String, bool)> {
     let parsed = tauri::Url::parse(&uri.to_string()).ok()?;
 

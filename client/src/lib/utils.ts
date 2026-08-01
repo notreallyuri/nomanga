@@ -30,7 +30,6 @@ const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
 	["minute", 60],
 ];
 
-/** "3 hours ago", "yesterday", … from an ISO timestamp. */
 export function formatRelativeTime(iso: string): string {
 	const seconds = (Date.parse(iso) - Date.now()) / 1000;
 	const abs = Math.abs(seconds);
@@ -51,7 +50,6 @@ function startOfDay(d: Date): Date {
 	return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-/** Monday-based start of the week containing `d`. */
 function startOfWeek(d: Date): Date {
 	const s = startOfDay(d);
 	s.setDate(s.getDate() - ((s.getDay() + 6) % 7));
@@ -78,11 +76,6 @@ const MONTH_HEADING = new Intl.DateTimeFormat(undefined, {
 	year: "numeric",
 });
 
-/**
- * Bucket a timestamp for grouped history: by day within the last week, by week
- * up to roughly a month old, then by month. The `key` groups entries; the
- * `heading` labels the group.
- */
 export function historyBucket(iso: string): { key: string; heading: string } {
 	const date = new Date(iso);
 	const daysAgo = Math.round(

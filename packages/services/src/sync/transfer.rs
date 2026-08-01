@@ -8,7 +8,6 @@ use crate::settings::Settings;
 use sqlx::SqlitePool;
 use std::path::Path;
 
-/// Snapshots kept per device before the oldest are pruned.
 pub(super) const KEEP_PER_DEVICE: usize = 5;
 
 pub async fn push(
@@ -99,8 +98,6 @@ pub(super) fn safe(name: &str) -> String {
     }
 }
 
-/// Snapshots accumulate one per push; keep a short history per device so a bad
-/// push can be recovered from, without growing without bound.
 fn prune(folder: &Path, device_name: &str) {
     let prefix = format!("nomanga-{}-", safe(device_name));
 

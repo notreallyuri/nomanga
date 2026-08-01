@@ -73,15 +73,6 @@ export function useIsInLibrary(
 	});
 }
 
-/**
- * `entry` is the metadata the caller already holds. Passing it lets the add
- * cache and save in one transaction, which is what makes the button work on a
- * browse or search card whose details page was never opened.
- *
- * `chapterCount` is seeded straight into the entry so its unread badge is
- * right away; callers without one fall back to a background fetch, since an
- * entry with no chapter count shows no badge at all.
- */
 export function useToggleLibrary(
 	sourceId: string,
 	mangaId: string,
@@ -216,7 +207,6 @@ export function useSetEntryCategories(sourceId: string, mangaId: string) {
 	);
 }
 
-/** Whether a library password exists at all — categories can only gate behind one. */
 export function useLibraryLockIsSet() {
 	return useQuery({
 		queryKey: libraryKeys.lock(),
@@ -247,7 +237,6 @@ export function useSetLibraryPassword() {
 	});
 }
 
-/** The reset path: drops the password and unlocks every category with it. */
 export function useClearLibraryLock() {
 	const queryClient = useQueryClient();
 
@@ -276,10 +265,6 @@ export function useClearLibraryUpdates() {
 	});
 }
 
-/**
- * Drives a scoped library refresh and exposes live progress from the backend's
- * `library-refresh-progress` events, so callers can render a determinate bar.
- */
 export function useLibraryRefresh() {
 	const queryClient = useQueryClient();
 	const [progress, setProgress] = useState<LibraryRefreshProgress | null>(null);

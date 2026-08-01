@@ -14,13 +14,6 @@ import { unwrap } from "@/lib/unwrap";
 import type { SourceInfo } from "@/types/bindings";
 import { commands } from "@/types/bindings";
 
-/**
- * Status panel for a challenge being solved in its own window.
- *
- * The check itself runs in a separate window rather than inside this dialog:
- * on Linux an embedded webview is packed into the window's box layout and
- * cannot be positioned over the app, so there is nothing to embed it into.
- */
 export function ChallengeDialog({
 	source,
 	open,

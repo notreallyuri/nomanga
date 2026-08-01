@@ -18,8 +18,6 @@ pub struct RepositoryCatalog {
     pub repository: Repository,
     pub index: Option<RepositoryIndex>,
     pub error: Option<String>,
-    /// Ids from this index whose ABI this app cannot load, resolved here so the
-    /// frontend never has to carry a copy of the supported range.
     pub unsupported: Vec<String>,
 }
 
@@ -51,8 +49,6 @@ pub async fn remove_repository(state: State<'_, AppState>, url: String) -> Comma
     Ok(())
 }
 
-/// Fetches every repository, reporting per-repository failures in the row
-/// rather than as an error, so one unreachable link does not blank the list.
 #[tauri::command]
 #[specta::specta]
 pub async fn browse_repositories(
@@ -92,9 +88,6 @@ pub async fn browse_repositories(
     Ok(catalogs)
 }
 
-/// Takes the extension's id rather than a download URL so the app only ever
-/// fetches a binary a registered repository's own index points at — the
-/// frontend cannot name an arbitrary URL to install from.
 #[tauri::command]
 #[specta::specta]
 pub async fn install_from_repository(
@@ -161,9 +154,6 @@ fn normalize_url(url: &str) -> CommandResult<String> {
     Ok(url.trim_end_matches('/').to_owned())
 }
 
-/// Lets an index publish `extension.wasm` beside itself instead of repeating an
-/// absolute URL, which is what makes an index usable from a release asset whose
-/// host is not known when the file is written.
 fn resolve_url(index_url: &str, target: &str) -> CommandResult<String> {
     if target.starts_with("https://") || target.starts_with("http://") {
         return Ok(target.to_owned());
@@ -229,9 +219,6 @@ mod tests {
     use super::*;
     use std::io::{Read, Write};
 
-    /// Serves `body` once at `/index.min.json` and returns the URL. Kept to a
-    /// raw socket so the test exercises the real reqwest path without pulling
-    /// in an HTTP server just for it.
     fn serve_once(body: Vec<u8>) -> String {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();

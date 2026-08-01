@@ -47,7 +47,6 @@ impl ImageCacheLimit {
     }
 }
 
-/// How long unlocking a locked category keeps it open.
 #[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CategoryLockSession {

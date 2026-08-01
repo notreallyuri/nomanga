@@ -183,9 +183,6 @@ pub async fn clear_call_log(state: State<'_, AppState>) -> CommandResult<()> {
     Ok(())
 }
 
-/// Headers stripped from an exported log. These carry credentials and are
-/// almost never the thing being debugged, whereas an export is written to be
-/// pasted into an issue tracker.
 const SENSITIVE_HEADERS: &[&str] = &[
     "authorization",
     "proxy-authorization",
@@ -196,8 +193,6 @@ const SENSITIVE_HEADERS: &[&str] = &[
     "x-auth-token",
 ];
 
-/// Column values redacted when exporting `source_setting`, which is where an
-/// extension's declared secrets are persisted.
 const SENSITIVE_KEY_HINTS: &[&str] = &["key", "token", "secret", "password", "auth", "session"];
 
 const REDACTED: &str = "<redacted>";

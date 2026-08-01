@@ -6,13 +6,6 @@ use std::sync::{
     mpsc, Arc,
 };
 
-/// Bridges the extension host's synchronous transport onto the app's async
-/// reqwest client.
-///
-/// Extism host functions are called from inside the wasm invocation, which
-/// already runs on a `spawn_blocking` thread — so blocking here is safe, but
-/// driving an async client from it is not. Requests are handed to a task on the
-/// tokio runtime and the calling thread waits for the reply.
 pub fn shared(client: reqwest::Client, jar: Arc<reqwest::cookie::Jar>) -> TransportShared {
     let (tx, rx) = mpsc::channel::<(HostRequest, mpsc::Sender<HostResponse>)>();
 
