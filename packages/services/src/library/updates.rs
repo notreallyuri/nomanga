@@ -184,6 +184,11 @@ pub async fn entries_to_refresh(
     let pairs = resolve_scope(pool, scope).await?;
     let cutoff = now() - Duration::hours(THROTTLE_HOURS);
 
+    // A category's skip only applies to the sweep over the whole library. Any
+    // other scope names its targets, and refusing to check something the user
+    // just pointed at would read as the button being broken.
+    let scope_kind = matches!(scope, RefreshScope::All);
+
     let mut targets = Vec::new();
     for (source_id, manga_id) in pairs {
         let row = sqlx::query!(
@@ -209,6 +214,10 @@ pub async fn entries_to_refresh(
             continue;
         }
 
+        if muted_by_category(pool, &scope_kind, &source_id, &manga_id).await? {
+            continue;
+        }
+
         if !force
             && let Some(last) = row.last_checked_at
             && last > cutoff
@@ -224,6 +233,40 @@ pub async fn entries_to_refresh(
     }
 
     Ok(targets)
+}
+
+/// Whether an entry's categories mute it.
+///
+/// The rule is **all**, not any: an entry is skipped only when every category it
+/// belongs to is marked to skip. A series filed in both "Finished" and "Reading"
+/// is still being read, and letting one archived shelf mute it wherever else it
+/// appears would make the flag act at a distance — the failure would show up as
+/// chapters silently never arriving, which is the hardest kind to notice.
+///
+/// An entry in no category is never muted; there is nothing to have said so.
+async fn muted_by_category(
+    pool: &SqlitePool,
+    applies: &bool,
+    source_id: &str,
+    manga_id: &str,
+) -> ServiceResult<bool> {
+    if !applies {
+        return Ok(false);
+    }
+
+    let row = sqlx::query!(
+        r#"SELECT COUNT(*) AS "total!: i64",
+                  COALESCE(SUM(c.skip_updates), 0) AS "muted!: i64"
+             FROM library_entry_category lec
+             JOIN category c ON c.id = lec.category_id
+            WHERE lec.source_id = ? AND lec.manga_id = ?"#,
+        source_id,
+        manga_id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(row.total > 0 && row.muted == row.total)
 }
 
 async fn resolve_scope(

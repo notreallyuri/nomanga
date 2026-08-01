@@ -105,6 +105,7 @@ async fn continue_reading_excludes_hidden_categories() {
             hidden: true,
             locked: false,
             is_default: false,
+            skip_updates: false,
             sort_mode: CategorySort::Added,
             color: None,
             icon: None,

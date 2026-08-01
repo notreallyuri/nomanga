@@ -64,15 +64,16 @@ pub async fn import(
         let is_default = if has_local_default { 0 } else { category.is_default };
 
         sqlx::query!(
-            "INSERT INTO category (id, name, sort_order, hidden, locked, is_default, sort_mode,
-                                   color, icon)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO category (id, name, sort_order, hidden, locked, is_default,
+                                   skip_updates, sort_mode, color, icon)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             category.id,
             category.name,
             category.sort_order,
             category.hidden,
             category.locked,
             is_default,
+            category.skip_updates,
             category.sort_mode,
             category.color,
             category.icon

@@ -38,7 +38,8 @@ pub async fn export(
 
     let categories = sqlx::query_as!(
         CategoryRow,
-        r#"SELECT id, name, sort_order, hidden, locked, is_default, sort_mode, color, icon
+        r#"SELECT id, name, sort_order, hidden, locked, is_default, skip_updates,
+                  sort_mode, color, icon
            FROM category"#
     )
     .fetch_all(pool)

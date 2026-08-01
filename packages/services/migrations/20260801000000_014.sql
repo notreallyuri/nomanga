@@ -1,0 +1,1 @@
+ALTER TABLE category ADD COLUMN skip_updates INTEGER NOT NULL DEFAULT 0;

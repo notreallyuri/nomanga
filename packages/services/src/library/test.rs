@@ -302,6 +302,7 @@ async fn updates_exclude_hidden_categories() {
             hidden: true,
             locked: false,
             is_default: false,
+            skip_updates: false,
             sort_mode: CategorySort::Added,
             color: None,
             icon: None,
@@ -404,4 +405,100 @@ async fn searches_by_field_within_the_current_category() {
             .len(),
         1
     );
+}
+
+async fn muted_category(pool: &sqlx::SqlitePool, name: &str) -> String {
+    let category = create_category(pool, name).await.unwrap();
+    update_category_options(
+        pool,
+        &category.id,
+        &CategoryOptions {
+            hidden: false,
+            locked: false,
+            is_default: false,
+            skip_updates: true,
+            sort_mode: CategorySort::Added,
+            color: None,
+            icon: None,
+        },
+    )
+    .await
+    .unwrap();
+    category.id
+}
+
+async fn entry_in(pool: &sqlx::SqlitePool, manga_id: &str, categories: &[&str]) {
+    cache_manga(pool, "src", &sample_manga("src", manga_id))
+        .await
+        .unwrap();
+    add_to_library(pool, "src", manga_id, None).await.unwrap();
+    set_entry_categories(pool, "src", manga_id, categories)
+        .await
+        .unwrap();
+}
+
+async fn refreshed(pool: &sqlx::SqlitePool, scope: &RefreshScope) -> Vec<String> {
+    entries_to_refresh(pool, scope, true)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|t| t.manga_id)
+        .collect()
+}
+
+#[tokio::test]
+async fn a_category_marked_to_skip_mutes_only_entries_filed_nowhere_else() {
+    let pool = open_in_memory().await.unwrap();
+
+    let finished = muted_category(&pool, "Finished").await;
+    let reading = create_category(&pool, "Reading").await.unwrap().id;
+
+    entry_in(&pool, "only-muted", &[&finished]).await;
+    entry_in(&pool, "also-reading", &[&finished, &reading]).await;
+    entry_in(&pool, "uncategorised", &[]).await;
+
+    let targets = refreshed(&pool, &RefreshScope::All).await;
+
+    // "all", not "any": a series still being read is not muted by also sitting
+    // on an archived shelf, and an entry in no category has nothing saying so.
+    assert!(!targets.contains(&"only-muted".to_owned()));
+    assert!(targets.contains(&"also-reading".to_owned()));
+    assert!(targets.contains(&"uncategorised".to_owned()));
+}
+
+#[tokio::test]
+async fn every_category_muted_is_what_skips_an_entry() {
+    let pool = open_in_memory().await.unwrap();
+
+    let finished = muted_category(&pool, "Finished").await;
+    let dropped = muted_category(&pool, "Dropped").await;
+
+    entry_in(&pool, "m1", &[&finished, &dropped]).await;
+
+    assert!(refreshed(&pool, &RefreshScope::All).await.is_empty());
+}
+
+#[tokio::test]
+async fn naming_the_target_overrides_the_category_skip() {
+    let pool = open_in_memory().await.unwrap();
+
+    let finished = muted_category(&pool, "Finished").await;
+    entry_in(&pool, "m1", &[&finished]).await;
+
+    // The sweep respects it; asking for this shelf, or this entry, does not --
+    // refusing to check something just pointed at reads as a broken button.
+    assert!(refreshed(&pool, &RefreshScope::All).await.is_empty());
+
+    let by_category = RefreshScope::Category {
+        id: finished.clone(),
+    };
+    assert_eq!(refreshed(&pool, &by_category).await, ["m1"]);
+
+    let by_entry = RefreshScope::Entries {
+        entries: vec![EntryRef {
+            source_id: "src".to_owned(),
+            manga_id: "m1".to_owned(),
+        }],
+    };
+    assert_eq!(refreshed(&pool, &by_entry).await, ["m1"]);
 }
