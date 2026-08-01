@@ -229,7 +229,7 @@ function CategoryRow({ category }: { category: Category }) {
 			style={style}
 		>
 			<button
-				className="shrink-0 cursor-grab touch-none text-muted-foreground focus-visible:outline-none active:cursor-grabbing"
+				className="shrink-0 cursor-grab touch-none rounded-sm text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
 				type="button"
 				{...attributes}
 				{...listeners}

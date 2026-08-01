@@ -26,7 +26,7 @@ export function PinToggle({
 						aria-label={label}
 						aria-pressed={pinned}
 						className={cn(
-							"flex size-7 shrink-0 items-center justify-center rounded-md transition-all hover:bg-background focus-visible:opacity-100 focus-visible:outline-none",
+							"flex size-7 shrink-0 items-center justify-center rounded-md outline-none transition-all hover:bg-background focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring",
 							pinned
 								? "text-foreground opacity-100"
 								: "text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100",

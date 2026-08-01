@@ -221,7 +221,7 @@ function UpdateList({
 										new
 									</Badge>
 									<CaretRightIcon
-										className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+										className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
 										size={14}
 									/>
 								</Link>

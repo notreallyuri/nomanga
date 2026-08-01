@@ -94,7 +94,7 @@ function ControlButton({
 		<button
 			aria-label={label}
 			className={cn(
-				"flex h-full w-11 items-center justify-center transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none",
+				"flex h-full w-11 items-center justify-center outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset",
 				className,
 			)}
 			onClick={onClick}

@@ -67,7 +67,7 @@ export function BrowseCard({
 					<button
 						aria-label={saved ? "Remove from library" : "Add to library"}
 						className={cn(
-							"absolute top-1.5 right-1.5 z-10 flex size-7 items-center justify-center rounded-full shadow-sm backdrop-blur transition-all focus-visible:opacity-100 focus-visible:outline-none",
+							"absolute top-1.5 right-1.5 z-10 flex size-7 items-center justify-center rounded-full shadow-sm outline-none backdrop-blur transition-all focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring",
 							saved
 								? "bg-primary text-primary-foreground opacity-100"
 								: "bg-background/80 text-foreground opacity-0 hover:bg-background group-hover/card:opacity-100",

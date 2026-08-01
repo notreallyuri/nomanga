@@ -179,7 +179,7 @@ function SourceCard({ info }: { info: SourceInfo }) {
 						<PinToggle sourceId={info.id} />
 
 						<CaretRightIcon
-							className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+							className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
 							size={16}
 						/>
 					</Link>

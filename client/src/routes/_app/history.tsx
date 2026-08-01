@@ -216,7 +216,7 @@ function HistoryRow({
 	const navigate = useNavigate();
 
 	const resume = item.last_chapter_done
-		? "Finished — continue"
+		? "Finished"
 		: `Page ${item.last_page + 1}`;
 
 	return (
@@ -269,7 +269,7 @@ function HistoryRow({
 						render={
 							<Button
 								aria-label="Open menu"
-								className="opacity-0 transition-opacity group-hover:opacity-100 data-[popup-open]:opacity-100"
+								className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[popup-open]:opacity-100"
 								size="icon-sm"
 								variant="ghost"
 							>
