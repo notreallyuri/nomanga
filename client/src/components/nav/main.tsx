@@ -156,7 +156,13 @@ function PinnedSource({ info, active }: { info: SourceInfo; active: boolean }) {
 					render={
 						<ContextMenuTrigger
 							render={
-								<Link params={{ sourceId: info.id }} to="/browse/$sourceId">
+								<Link
+									params={{ sourceId: info.id }}
+									onClick={(e) => {
+										if (e.ctrlKey) e.preventDefault();
+									}}
+									to="/browse/$sourceId"
+								>
 									<SourceIcon
 										className="size-4 rounded-sm"
 										iconSize={14}
