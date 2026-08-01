@@ -4,7 +4,11 @@ import {
 	CaretDownIcon,
 	SlidersHorizontalIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	useNavigate,
+	useRouter,
+} from "@tanstack/react-router";
 import { useLayoutEffect, useRef, useState } from "react";
 import { LibraryAction } from "@/components/library/library-action";
 import { ChapterTable } from "@/components/manga/chapter-table";
@@ -14,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProgress, useReadChapters } from "@/hooks/services/use-history";
-import { useIsInLibrary } from "@/hooks/services/use-library";
 import {
 	useSourceChapters,
 	useSourceManga,
@@ -41,12 +44,12 @@ function useIsClamped<T extends HTMLElement>(dependency: unknown) {
 function MangaDetails() {
 	const { sourceId, mangaId } = Route.useParams();
 	const navigate = useNavigate();
+	const router = useRouter();
 
 	const manga = useSourceManga(sourceId, mangaId);
 	const chapters = useSourceChapters(sourceId, mangaId);
 	const readChapters = useReadChapters(sourceId, mangaId);
 	const progress = useProgress(sourceId, mangaId);
-	const inLibrary = useIsInLibrary(sourceId, mangaId);
 
 	const [expanded, setExpanded] = useState(false);
 	const [readerOpen, setReaderOpen] = useState(false);
@@ -54,13 +57,21 @@ function MangaDetails() {
 		manga.data?.description,
 	);
 
-	// Deterministic parent navigation rather than history.back(): a library entry
-	// returns to the library, otherwise back to the source it was browsed from.
-	// This stays correct however the page was reached (list, search, or reader).
-	const goBack = () =>
-		inLibrary.data
-			? navigate({ to: "/library" })
-			: navigate({ to: "/browse/$sourceId", params: { sourceId } });
+	// Retrace rather than guess a parent. The browse page keeps its query,
+	// filters and section in the URL and rewrites that entry in place as they
+	// change, so popping restores the exact list the user was looking at --
+	// a parent navigation would drop all of it. The source this series came
+	// from is the fallback for a cold entry (deep link) with nothing to pop:
+	// it is fixed for the route, unlike library membership, which can change
+	// underfoot while the page is open.
+	const goBack = () => {
+		if (router.history.canGoBack()) {
+			router.history.back();
+			return;
+		}
+
+		navigate({ to: "/browse/$sourceId", params: { sourceId } });
+	};
 
 	if (manga.isPending) return <DetailsSkeleton onBack={goBack} />;
 	if (manga.error)
@@ -84,7 +95,7 @@ function MangaDetails() {
 					variant="ghost"
 				>
 					<ArrowLeftIcon />
-					{inLibrary.data ? "Library" : "Back"}
+					Back
 				</Button>
 
 				<CoverImage

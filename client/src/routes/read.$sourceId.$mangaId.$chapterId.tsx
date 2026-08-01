@@ -4,7 +4,11 @@ import {
 	CaretRightIcon,
 	SlidersHorizontalIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	useNavigate,
+	useRouter,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PagedReader } from "@/components/reader/paged-reader";
 import { ReaderOverrideDialog } from "@/components/reader/reader-override-dialog";
@@ -32,6 +36,7 @@ export const Route = createFileRoute("/read/$sourceId/$mangaId/$chapterId")({
 function Reader() {
 	const { sourceId, mangaId, chapterId } = Route.useParams();
 	const navigate = useNavigate();
+	const router = useRouter();
 
 	const pages = useChapterPages(sourceId, mangaId, chapterId);
 	const chapters = useSourceChapters(sourceId, mangaId);
@@ -116,7 +121,7 @@ function Reader() {
 	const goToChapter = useCallback(
 		(id: string) => {
 			// Replace so paging through chapters keeps a single reader entry in
-			// history — exiting returns to the manga page, not the previous chapter.
+			// history — exiting pops back past the whole session, not one chapter.
 			navigate({
 				to: "/read/$sourceId/$mangaId/$chapterId",
 				params: { sourceId, mangaId, chapterId: id },
@@ -135,14 +140,21 @@ function Reader() {
 	}, [nextChapter, chapterId, index, total, markChapterFinished, goToChapter]);
 
 	const exit = useCallback(() => {
-		// Hierarchical return to the manga page (not history.back), replacing the
-		// reader entry so the browser back button doesn't land back in the reader.
+		// Paging through chapters replaces this single reader entry, so popping it
+		// lands wherever the reader was opened from, with that page's own query
+		// and scroll intact. Replacing with the series page instead would leave a
+		// second copy of it in the stack and make the next back press look dead.
+		if (router.history.canGoBack()) {
+			router.history.back();
+			return;
+		}
+
 		navigate({
 			to: "/manga/$sourceId/$mangaId",
 			params: { sourceId, mangaId },
 			replace: true,
 		});
-	}, [navigate, sourceId, mangaId]);
+	}, [router, navigate, sourceId, mangaId]);
 
 	const advance = useCallback(() => {
 		if (index < total - 1) {
@@ -182,7 +194,7 @@ function Reader() {
 				<p className="max-w-md text-center text-sm">{pages.error.message}</p>
 				<Button onClick={exit} variant="secondary">
 					<ArrowLeftIcon />
-					Back to chapters
+					Back
 				</Button>
 			</div>
 		);
