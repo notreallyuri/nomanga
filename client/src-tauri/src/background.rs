@@ -28,7 +28,17 @@ pub async fn evict_loop(app: AppHandle) {
         let Ok(registry) = registry.read() else {
             continue;
         };
-        registry.evict_idle(EVICT_AFTER);
+        let evicted = registry.evict_idle(EVICT_AFTER);
+        drop(registry);
+
+        // Dropping the sources returned their pages to the allocator, which
+        // holds on to them by default -- so without this the sweep frees
+        // megabytes that the OS, and every memory readout the user can see, goes
+        // on counting against the app. Only worth the walk when something
+        // actually went.
+        if evicted > 0 {
+            crate::memory::release_to_os();
+        }
     }
 }
 

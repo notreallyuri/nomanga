@@ -42,3 +42,12 @@ futures-util = { version = "0.3.33", default-features = false, features = ["std"
 tauri-plugin-deep-link = "2.4.9"
 tauri-plugin-single-instance = { version = "2.4.3", features = ["deep-link"] }
 tauri-plugin-os = "2"
+
+# Only for asking the process heap to give its free lists back -- see
+# `memory::release_to_os`.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Memory",
+    "Win32_System_Threading",
+] }

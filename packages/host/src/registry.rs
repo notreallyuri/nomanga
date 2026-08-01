@@ -1,6 +1,6 @@
 use crate::rate_limit::RateLimiter;
 use crate::snapshot::{self, ExtensionSnapshot, SourceSnapshot};
-use crate::{ExtensionMetadata, HostError, HostResult, LoadedExtension};
+use crate::{CompiledExtension, ExtensionMetadata, HostError, HostResult, LoadedExtension};
 use nomanga_core::extension::config::Setting;
 use nomanga_core::extension::filter::Filter;
 use nomanga_core::extension::info::ExtensionInfo;
@@ -25,19 +25,26 @@ pub struct SourceHandle {
     limits_fresh: Arc<AtomicBool>,
 }
 
-// The instant lives with the instance rather than beside it so the two can
-// never disagree about whether a source is in use.
+// The instant lives with the compiled artefact rather than beside it so the two
+// can never disagree about whether a source is in use.
 struct Loaded {
-    plugin: LoadedExtension,
+    compiled: CompiledExtension,
     last_used: Instant,
 }
 
 impl SourceHandle {
-    // Compiling a source's wasm costs several MB of resident memory that is
-    // never handed back, so it happens here -- on the first call that actually
-    // needs to run guest code -- rather than for every installed source at
-    // startup. The lock is held across the build so a burst of concurrent first
-    // calls compiles once, not once each.
+    // Compiling a source's wasm costs several MB of resident memory, so it
+    // happens here -- on the first call that actually needs to run guest code --
+    // rather than for every installed source at startup. The lock is held across
+    // the build so a burst of concurrent first calls compiles once, not once
+    // each.
+    //
+    // What is cached between calls is only the compiled code. The instance `f`
+    // runs against is built here and dropped before this returns, which is what
+    // hands back the linear memory the call grew: a source that parsed one
+    // enormous page does not sit on that peak until the eviction sweep notices
+    // it. Instantiating costs single-digit milliseconds against calls that are
+    // dominated by the network.
     pub fn with_plugin<T>(
         &self,
         f: impl FnOnce(&mut LoadedExtension) -> HostResult<T>,
@@ -53,16 +60,22 @@ impl SourceHandle {
 
         if guard.is_none() {
             *guard = Some(Loaded {
-                plugin: self.build()?,
+                compiled: self.build()?,
                 last_used: Instant::now(),
             });
         }
 
         let loaded = guard.as_mut().expect("just built");
 
-        self.refresh_limits(&mut loaded.plugin);
+        let mut instance = loaded.compiled.instantiate()?;
 
-        let result = f(&mut loaded.plugin);
+        self.refresh_limits(&mut instance);
+
+        let result = f(&mut instance);
+
+        // Before the timestamp, so the memory is already back by the time this
+        // source can be considered idle.
+        drop(instance);
 
         // Stamped on the way out, and for failures too: a call that errored
         // still means the user is on this source, and evicting it would only
@@ -114,7 +127,7 @@ impl SourceHandle {
         idle
     }
 
-    fn build(&self) -> HostResult<LoadedExtension> {
+    fn build(&self) -> HostResult<CompiledExtension> {
         let config = {
             let config = self.config.lock().map_err(|_| HostError::Poisoned)?;
             config.clone()
@@ -122,7 +135,7 @@ impl SourceHandle {
         let hosts = self.info.hosts.clone();
 
         self.meta
-            .activate(hosts.clone(), config, self.transport.context(hosts))
+            .compile(hosts.clone(), config, self.transport.context(hosts))
     }
 
     pub fn throttled<T>(
