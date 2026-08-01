@@ -7,7 +7,7 @@ import {
 	PlayIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useEffect, useState } from "react";
 import { ScrollRow } from "@/components/browse/scroll-row";
 import { CoverImage } from "@/components/manga/cover-image";
 import { coverVariants, MangaCard } from "@/components/manga/manga-card";
@@ -28,6 +28,7 @@ import {
 	useLibraryUpdates,
 } from "@/hooks/services/use-library";
 import { useAppearance } from "@/hooks/services/use-settings";
+import { coverColor } from "@/lib/cover-color";
 import { sourceImageUrl } from "@/lib/source-image";
 import { cn } from "@/lib/utils";
 import type { ContinueReadingItem, LibraryUpdate } from "@/types/bindings";
@@ -244,15 +245,44 @@ function resumeLabel(item: ContinueReadingItem) {
 		: `${chapter} · page ${item.last_page + 1}`;
 }
 
+function useCoverColor(url: string | null) {
+	const [color, setColor] = useState<string | null | undefined>(undefined);
+
+	useEffect(() => {
+		if (!url) return setColor(null);
+
+		let alive = true;
+		setColor(undefined);
+		coverColor(url).then((next) => {
+			if (alive) setColor(next);
+		});
+		return () => {
+			alive = false;
+		};
+	}, [url]);
+
+	return color;
+}
+
 function ResumeHero({ item }: { item: ContinueReadingItem }) {
 	const appearance = useAppearance();
 	const backdrop = sourceImageUrl(item.source_id, item.cover_url, {
 		cache: true,
 	});
+	const color = useCoverColor(backdrop);
 
 	return (
-		<section className="group relative isolate flex min-w-0 items-center gap-5 overflow-hidden rounded-xl border border-border bg-card p-4">
-			{backdrop && (
+		<section
+			className="group relative isolate flex min-w-0 items-center gap-5 overflow-hidden rounded-xl border border-border bg-card p-4"
+			style={
+				color
+					? {
+							backgroundImage: `linear-gradient(to right, color-mix(in oklch, ${color} 38%, var(--card)), color-mix(in oklch, ${color} 12%, var(--card)) 55%, var(--card))`,
+						}
+					: undefined
+			}
+		>
+			{color === null && backdrop && (
 				<>
 					<img
 						alt=""
@@ -266,6 +296,7 @@ function ResumeHero({ item }: { item: ContinueReadingItem }) {
 					/>
 				</>
 			)}
+
 			<Link
 				className={cn(
 					"w-24 shrink-0 sm:w-28",
