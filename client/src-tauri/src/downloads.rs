@@ -524,8 +524,27 @@ mod referer_tests {
     }
 }
 
+/// Names the file after what the bytes actually are.
+///
+/// `Content-Type` is consulted **first** and the URL only as a fallback. The
+/// other way round is what a URL suggests rather than what arrived, and sources
+/// do disagree with themselves: WeebCentral serves JPEG bytes from `.png` URLs,
+/// which named 7465 of one library's 7874 "PNG" pages wrongly. Nothing broke
+/// visibly, because webviews sniff image content and ignore the extension — the
+/// extension is only ever a hint, so the honest hint is the served one.
 fn pick_extension(url: &str, headers: &reqwest::header::HeaderMap) -> String {
     const ALLOWED: [&str; 6] = ["jpg", "jpeg", "png", "webp", "gif", "avif"];
+
+    let from_type = headers
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split('/').nth(1))
+        .map(|s| s.split(['+', ';']).next().unwrap_or(s).to_ascii_lowercase())
+        .filter(|ext| ALLOWED.contains(&ext.as_str()));
+
+    if let Some(ext) = from_type {
+        return ext;
+    }
 
     let from_url = url
         .rsplit('/')
@@ -539,18 +558,68 @@ fn pick_extension(url: &str, headers: &reqwest::header::HeaderMap) -> String {
         })
         .filter(|ext| ALLOWED.contains(&ext.as_str()));
 
-    if let Some(ext) = from_url {
-        return ext;
+    from_url.unwrap_or_else(|| "jpg".to_owned())
+}
+
+#[cfg(test)]
+mod extension_tests {
+    use super::pick_extension;
+    use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+
+    fn served(value: &str) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(CONTENT_TYPE, HeaderValue::from_str(value).unwrap());
+        headers
     }
 
-    let from_type = headers
-        .get(reqwest::header::CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.split('/').nth(1))
-        .map(|s| s.split(['+', ';']).next().unwrap_or(s).to_ascii_lowercase())
-        .filter(|ext| ALLOWED.contains(&ext.as_str()));
+    #[test]
+    fn the_served_type_beats_the_url() {
+        // The WeebCentral case this exists for.
+        assert_eq!(
+            pick_extension("https://x.test/0001.png", &served("image/jpeg")),
+            "jpeg"
+        );
+    }
 
-    from_type.unwrap_or_else(|| "jpg".to_owned())
+    #[test]
+    fn the_url_answers_when_the_type_is_useless() {
+        // Some CDNs send application/octet-stream, or nothing at all.
+        assert_eq!(
+            pick_extension(
+                "https://x.test/0001.webp",
+                &served("application/octet-stream")
+            ),
+            "webp"
+        );
+        assert_eq!(
+            pick_extension("https://x.test/0001.png", &HeaderMap::new()),
+            "png"
+        );
+    }
+
+    #[test]
+    fn a_query_string_is_not_part_of_the_extension() {
+        assert_eq!(
+            pick_extension("https://x.test/0001.jpg?token=abc", &HeaderMap::new()),
+            "jpg"
+        );
+    }
+
+    #[test]
+    fn an_unknown_type_and_a_bare_url_fall_back_to_jpg() {
+        assert_eq!(
+            pick_extension("https://x.test/image", &served("image/tiff")),
+            "jpg"
+        );
+    }
+
+    #[test]
+    fn a_charset_parameter_is_stripped() {
+        assert_eq!(
+            pick_extension("https://x.test/0001", &served("image/webp; charset=binary")),
+            "webp"
+        );
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
