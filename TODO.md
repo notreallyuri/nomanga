@@ -497,13 +497,19 @@ default.
 
 ### Platform
 
-- [x] Downloaded pages are named after what the bytes are, not what the URL
-  claimed. `pick_extension` read the URL extension first and only fell back to
-  `Content-Type`; WeebCentral serves JPEG bytes from `.png` URLs, which misnamed
-  7465 of one library's 7874 "PNG" pages — 1.82 GB, 65% of that store. Nothing
-  broke visibly, because webviews sniff image content and ignore the extension,
-  which is also why the fix is forward-only: existing files render fine and
-  renaming them would rewrite user data to correct a hint nothing reads.
+- [x] Downloaded pages are named from the body's signature, not from anything
+  the server claims. `pick_extension` used to read the URL extension, falling
+  back to `Content-Type`; it misnamed 7465 of one library's 7874 "PNG" pages —
+  1.82 GB, 65% of that store.
+  **Reordering the two claims does not fix it, and was tried first.** Measured
+  live 2026-08-01: `official.lowee.us/.../0003-001.png` answers
+  `Content-Type: image/png` with a body starting `FF D8 FF` — the URL and the
+  header agree with each other and both are wrong. Only the bytes are a fact, so
+  `sniff_format` reads the magic number and the two claims survive purely as
+  fallbacks for formats it does not recognise.
+  Forward-only: webviews sniff image content and ignore the extension, so
+  existing files render fine and renaming them would rewrite user data to correct
+  a hint nothing reads.
 
 - [x] Considered and dropped: recompressing downloads to save space. Measured
   against a real 2.8 GB library on 2026-08-01, so it does not need re-deriving.

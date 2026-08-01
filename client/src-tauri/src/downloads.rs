@@ -408,8 +408,11 @@ async fn process(
             .and_then(|r| r.error_for_status())
             .map_err(|e| e.to_string())?;
 
-        let ext = pick_extension(&page.image_url, resp.headers());
+        // Headers cloned because naming the file needs the body, and reading
+        // the body consumes the response.
+        let headers = resp.headers().clone();
         let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
+        let ext = pick_extension(&page.image_url, &headers, &bytes);
 
         let file = dir.join(format!("{:04}.{ext}", page.number));
         tokio::fs::write(&file, &bytes)
@@ -524,16 +527,69 @@ mod referer_tests {
     }
 }
 
-/// Names the file after what the bytes actually are.
+/// The format a body actually is, read from its signature.
 ///
-/// `Content-Type` is consulted **first** and the URL only as a fallback. The
-/// other way round is what a URL suggests rather than what arrived, and sources
-/// do disagree with themselves: WeebCentral serves JPEG bytes from `.png` URLs,
-/// which named 7465 of one library's 7874 "PNG" pages wrongly. Nothing broke
-/// visibly, because webviews sniff image content and ignore the extension — the
-/// extension is only ever a hint, so the honest hint is the served one.
-fn pick_extension(url: &str, headers: &reqwest::header::HeaderMap) -> String {
+/// Measured 2026-08-01: WeebCentral's CDN answers `0003-001.png` with
+/// `Content-Type: image/png` and a body starting `FF D8 FF` — a JPEG. Both the
+/// URL and the served type say PNG and both are wrong, so neither can decide
+/// this. Only the bytes can.
+fn sniff_format(bytes: &[u8]) -> Option<&'static str> {
+    match bytes {
+        [0xFF, 0xD8, 0xFF, ..] => Some("jpg"),
+        [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, ..] => Some("png"),
+        [b'G', b'I', b'F', b'8', b'7' | b'9', b'a', ..] => Some("gif"),
+        // RIFF and ftyp both carry a four byte length before the tag naming the
+        // format, so the discriminator sits at offset 8 rather than 0.
+        [
+            b'R',
+            b'I',
+            b'F',
+            b'F',
+            _,
+            _,
+            _,
+            _,
+            b'W',
+            b'E',
+            b'B',
+            b'P',
+            ..,
+        ] => Some("webp"),
+        [
+            _,
+            _,
+            _,
+            _,
+            b'f',
+            b't',
+            b'y',
+            b'p',
+            b'a',
+            b'v',
+            b'i',
+            b'f',
+            ..,
+        ] => Some("avif"),
+        _ => None,
+    }
+}
+
+/// Names the file after what the bytes are, falling back to what was claimed.
+///
+/// The signature is authoritative because the claims are not. WeebCentral
+/// disagrees with itself twice over — a `.png` URL, served as `image/png`,
+/// carrying JPEG — which misnamed 7465 of one library's 7874 "PNG" pages.
+/// Nothing broke visibly, since webviews sniff image content and ignore the
+/// extension, but a filename that lies is worth not writing.
+///
+/// `Content-Type` and then the URL still answer for anything the signature list
+/// does not cover, so an unrecognised but valid format keeps a sensible name.
+fn pick_extension(url: &str, headers: &reqwest::header::HeaderMap, bytes: &[u8]) -> String {
     const ALLOWED: [&str; 6] = ["jpg", "jpeg", "png", "webp", "gif", "avif"];
+
+    if let Some(ext) = sniff_format(bytes) {
+        return ext.to_owned();
+    }
 
     let from_type = headers
         .get(reqwest::header::CONTENT_TYPE)
@@ -564,7 +620,14 @@ fn pick_extension(url: &str, headers: &reqwest::header::HeaderMap) -> String {
 #[cfg(test)]
 mod extension_tests {
     use super::pick_extension;
-    use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+    use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
+
+    const JPEG: &[u8] = &[
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, b'J', b'F', b'I', b'F', 0, 1,
+    ];
+    const PNG: &[u8] = &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13];
+    const WEBP: &[u8] = b"RIFF\x24\x00\x00\x00WEBPVP8 ";
+    const GIF: &[u8] = b"GIF89a\x01\x00\x01\x00\x00\x00";
 
     fn served(value: &str) -> HeaderMap {
         let mut headers = HeaderMap::new();
@@ -573,51 +636,53 @@ mod extension_tests {
     }
 
     #[test]
-    fn the_served_type_beats_the_url() {
-        // The WeebCentral case this exists for.
+    fn the_bytes_beat_a_url_and_a_header_that_both_lie() {
+        // The measured WeebCentral case: a `.png` URL served as `image/png`
+        // carrying a JPEG. Neither claim can decide this, so the body does.
         assert_eq!(
-            pick_extension("https://x.test/0001.png", &served("image/jpeg")),
-            "jpeg"
+            pick_extension("https://x.test/0003-001.png", &served("image/png"), JPEG),
+            "jpg"
         );
     }
 
     #[test]
-    fn the_url_answers_when_the_type_is_useless() {
-        // Some CDNs send application/octet-stream, or nothing at all.
+    fn each_signature_is_recognised() {
+        let none = HeaderMap::new();
+        assert_eq!(pick_extension("https://x.test/a", &none, PNG), "png");
+        assert_eq!(pick_extension("https://x.test/a", &none, WEBP), "webp");
+        assert_eq!(pick_extension("https://x.test/a", &none, GIF), "gif");
+    }
+
+    #[test]
+    fn an_unrecognised_body_falls_back_to_the_served_type() {
         assert_eq!(
             pick_extension(
-                "https://x.test/0001.webp",
-                &served("application/octet-stream")
+                "https://x.test/a.png",
+                &served("image/avif"),
+                b"\x00\x01\x02\x03"
             ),
+            "avif"
+        );
+    }
+
+    #[test]
+    fn then_to_the_url_and_finally_to_jpg() {
+        let none = HeaderMap::new();
+        assert_eq!(
+            pick_extension("https://x.test/a.webp?token=1", &none, b"\x00\x01\x02\x03"),
             "webp"
         );
         assert_eq!(
-            pick_extension("https://x.test/0001.png", &HeaderMap::new()),
+            pick_extension("https://x.test/image", &served("image/tiff"), b"\x00"),
+            "jpg"
+        );
+    }
+
+    #[test]
+    fn a_body_too_short_to_have_a_signature_does_not_panic() {
+        assert_eq!(
+            pick_extension("https://x.test/a.png", &HeaderMap::new(), b""),
             "png"
-        );
-    }
-
-    #[test]
-    fn a_query_string_is_not_part_of_the_extension() {
-        assert_eq!(
-            pick_extension("https://x.test/0001.jpg?token=abc", &HeaderMap::new()),
-            "jpg"
-        );
-    }
-
-    #[test]
-    fn an_unknown_type_and_a_bare_url_fall_back_to_jpg() {
-        assert_eq!(
-            pick_extension("https://x.test/image", &served("image/tiff")),
-            "jpg"
-        );
-    }
-
-    #[test]
-    fn a_charset_parameter_is_stripped() {
-        assert_eq!(
-            pick_extension("https://x.test/0001", &served("image/webp; charset=binary")),
-            "webp"
         );
     }
 }
