@@ -1,16 +1,24 @@
 import {
 	ArrowRightIcon,
+	BookIcon,
+	BookOpenIcon,
 	BooksIcon,
 	CompassIcon,
 	PlayIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import type { ReactElement, ReactNode } from "react";
 import { ScrollRow } from "@/components/browse/scroll-row";
 import { CoverImage } from "@/components/manga/cover-image";
 import { coverVariants, MangaCard } from "@/components/manga/manga-card";
 import { SourceIcon } from "@/components/source-icon";
 import { Button } from "@/components/ui/button";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSourcesWithPreferences } from "@/hooks/services/use-extensions";
 import { useContinueReading } from "@/hooks/services/use-history";
@@ -183,6 +191,50 @@ function Section({
 	);
 }
 
+function ResumeMenu({
+	item,
+	trigger,
+}: {
+	item: ContinueReadingItem;
+	trigger: ReactElement;
+}) {
+	const navigate = useNavigate();
+
+	return (
+		<ContextMenu>
+			<ContextMenuTrigger render={trigger} />
+			<ContextMenuContent>
+				<ContextMenuItem
+					onClick={() =>
+						navigate({
+							params: {
+								sourceId: item.source_id,
+								mangaId: item.manga_id,
+								chapterId: item.last_chapter_id,
+							},
+							to: "/read/$sourceId/$mangaId/$chapterId",
+						})
+					}
+				>
+					<BookOpenIcon />
+					Read
+				</ContextMenuItem>
+				<ContextMenuItem
+					onClick={() =>
+						navigate({
+							params: { sourceId: item.source_id, mangaId: item.manga_id },
+							to: "/manga/$sourceId/$mangaId",
+						})
+					}
+				>
+					<BookIcon />
+					Go to Manga
+				</ContextMenuItem>
+			</ContextMenuContent>
+		</ContextMenu>
+	);
+}
+
 function resumeLabel(item: ContinueReadingItem) {
 	const chapter = item.last_chapter_title || "this chapter";
 
@@ -195,46 +247,69 @@ function ResumeHero({ item }: { item: ContinueReadingItem }) {
 	const appearance = useAppearance();
 
 	return (
-		<section className="min-w-0">
+		<section className="group flex min-w-0 items-center gap-5 rounded-xl border border-border bg-card p-4">
 			<Link
-				className="group flex items-center gap-5 rounded-xl border border-border bg-card p-4 transition-colors hover:border-foreground/20 hover:bg-muted"
-				params={{
-					sourceId: item.source_id,
-					mangaId: item.manga_id,
-					chapterId: item.last_chapter_id,
-				}}
-				to="/read/$sourceId/$mangaId/$chapterId"
+				className={cn(
+					"w-24 shrink-0 sm:w-28",
+					coverVariants({ coverStyle: appearance.cover_style }),
+				)}
+				params={{ sourceId: item.source_id, mangaId: item.manga_id }}
+				to="/manga/$sourceId/$mangaId"
 			>
-				<div
-					className={cn(
-						"w-24 shrink-0 sm:w-28",
-						coverVariants({ coverStyle: appearance.cover_style }),
-					)}
-				>
-					<CoverImage
-						className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-						sourceId={item.source_id}
-						url={item.cover_url}
-					/>
-				</div>
-
-				<div className="min-w-0 flex-1">
-					<p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-						{item.last_chapter_done ? "Up next" : "Continue reading"}
-					</p>
-					<p className="mt-1 truncate font-heading font-semibold text-xl">
-						{item.title}
-					</p>
-					<p className="mt-1 truncate text-muted-foreground text-sm">
-						{resumeLabel(item)}
-					</p>
-
-					<span className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-sm">
-						<PlayIcon size={14} weight="fill" />
-						Resume
-					</span>
-				</div>
+				<CoverImage
+					className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+					sourceId={item.source_id}
+					url={item.cover_url}
+				/>
 			</Link>
+
+			<div className="min-w-0 flex-1">
+				<p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+					{item.last_chapter_done ? "Up next" : "Continue reading"}
+				</p>
+				<p className="mt-1 truncate font-heading font-semibold text-xl">
+					{item.title}
+				</p>
+				<p className="mt-1 truncate text-muted-foreground text-sm">
+					{resumeLabel(item)}
+				</p>
+
+				<div className="mt-4 flex flex-wrap items-center gap-2">
+					<Button
+						render={
+							<Link
+								params={{
+									sourceId: item.source_id,
+									mangaId: item.manga_id,
+									chapterId: item.last_chapter_id,
+								}}
+								to="/read/$sourceId/$mangaId/$chapterId"
+							/>
+						}
+						size="sm"
+					>
+						<PlayIcon weight="fill" />
+						Resume
+					</Button>
+
+					<Button
+						render={
+							<Link
+								params={{
+									sourceId: item.source_id,
+									mangaId: item.manga_id,
+								}}
+								to="/manga/$sourceId/$mangaId"
+							/>
+						}
+						size="sm"
+						variant="outline"
+					>
+						<BookIcon />
+						Go to Manga
+					</Button>
+				</div>
+			</div>
 		</section>
 	);
 }
@@ -244,35 +319,42 @@ function ResumeCard({ item }: { item: ContinueReadingItem }) {
 	const width = useCardWidth();
 
 	return (
-		<Link
-			className={cn("group block shrink-0 snap-start", width)}
-			params={{
-				sourceId: item.source_id,
-				mangaId: item.manga_id,
-				chapterId: item.last_chapter_id,
-			}}
-			to="/read/$sourceId/$mangaId/$chapterId"
-		>
-			<div className={coverVariants({ coverStyle: appearance.cover_style })}>
-				<CoverImage
-					className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-					sourceId={item.source_id}
-					url={item.cover_url}
-				/>
-				<div className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-linear-to-t from-black/85 to-transparent p-1.5 pt-4">
-					<PlayIcon className="text-white" size={12} weight="fill" />
-					<span className="text-white text-xs">Resume</span>
-				</div>
-			</div>
-			{appearance.show_titles && (
-				<p className="mt-1.5 line-clamp-2 text-sm leading-tight">
-					{item.title}
-				</p>
-			)}
-			<p className="mt-0.5 line-clamp-1 text-muted-foreground text-xs">
-				{resumeLabel(item)}
-			</p>
-		</Link>
+		<ResumeMenu
+			item={item}
+			trigger={
+				<Link
+					className={cn("group block shrink-0 snap-start", width)}
+					params={{
+						sourceId: item.source_id,
+						mangaId: item.manga_id,
+						chapterId: item.last_chapter_id,
+					}}
+					to="/read/$sourceId/$mangaId/$chapterId"
+				>
+					<div
+						className={coverVariants({ coverStyle: appearance.cover_style })}
+					>
+						<CoverImage
+							className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+							sourceId={item.source_id}
+							url={item.cover_url}
+						/>
+						<div className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-linear-to-t from-black/85 to-transparent p-1.5 pt-4">
+							<PlayIcon className="text-white" size={12} weight="fill" />
+							<span className="text-white text-xs">Resume</span>
+						</div>
+					</div>
+					{appearance.show_titles && (
+						<p className="mt-1.5 line-clamp-2 text-sm leading-tight">
+							{item.title}
+						</p>
+					)}
+					<p className="mt-0.5 line-clamp-1 text-muted-foreground text-xs">
+						{resumeLabel(item)}
+					</p>
+				</Link>
+			}
+		/>
 	);
 }
 
