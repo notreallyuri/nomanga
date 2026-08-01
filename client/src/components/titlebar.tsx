@@ -13,6 +13,7 @@ const appWindow = getCurrentWindow();
 
 export function Titlebar() {
 	const [maximized, setMaximized] = useState(false);
+	const [fullscreen, setFullscreen] = useState(false);
 
 	useEffect(() => {
 		// macOS draws its own traffic lights, so nothing here reads `maximized`.
@@ -29,6 +30,21 @@ export function Titlebar() {
 			});
 		return () => unlisten?.();
 	}, []);
+
+	useEffect(() => {
+		let unlisten: (() => void) | undefined;
+		appWindow.isFullscreen().then(setFullscreen);
+		appWindow
+			.onResized(() => {
+				appWindow.isFullscreen().then(setFullscreen);
+			})
+			.then((fn) => {
+				unlisten = fn;
+			});
+		return () => unlisten?.();
+	}, []);
+
+	if (fullscreen) return null;
 
 	return (
 		<div

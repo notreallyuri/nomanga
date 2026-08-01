@@ -2,6 +2,8 @@ import {
 	ArrowLeftIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
+	CornersInIcon,
+	CornersOutIcon,
 	SlidersHorizontalIcon,
 } from "@phosphor-icons/react";
 import {
@@ -9,6 +11,7 @@ import {
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PagedReader } from "@/components/reader/paged-reader";
 import { ReaderOverrideDialog } from "@/components/reader/reader-override-dialog";
@@ -175,9 +178,17 @@ function Reader() {
 	useReaderKeys({
 		advance,
 		retreat,
-		exit,
 		rtl,
 		enabled: layout !== "VerticalScroll",
+	});
+
+	const { fullscreen, apply: setFullscreen } = useReaderFullscreen();
+
+	useFullscreenKeys({
+		fullscreen,
+		apply: setFullscreen,
+		exit,
+		enabled: !settingsOpen,
 	});
 
 	if (pages.isPending || effective.isPending) {
@@ -233,6 +244,7 @@ function Reader() {
 
 			<Chrome
 				chapterTitle={chapter?.title ?? ""}
+				fullscreen={fullscreen}
 				index={index}
 				mangaTitle={manga.data?.title ?? ""}
 				nextChapter={nextChapter?.id}
@@ -240,6 +252,7 @@ function Reader() {
 				onGoToChapter={goToChapter}
 				onGoToNextChapter={goToNextChapter}
 				onOpenSettings={() => setSettingsOpen(true)}
+				onToggleFullscreen={() => setFullscreen(!fullscreen)}
 				prevChapter={prevChapter?.id}
 				total={total}
 				visible={chromeVisible}
@@ -261,10 +274,12 @@ function Chrome({
 	chapterTitle,
 	index,
 	total,
+	fullscreen,
 	onExit,
 	onGoToChapter,
 	onGoToNextChapter,
 	onOpenSettings,
+	onToggleFullscreen,
 	nextChapter,
 	prevChapter,
 }: {
@@ -273,10 +288,12 @@ function Chrome({
 	chapterTitle: string;
 	index: number;
 	total: number;
+	fullscreen: boolean;
 	onExit: () => void;
 	onGoToChapter: (id: string) => void;
 	onGoToNextChapter: () => void;
 	onOpenSettings: () => void;
+	onToggleFullscreen: () => void;
 	nextChapter?: string;
 	prevChapter?: string;
 }) {
@@ -297,6 +314,18 @@ function Chrome({
 					</p>
 					<p className="truncate text-white/70 text-xs">{chapterTitle}</p>
 				</div>
+				<Button
+					aria-label={fullscreen ? "Leave fullscreen (F)" : "Fullscreen (F)"}
+					onClick={onToggleFullscreen}
+					size="icon"
+					variant="ghost"
+				>
+					{fullscreen ? (
+						<CornersInIcon className="text-white" />
+					) : (
+						<CornersOutIcon className="text-white" />
+					)}
+				</Button>
 				<Button onClick={onOpenSettings} size="icon" variant="ghost">
 					<SlidersHorizontalIcon className="text-white" />
 				</Button>
@@ -385,13 +414,11 @@ function useReportProgress({
 function useReaderKeys({
 	advance,
 	retreat,
-	exit,
 	rtl,
 	enabled,
 }: {
 	advance: () => void;
 	retreat: () => void;
-	exit: () => void;
 	rtl: boolean;
 	enabled: boolean;
 }) {
@@ -417,13 +444,79 @@ function useReaderKeys({
 					e.preventDefault();
 					retreat();
 					break;
-				case "Escape":
-					exit();
-					break;
 			}
 		};
 
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
-	}, [advance, retreat, exit, rtl, enabled]);
+	}, [advance, retreat, rtl, enabled]);
+}
+
+function useReaderFullscreen() {
+	const [fullscreen, setFullscreen] = useState(false);
+	const restoreOnLeave = useRef(false);
+
+	useEffect(() => {
+		const appWindow = getCurrentWindow();
+		let alive = true;
+
+		appWindow.isFullscreen().then((on) => {
+			if (!alive) return;
+			setFullscreen(on);
+			restoreOnLeave.current = !on;
+		});
+
+		return () => {
+			alive = false;
+			if (restoreOnLeave.current) void appWindow.setFullscreen(false);
+		};
+	}, []);
+
+	const apply = useCallback((next: boolean) => {
+		setFullscreen(next);
+		void getCurrentWindow().setFullscreen(next);
+	}, []);
+
+	return { fullscreen, apply };
+}
+
+function useFullscreenKeys({
+	fullscreen,
+	apply,
+	exit,
+	enabled,
+}: {
+	fullscreen: boolean;
+	apply: (next: boolean) => void;
+	exit: () => void;
+	enabled: boolean;
+}) {
+	useEffect(() => {
+		if (!enabled) return;
+
+		const onKey = (e: KeyboardEvent) => {
+			const target = e.target;
+			if (
+				target instanceof HTMLInputElement ||
+				target instanceof HTMLTextAreaElement ||
+				(target instanceof HTMLElement && target.isContentEditable)
+			) {
+				return;
+			}
+
+			if (e.key === "f" || e.key === "F") {
+				e.preventDefault();
+				apply(!fullscreen);
+				return;
+			}
+
+			if (e.key === "Escape") {
+				if (fullscreen) apply(false);
+				else exit();
+			}
+		};
+
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [fullscreen, apply, exit, enabled]);
 }
