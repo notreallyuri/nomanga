@@ -11,6 +11,7 @@ use nomanga_services::library::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use tauri::State;
 use tauri_specta::Event;
@@ -19,6 +20,10 @@ use tauri_specta::Event;
 pub struct RefreshSummary {
     pub checked: u32,
     pub new_chapters: u32,
+    /// True when the run stopped early. `checked` still reports the series that
+    /// did complete, so a cancelled run is reported as partial rather than as
+    /// nothing having happened.
+    pub cancelled: bool,
 }
 
 #[tauri::command]
@@ -29,7 +34,30 @@ pub async fn refresh_library(
     scope: RefreshScope,
     force: bool,
 ) -> CommandResult<RefreshSummary> {
-    run_refresh(&state.pool, &state.registry, &app, scope, force).await
+    run_refresh(
+        &state.pool,
+        &state.registry,
+        &app,
+        scope,
+        force,
+        &state.refresh_cancel,
+    )
+    .await
+}
+
+/// Stops the running refresh after the series in flight. Nothing is undone: a
+/// series is committed by `sync_chapters` only once its whole chapter list is
+/// back, so the boundary between series is already a safe place to stop and
+/// there is no partial state to clean up — unlike a download, which owns files.
+///
+/// Setting the flag with no run in progress is harmless; the next run clears it
+/// before checking anything.
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_library_refresh(state: State<'_, AppState>) -> CommandResult<()> {
+    state.refresh_cancel.store(true, Ordering::Relaxed);
+
+    Ok(())
 }
 
 /// Shared refresh engine for the `refresh_library` command and the background
@@ -40,14 +68,27 @@ pub async fn run_refresh(
     app: &tauri::AppHandle,
     scope: RefreshScope,
     force: bool,
+    cancel: &Arc<AtomicBool>,
 ) -> CommandResult<RefreshSummary> {
+    // Cleared here rather than after the loop so a cancel raised once the
+    // previous run had already ended cannot carry into this one.
+    cancel.store(false, Ordering::Relaxed);
+
     let targets = library::entries_to_refresh(pool, &scope, force).await?;
     let total = targets.len() as u32;
 
     let mut checked = 0u32;
     let mut new_chapters = 0u32;
+    let mut cancelled = false;
 
     for (index, target) in targets.iter().enumerate() {
+        // Checked before the fetch rather than after, so cancelling does not
+        // still pay for one more round trip to a source.
+        if cancel.load(Ordering::Relaxed) {
+            cancelled = true;
+            break;
+        }
+
         LibraryRefreshProgress {
             done: index as u32,
             total,
@@ -84,6 +125,10 @@ pub async fn run_refresh(
         library::mark_checked(pool, &target.source_id, &target.manga_id).await?;
     }
 
+    // Terminal event either way. Listeners treat `done == total` as "the run is
+    // over" and clear their progress on it, so a cancelled run has to send one
+    // too or the UI would sit on a bar that never finishes. What actually
+    // happened is carried by the summary, not by the counts.
     LibraryRefreshProgress {
         done: total,
         total,
@@ -95,6 +140,7 @@ pub async fn run_refresh(
     Ok(RefreshSummary {
         checked,
         new_chapters,
+        cancelled,
     })
 }
 

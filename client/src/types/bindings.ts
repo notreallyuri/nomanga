@@ -34,6 +34,16 @@ export const commands = {
 	bulkCategoryCounts: (entries: EntryRef[]) => typedError<CategoryCount[], CommandError>(__TAURI_INVOKE("bulk_category_counts", { entries })),
 	bulkUpdateCategories: (entries: EntryRef[], add: string[], remove: string[]) => typedError<null, CommandError>(__TAURI_INVOKE("bulk_update_categories", { entries, add, remove })),
 	refreshLibrary: (scope: RefreshScope, force: boolean) => typedError<RefreshSummary, CommandError>(__TAURI_INVOKE("refresh_library", { scope, force })),
+	/**
+	 *  Stops the running refresh after the series in flight. Nothing is undone: a
+	 *  series is committed by `sync_chapters` only once its whole chapter list is
+	 *  back, so the boundary between series is already a safe place to stop and
+	 *  there is no partial state to clean up — unlike a download, which owns files.
+	 * 
+	 *  Setting the flag with no run in progress is harmless; the next run clears it
+	 *  before checking anything.
+	 */
+	cancelLibraryRefresh: () => typedError<null, CommandError>(__TAURI_INVOKE("cancel_library_refresh")),
 	libraryUpdates: (limit: number) => typedError<LibraryUpdate[], CommandError>(__TAURI_INVOKE("library_updates", { limit })),
 	clearLibraryUpdates: () => typedError<null, CommandError>(__TAURI_INVOKE("clear_library_updates")),
 	continueReading: (limit: number) => typedError<ContinueReadingItem[], CommandError>(__TAURI_INVOKE("continue_reading", { limit })),
@@ -555,6 +565,12 @@ export type RefreshScope = { type: "All" } | { type: "Category"; id: string } | 
 export type RefreshSummary = {
 	checked: number,
 	new_chapters: number,
+	/**
+	 *  True when the run stopped early. `checked` still reports the series that
+	 *  did complete, so a cancelled run is reported as partial rather than as
+	 *  nothing having happened.
+	 */
+	cancelled: boolean,
 };
 
 export type Repository = {

@@ -64,13 +64,20 @@ pub async fn run_loop(app: AppHandle) {
             continue;
         }
 
-        let (pool, registry) = {
+        let (pool, registry, cancel) = {
             let state = app.state::<AppState>();
-            (state.pool.clone(), state.registry.clone())
+            (
+                state.pool.clone(),
+                state.registry.clone(),
+                state.refresh_cancel.clone(),
+            )
         };
 
-        // force = false so the per-series throttle still applies.
-        let summary = run_refresh(&pool, &registry, &app, RefreshScope::All, false).await;
+        // force = false so the per-series throttle still applies. The cancel
+        // flag is shared with the manual run on purpose: to the user there is
+        // one "checking for updates" in progress, and Stop should end whichever
+        // one is behind it.
+        let summary = run_refresh(&pool, &registry, &app, RefreshScope::All, false, &cancel).await;
         if let Ok(summary) = summary {
             if summary.new_chapters > 0 && notify {
                 let body = if summary.new_chapters == 1 {

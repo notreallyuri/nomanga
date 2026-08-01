@@ -251,13 +251,6 @@ releases on its own once a tag exists.
   compete for the same politeness budget, so doing both later means bounding
   N×M.
 
-- [ ] Cancel a library update run, in the updates progress dialog. Downloads
-  now have this (below); `refresh_library` is still a plain loop emitting
-  `LibraryRefreshProgress` that runs to completion whatever the user does.
-  Cheaper than the download case was: an update fetches chapter lists and writes
-  rows, so stopping between series leaves nothing half-written and needs no
-  cleanup decision. Pause is probably not worth it here — a refresh is short.
-
 ### System
 
 #### E. Developer section
@@ -516,6 +509,27 @@ default.
     (ABI 3: `SearchQuery.query` renamed to `SearchQuery.term`.)
 
 ### Library
+
+- [x] Cancel a library update run, from the updates dialog. Stop replaces
+  "Check for updates" while a run is in flight, and the summary reports the run
+  as partial rather than as a success or a failure.
+  Cheaper than the download case was, structurally: a series is committed by
+  `sync_chapters` only once its whole chapter list is back, so a series boundary
+  is already a safe place to stop — nothing is half-written and there is no
+  cleanup decision, unlike a download, which owns files. Series never reached
+  keep their old `last_checked_at`, so the next run picks them up.
+  An `AtomicBool` on `AppState`, shared with the background loop deliberately:
+  to the user there is one "checking for updates" in progress, and Stop should
+  end whichever run is behind it.
+  Two things that are load-bearing rather than incidental:
+  - The flag is cleared when a run *starts*, not when it ends. A Stop pressed
+    just after a run finished would otherwise sit raised and kill the next run
+    before it checked anything.
+  - A cancelled run still emits the terminal `done == total` progress event.
+    Listeners clear their progress on that event, so without it the UI sits on a
+    bar that never completes. What happened rides on the summary, not the counts.
+  Pause was considered and left out — a refresh is short, and the value of pause
+  in downloads was avoiding a partial file, which has no analogue here.
 
 - [x] Pause and cancel in the downloads queue dialog.
   Pause is a `watch::channel(bool)` the worker waits on **between chapters**, so

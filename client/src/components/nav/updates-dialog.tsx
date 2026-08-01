@@ -3,8 +3,10 @@ import {
 	CaretRightIcon,
 	CheckCircleIcon,
 	SparkleIcon,
+	StopCircleIcon,
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { CoverImage } from "@/components/manga/cover-image";
 import { historyBucket } from "@/lib/utils";
 import type { LibraryRefreshProgress, LibraryUpdate } from "@/types/bindings";
@@ -35,6 +37,7 @@ export function UpdatesDialog({
 	log,
 	updates,
 	onCheck,
+	onCancel,
 	onClear,
 	clearing,
 }: {
@@ -46,10 +49,20 @@ export function UpdatesDialog({
 	log: RefreshLogEntry[];
 	updates: LibraryUpdate[];
 	onCheck: () => void;
+	onCancel: () => void;
 	onClear: () => void;
 	clearing: boolean;
 }) {
 	const newChapters = updates.reduce((sum, u) => sum + u.new_count, 0);
+
+	// Latched locally so the button reports the request the moment it is made.
+	// The backend only stops at the next series boundary, and a button that
+	// still says "Stop" until then reads as not having worked.
+	const [stopping, setStopping] = useState(false);
+
+	useEffect(() => {
+		if (!running) setStopping(false);
+	}, [running]);
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
@@ -102,16 +115,26 @@ export function UpdatesDialog({
 						<CheckCircleIcon />
 						Mark all seen
 					</Button>
-					<Button disabled={running} onClick={onCheck} size="sm">
-						<ArrowClockwiseIcon
-							className={running ? "animate-spin" : undefined}
-						/>
-						{running
-							? "Checking…"
-							: updates.length > 0
-								? "Check again"
-								: "Check for updates"}
-					</Button>
+
+					{running ? (
+						<Button
+							disabled={stopping}
+							onClick={() => {
+								setStopping(true);
+								onCancel();
+							}}
+							size="sm"
+							variant="outline"
+						>
+							<StopCircleIcon />
+							{stopping ? "Stopping…" : "Stop"}
+						</Button>
+					) : (
+						<Button onClick={onCheck} size="sm">
+							<ArrowClockwiseIcon />
+							{updates.length > 0 ? "Check again" : "Check for updates"}
+						</Button>
+					)}
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

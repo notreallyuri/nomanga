@@ -26,6 +26,11 @@ pub struct AppState {
     pub sync: Arc<RwLock<nomanga_services::sync::SyncState>>,
     pub sync_path: PathBuf,
     pub transport: nomanga_host::transport::TransportShared,
+    /// Raised by `cancel_library_refresh`, cleared by every run as it starts.
+    /// Clearing on entry rather than on exit is what keeps a cancel pressed
+    /// after a run already finished from stopping the next one before it
+    /// checks anything.
+    pub refresh_cancel: Arc<std::sync::atomic::AtomicBool>,
 }
 
 pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
@@ -58,6 +63,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             library::bulk_category_counts,
             library::bulk_update_categories,
             library::refresh_library,
+            library::cancel_library_refresh,
             library::library_updates,
             library::clear_library_updates,
             // history
@@ -352,6 +358,7 @@ pub fn run() {
                 sync_path,
                 transport,
                 downloads_dir,
+                refresh_cancel: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             });
 
             tauri::async_runtime::spawn(downloads::restore(handle.clone()));
