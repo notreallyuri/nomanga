@@ -28,6 +28,7 @@ import {
 	useLibraryUpdates,
 } from "@/hooks/services/use-library";
 import { useAppearance } from "@/hooks/services/use-settings";
+import { sourceImageUrl } from "@/lib/source-image";
 import { cn } from "@/lib/utils";
 import type { ContinueReadingItem, LibraryUpdate } from "@/types/bindings";
 
@@ -245,9 +246,26 @@ function resumeLabel(item: ContinueReadingItem) {
 
 function ResumeHero({ item }: { item: ContinueReadingItem }) {
 	const appearance = useAppearance();
+	const backdrop = sourceImageUrl(item.source_id, item.cover_url, {
+		cache: true,
+	});
 
 	return (
-		<section className="group flex min-w-0 items-center gap-5 rounded-xl border border-border bg-card p-4">
+		<section className="group relative isolate flex min-w-0 items-center gap-5 overflow-hidden rounded-xl border border-border bg-card p-4">
+			{backdrop && (
+				<>
+					<img
+						alt=""
+						aria-hidden
+						className="pointer-events-none absolute inset-0 -z-10 h-full w-full scale-125 object-cover opacity-50 blur-2xl"
+						src={backdrop}
+					/>
+					<div
+						aria-hidden
+						className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-r from-card via-card/80 to-card/40"
+					/>
+				</>
+			)}
 			<Link
 				className={cn(
 					"w-24 shrink-0 sm:w-28",
