@@ -315,6 +315,19 @@ export function useLibraryRefresh() {
 		// itself; explicit refreshes report their result.
 		onSuccess: (summary, { silent }) => {
 			if (silent) return;
+
+			// Reported as partial rather than as a success or a failure: the
+			// series that did finish are checked and saved, and the rest kept
+			// their old `last_checked_at`, so the next run picks them up.
+			if (summary.cancelled) {
+				toast.info(
+					summary.checked > 0
+						? `Stopped after ${summary.checked} series`
+						: "Update check stopped",
+				);
+				return;
+			}
+
 			toast.success(
 				summary.new_chapters > 0
 					? `${summary.new_chapters} new chapter${summary.new_chapters === 1 ? "" : "s"} across ${summary.checked} series`
@@ -338,6 +351,13 @@ export function useLibraryRefresh() {
 	return {
 		refresh: (scope: RefreshScope, force = true, silent = false) =>
 			mutation.mutate({ scope, force, silent }),
+		// Fire-and-forget rather than a mutation: it only raises a flag, and the
+		// run it stops is what reports the outcome. It is also deliberately not
+		// scoped to this hook's own mutation — the background loop shares the
+		// flag, so Stop ends whichever run is actually on screen.
+		cancel: () => {
+			void unwrap(commands.cancelLibraryRefresh()).catch(() => {});
+		},
 		summary: mutation.data,
 		isRefreshing: mutation.isPending,
 		progress,

@@ -97,6 +97,7 @@ export function NavUpdates() {
 			<UpdatesDialog
 				clearing={clearUpdates.isPending}
 				log={log}
+				onCancel={refresh.cancel}
 				onCheck={() => refresh.refresh({ type: "All" })}
 				onClear={() => clearUpdates.mutate()}
 				onOpenChange={setOpen}
