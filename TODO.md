@@ -11,59 +11,61 @@
 
 ### Cloudflare bypass
 
-- [ ] Add a simple Cloudflare bypass:
-  - Invokes another window, user passes the Cloudflare challenge.
-  - Returns, the app grabs the Cloudflare key.
-  - Test target: the NatoManga source (`com.natomanga.en`). The challenge is
-    route-scoped, not site-wide, but the opening is narrow: only
-    `/api/manga/<slug>/chapters` answers unauthenticated. Everything that
-    renders a page 403s with `cf-mitigated: challenge`, including the search
-    box's own AJAX endpoint `/home/search/json`. Other `/api/manga/*` paths
-    reach the origin but 404 — there is no listing/search/details API to use
-    instead, so the bypass is genuinely required for those.
-  - So `chapters()` already works end to end live (verified: 66 chapters back
-    to chapter 1, paging past the 50-row cap the detail page imposes), and
-    homepage/search/manga/pages are the methods actually blocked.
-  - The injection point this needed now exists, built for MadaraDex: one
-    `reqwest::cookie::Jar` is shared by the extension transport, the image
-    proxy and the download worker, and `guest::set_cookie()` lets an extension
-    write into it (ABI 4 → 5). Dropping a `cf_clearance` in is the same move
-    MadaraDex makes with `mdx_fp`. The jar is in-memory, so a clearance does
-    not survive a restart — persisting it is the open question, and it is a
-    credential, so it wants the same care the debug export's redaction got.
-  - **Harvesting a `cf_clearance` does not work for this source. Measured
-    2026-07-30, do not retry it without new evidence.** A fresh clearance taken
-    from a real browser, replayed from the same machine and IP, through the
-    app's own reqwest client with the app's `USER_AGENT`, still 403s on both
-    `/manga-list/latest-manga` and `/manga/<slug>` — identically to sending no
-    cookie at all. curl behaves the same. Cloudflare is not gating on
-    possession of a cookie here; it is gating on the client's TLS/HTTP
-    fingerprint, which no header or cookie can supply.
-    The UA is not the missing piece either: the same replay was tried under
-    Firefox 128/140/143/145 and a current Chrome string, all 403. Nor is the
-    clearance's provenance — the app's own challenge window was made to solve a
-    real interstitial and mint one, and that fresh cookie, replayed through the
-    app's reqwest client seconds later under WebKit's own user agent, 403s too.
-    The binding is to the client's TLS/HTTP fingerprint, which is the one thing
-    a cookie cannot carry.
-    Worth keeping from the attempt: the challenge only renders and passes when
-    the webview is left on its **native** user agent. Forcing `USER_AGENT` onto
-    it made Cloudflare serve Gecko-targeted challenge code to a WebKit engine,
-    which hung and painted black. Whatever replaces this must let the engine be
-    honest about what it is.
-    Two things fell out of measuring it. The gate is narrower than recorded
-    above: `/` is open to anything, including bare curl with no user agent,
-    while `/manga-list/*` and `/manga/*` are gated. And those routes answer a
-    browser-shaped request with a real, solvable interstitial — 403 plus
-    `cf-mitigated: challenge` and a 5.7 KB "Just a moment..." document that
-    loads `challenges.cloudflare.com` — so a browser engine can pass them. It
-    is only the *export* to reqwest that fails.
-    So the fetch itself has to happen in a browser engine; a cookie carried out
-    of one will not do. What this leaves: route the blocked fetches through the
-    webview (Tauri v2 can grant remote URLs IPC access, so a page in the
-    source's own origin can fetch and hand the HTML back), swap the HTTP stack
-    for one that reproduces a browser's TLS fingerprint, or accept that only
-    `chapters()` works and drop the source's other methods.
+NatoManga no longer needs this — the source moved to `manganato.gg`, which
+answers the app's own client ungated, so all its methods work without a bypass.
+It is no longer the test target and nothing ships blocked. What remains open is
+the general capability, for the next source that puts a managed challenge in
+front of a page the app has to read.
+
+- [ ] Finish the Cloudflare bypass. The harvesting path is **built**, end to
+  end, and unproven against a real gate:
+  - `Challenge { url, cookies }` is an optional field on `SourceInfo`
+    (`packages/core/src/extension/source.rs`), additive at ABI 6 — an ABI 5
+    extension emits none and reads as `None`, which is why `ABI_MIN_SUPPORTED`
+    stayed at 5.
+  - `solve_challenge` / `cancel_challenge`
+    (`client/src-tauri/src/commands/challenge.rs`) open the declared page in a
+    separate window, poll the webview cookie store, and copy every named cookie
+    — Domain and Path carried over, not just `name=value` — into the shared
+    `reqwest::cookie::Jar` the transport, image proxy and download worker all
+    read. `challenge-dialog.tsx` drives it.
+  - A separate window rather than an embedded one because on Linux wry packs a
+    child webview into the window's GtkBox, which ignores its bounds and lays
+    out as a sibling of the app.
+  - The jar is in-memory, so a clearance does not survive a restart. Persisting
+    it is the open question, and it is a credential — it wants the care the
+    debug export's redaction got.
+  - Still missing: a source that actually exercises it. Every installed source
+    now answers ungated, so `solve_challenge` has been run against a real
+    interstitial but never against one whose cleared cookie then had to carry a
+    real fetch.
+
+- **Cookie harvesting alone is not sufficient in the general case. Measured
+  against NatoManga 2026-07-30, before the domain move; do not re-derive it.**
+  A fresh `cf_clearance` from a real browser, replayed from the same machine and
+  IP through the app's reqwest client, 403'd identically to sending no cookie at
+  all. curl behaved the same. Not a UA problem — Firefox 128/140/143/145 and a
+  current Chrome string all 403'd. Not a provenance problem either: the app's
+  own challenge window solved a real interstitial and minted one, and that
+  cookie replayed seconds later under WebKit's own UA 403'd too. Cloudflare was
+  gating on the client's TLS/HTTP fingerprint, which is the one thing a cookie
+  cannot carry.
+  Two things worth keeping:
+  - The challenge only renders and passes when the webview keeps its **native**
+    user agent. Forcing core's `USER_AGENT` onto it made Cloudflare serve
+    Gecko-targeted challenge code to a WebKit engine, which hung and painted the
+    window black. `challenge.rs` deliberately does not pin the UA, and whatever
+    is built next must let the engine be honest about what it is.
+  - Gates are route-scoped. `/` was open to bare curl with no user agent while
+    `/manga-list/*` and `/manga/*` were gated, and those routes answered a
+    browser-shaped request with a real, solvable interstitial. Only the *export*
+    to reqwest failed.
+  So when the harvesting path meets a fingerprint-gated source, the fetch itself
+  has to happen in a browser engine. Two options if that day comes: route the
+  blocked fetches through the webview (Tauri v2 can grant remote URLs IPC
+  access, so a page in the source's own origin can fetch and hand the HTML
+  back), or swap the HTTP stack for one that reproduces a browser's TLS
+  fingerprint.
 
 ### Library
 
