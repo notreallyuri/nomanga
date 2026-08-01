@@ -3,8 +3,8 @@ use nomanga_services::extension::repository::{self, Repository};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::AppState;
 use crate::error::{CommandError, CommandResult};
+use crate::AppState;
 
 // A repository is an arbitrary URL the user pasted, so both fetches are bounded
 // rather than trusted: an index that streams forever, or a `.wasm` sized to

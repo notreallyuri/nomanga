@@ -76,7 +76,8 @@ pub async fn run_refresh(
         // A single flaky source shouldn't abort the whole run.
         if let Ok(chapters) = fetched {
             new_chapters +=
-                library::sync_chapters(pool, &target.source_id, &target.manga_id, &chapters).await?;
+                library::sync_chapters(pool, &target.source_id, &target.manga_id, &chapters)
+                    .await?;
             checked += 1;
         }
 

@@ -1,5 +1,5 @@
-use crate::AppState;
 use crate::commands::library::run_refresh;
+use crate::AppState;
 use nomanga_services::library::RefreshScope;
 use std::time::Duration;
 use tauri::{AppHandle, Manager};

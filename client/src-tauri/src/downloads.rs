@@ -59,9 +59,8 @@ type Key = (String, String, String);
 type Live = Arc<Mutex<Vec<DownloadProgress>>>;
 
 fn position(live: &[DownloadProgress], key: &Key) -> Option<usize> {
-    live.iter().position(|p| {
-        p.source_id == key.0 && p.manga_id == key.1 && p.chapter_id == key.2
-    })
+    live.iter()
+        .position(|p| p.source_id == key.0 && p.manga_id == key.1 && p.chapter_id == key.2)
 }
 
 fn is_terminal(state: &DownloadState) -> bool {
@@ -84,11 +83,7 @@ pub struct DownloadManager {
 }
 
 impl DownloadManager {
-    pub fn new(
-        app: AppHandle,
-        downloads_dir: PathBuf,
-        jar: Arc<reqwest::cookie::Jar>,
-    ) -> Self {
+    pub fn new(app: AppHandle, downloads_dir: PathBuf, jar: Arc<reqwest::cookie::Jar>) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let queued: Live = Arc::new(Mutex::new(Vec::new()));
         let cancelled: Arc<Mutex<HashSet<Key>>> = Arc::new(Mutex::new(HashSet::new()));
@@ -170,7 +165,11 @@ impl DownloadManager {
         targets: Vec<DownloadTarget>,
     ) {
         for target in targets {
-            let key = (source_id.clone(), manga_id.clone(), target.chapter_id.clone());
+            let key = (
+                source_id.clone(),
+                manga_id.clone(),
+                target.chapter_id.clone(),
+            );
 
             let progress = DownloadProgress {
                 source_id: source_id.clone(),
@@ -330,13 +329,9 @@ async fn worker(
         // The chapter is settled either way — a failure is reported to the user
         // to retry, not carried over to the next launch.
         let pool = app.state::<AppState>().pool.clone();
-        let _ = downloads::forget_pending(
-            &pool,
-            &job.source_id,
-            &job.manga_id,
-            &job.target.chapter_id,
-        )
-        .await;
+        let _ =
+            downloads::forget_pending(&pool, &job.source_id, &job.manga_id, &job.target.chapter_id)
+                .await;
     }
 }
 
@@ -536,7 +531,12 @@ fn pick_extension(url: &str, headers: &reqwest::header::HeaderMap) -> String {
         .rsplit('/')
         .next()
         .and_then(|name| name.rsplit_once('.'))
-        .map(|(_, ext)| ext.split(['?', '#']).next().unwrap_or(ext).to_ascii_lowercase())
+        .map(|(_, ext)| {
+            ext.split(['?', '#'])
+                .next()
+                .unwrap_or(ext)
+                .to_ascii_lowercase()
+        })
         .filter(|ext| ALLOWED.contains(&ext.as_str()));
 
     if let Some(ext) = from_url {

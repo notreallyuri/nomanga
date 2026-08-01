@@ -72,8 +72,7 @@ pub fn handle<R: Runtime>(
             // through so the reader's retry logic sees the real story.
             Ok(r) => {
                 responder.respond(error(
-                    StatusCode::from_u16(r.status().as_u16())
-                        .unwrap_or(StatusCode::BAD_GATEWAY),
+                    StatusCode::from_u16(r.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY),
                 ));
                 return;
             }

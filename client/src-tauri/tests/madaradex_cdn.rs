@@ -17,16 +17,16 @@ fn a_seeded_cookie_is_offered_to_the_cdn_subdomain() {
     let origin: reqwest::Url = BASE_URL.parse().unwrap();
 
     jar.set_cookies(
-        &mut std::iter::once(
-            &reqwest::header::HeaderValue::from_static(
-                "mdx_fp=abc123; Domain=.madaradex.org; Path=/",
-            ),
-        ),
+        &mut std::iter::once(&reqwest::header::HeaderValue::from_static(
+            "mdx_fp=abc123; Domain=.madaradex.org; Path=/",
+        )),
         &origin,
     );
 
     let cdn: reqwest::Url = "https://cdn.madaradex.org/x/0.webp".parse().unwrap();
-    let sent = jar.cookies(&cdn).expect("cookie was not offered to the cdn");
+    let sent = jar
+        .cookies(&cdn)
+        .expect("cookie was not offered to the cdn");
 
     assert!(sent.to_str().unwrap().contains("mdx_fp=abc123"));
 }

@@ -82,13 +82,12 @@ pub async fn source_filters(
     }
 
     let fetch_id = source_id.clone();
-    let fetched = tokio::task::spawn_blocking(move || {
-        handle.with_plugin(|ext| ext.filters(&fetch_id))
-    })
-    .await
-    .map_err(|e| CommandError::Internal {
-        message: format!("task panicked: {e}"),
-    })?;
+    let fetched =
+        tokio::task::spawn_blocking(move || handle.with_plugin(|ext| ext.filters(&fetch_id)))
+            .await
+            .map_err(|e| CommandError::Internal {
+                message: format!("task panicked: {e}"),
+            })?;
 
     match fetched {
         Ok(filters) => {
@@ -168,9 +167,12 @@ pub async fn source_manga(
     source_id: String,
     manga_id: String,
 ) -> CommandResult<Manga> {
-    let manga = call_source(&state, source_id.clone(), SourceMethod::Manga, move |ext, id| {
-        ext.manga(id, MangaRef { manga_id })
-    })
+    let manga = call_source(
+        &state,
+        source_id.clone(),
+        SourceMethod::Manga,
+        move |ext, id| ext.manga(id, MangaRef { manga_id }),
+    )
     .await?;
 
     nomanga_services::cache::manga::cache_manga(&state.pool, &source_id, &manga).await?;

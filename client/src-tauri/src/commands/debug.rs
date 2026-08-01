@@ -224,9 +224,10 @@ fn looks_secret(key: &str) -> bool {
 }
 
 fn write_export(path: &str, value: &serde_json::Value) -> CommandResult<()> {
-    let json = serde_json::to_string_pretty(value).map_err(|e| crate::error::CommandError::Internal {
-        message: format!("could not encode export: {e}"),
-    })?;
+    let json =
+        serde_json::to_string_pretty(value).map_err(|e| crate::error::CommandError::Internal {
+            message: format!("could not encode export: {e}"),
+        })?;
 
     std::fs::write(path, json).map_err(|e| crate::error::CommandError::Internal {
         message: format!("could not write {path}: {e}"),
@@ -304,7 +305,10 @@ pub async fn export_table_rows(
 
                 if hide {
                     redacted_any = true;
-                    object.insert(column.clone(), serde_json::Value::String(REDACTED.to_owned()));
+                    object.insert(
+                        column.clone(),
+                        serde_json::Value::String(REDACTED.to_owned()),
+                    );
                 } else {
                     object.insert(
                         column.clone(),

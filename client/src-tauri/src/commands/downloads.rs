@@ -6,9 +6,7 @@ use tauri::State;
 
 #[tauri::command]
 #[specta::specta]
-pub async fn list_downloads(
-    state: State<'_, AppState>,
-) -> CommandResult<Vec<DownloadedManga>> {
+pub async fn list_downloads(state: State<'_, AppState>) -> CommandResult<Vec<DownloadedManga>> {
     Ok(downloads::list_downloads(&state.pool).await?)
 }
 
@@ -49,18 +47,13 @@ pub async fn queue_downloads(
 /// way instead of learning about a chapter only when its turn comes.
 #[tauri::command]
 #[specta::specta]
-pub async fn download_queue(
-    state: State<'_, AppState>,
-) -> CommandResult<Vec<DownloadProgress>> {
+pub async fn download_queue(state: State<'_, AppState>) -> CommandResult<Vec<DownloadProgress>> {
     Ok(state.downloads.snapshot())
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn set_downloads_paused(
-    state: State<'_, AppState>,
-    paused: bool,
-) -> CommandResult<()> {
+pub async fn set_downloads_paused(state: State<'_, AppState>, paused: bool) -> CommandResult<()> {
     state.downloads.set_paused(paused);
     Ok(())
 }
@@ -112,7 +105,14 @@ pub async fn local_pages(
     manga_id: String,
     chapter_id: String,
 ) -> CommandResult<Vec<Page>> {
-    Ok(downloads::local_pages(&state.pool, &state.downloads_dir, &source_id, &manga_id, &chapter_id).await?)
+    Ok(downloads::local_pages(
+        &state.pool,
+        &state.downloads_dir,
+        &source_id,
+        &manga_id,
+        &chapter_id,
+    )
+    .await?)
 }
 
 #[tauri::command]
