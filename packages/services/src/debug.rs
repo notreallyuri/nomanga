@@ -2,8 +2,6 @@ use crate::error::ServiceResult;
 use serde::{Deserialize, Serialize};
 use sqlx::{AssertSqlSafe, Column, Row, SqlitePool, TypeInfo, ValueRef};
 
-/// Browsable tables, as a fixed list. Arbitrary SQL is a footgun in a shipped
-/// app even read-only, and every table worth inspecting is known up front.
 pub const TABLES: &[&str] = &[
     "manga",
     "library_entry",
@@ -116,8 +114,6 @@ pub async fn table_page(pool: &SqlitePool, name: &str, page: u32) -> ServiceResu
     })
 }
 
-/// SQLite columns are dynamically typed, so each value is coerced to text for
-/// display rather than decoded into a concrete Rust type.
 fn stringify_row(row: &sqlx::sqlite::SqliteRow) -> Vec<Option<String>> {
     (0..row.len())
         .map(|i| {

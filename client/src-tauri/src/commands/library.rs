@@ -20,9 +20,6 @@ use tauri_specta::Event;
 pub struct RefreshSummary {
     pub checked: u32,
     pub new_chapters: u32,
-    /// True when the run stopped early. `checked` still reports the series that
-    /// did complete, so a cancelled run is reported as partial rather than as
-    /// nothing having happened.
     pub cancelled: bool,
 }
 
@@ -45,13 +42,6 @@ pub async fn refresh_library(
     .await
 }
 
-/// Stops the running refresh after the series in flight. Nothing is undone: a
-/// series is committed by `sync_chapters` only once its whole chapter list is
-/// back, so the boundary between series is already a safe place to stop and
-/// there is no partial state to clean up — unlike a download, which owns files.
-///
-/// Setting the flag with no run in progress is harmless; the next run clears it
-/// before checking anything.
 #[tauri::command]
 #[specta::specta]
 pub async fn cancel_library_refresh(state: State<'_, AppState>) -> CommandResult<()> {
@@ -60,8 +50,6 @@ pub async fn cancel_library_refresh(state: State<'_, AppState>) -> CommandResult
     Ok(())
 }
 
-/// Shared refresh engine for the `refresh_library` command and the background
-/// loop; streams `LibraryRefreshProgress` events so any listener can show it.
 pub async fn run_refresh(
     pool: &SqlitePool,
     registry: &Arc<RwLock<Registry>>,
@@ -213,8 +201,6 @@ pub async fn add_manga_to_library(
     Ok(())
 }
 
-/// Fills the chapter cache for one entry without the progress events a full
-/// refresh emits — used right after an add whose caller had no chapter count.
 #[tauri::command]
 #[specta::specta]
 pub async fn cache_entry_chapters(

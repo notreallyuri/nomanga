@@ -11,13 +11,6 @@ import { Skeleton } from "../ui/skeleton";
 import { BrowseCard } from "./browse-card";
 import { ScrollRow } from "./scroll-row";
 
-/**
- * Runs one search per source and gives each its own row.
- *
- * A merged grid was the other option and is worse: relevance is not comparable
- * across sources, and the same series carries a different id in each, so the
- * duplicates cannot be collapsed either.
- */
 export function GlobalSearch({
 	term,
 	sources,
@@ -45,10 +38,6 @@ export function GlobalSearch({
 	);
 }
 
-/**
- * One source's answer. Each row owns its query, so a slow or broken source
- * delays and fails only its own row — the rest paint as they arrive.
- */
 function SourceResults({ info, term }: { info: SourceInfo; term: string }) {
 	const compact = useAppearance().compact_mode;
 

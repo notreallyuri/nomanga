@@ -6,10 +6,6 @@ import type { CategoryFilter } from "@/types/bindings";
 const ACTIVITY_EVENTS = ["pointerdown", "keydown", "wheel"] as const;
 const IDLE_CHECK_MS = 15_000;
 
-/**
- * Applies the configured re-lock policy to whatever the user has unlocked.
- * `UntilAppCloses` needs nothing — module state dies with the window.
- */
 export function useLockSession(filter: CategoryFilter) {
 	const { category_lock_session, category_lock_idle_minutes } = useSystem();
 	const activeId = filter.type === "Category" ? filter.id : null;

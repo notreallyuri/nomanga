@@ -91,7 +91,6 @@ pub async fn record_chapter(
     Ok(())
 }
 
-/// One chapter waiting to be downloaded, as it survives a restart.
 #[derive(Debug, Clone)]
 pub struct PendingDownload {
     pub source_id: String,
@@ -101,11 +100,6 @@ pub struct PendingDownload {
     pub title: String,
 }
 
-/// Records chapters as waiting so the queue outlives the process.
-///
-/// The queue itself is an in-memory channel: without this, closing the app
-/// halfway through a hundred-chapter batch loses every chapter that had not
-/// started. Rows are dropped as each chapter reaches a state it cannot leave.
 pub async fn remember_pending(
     pool: &SqlitePool,
     entries: &[PendingDownload],
@@ -165,11 +159,6 @@ pub async fn forget_all_pending(pool: &SqlitePool) -> ServiceResult<()> {
     Ok(())
 }
 
-/// The queue to restore on startup, in the order it was asked for.
-///
-/// Chapters that made it to disk are skipped and their rows dropped: the app can
-/// die between recording a chapter and clearing its row, and re-downloading what
-/// is already saved would waste a source's rate limit.
 pub async fn pending_downloads(pool: &SqlitePool) -> ServiceResult<Vec<PendingDownload>> {
     sqlx::query!("DELETE FROM download_queue AS q
                    WHERE EXISTS (SELECT 1 FROM downloaded_chapter dc

@@ -235,15 +235,6 @@ pub async fn entries_to_refresh(
     Ok(targets)
 }
 
-/// Whether an entry's categories mute it.
-///
-/// The rule is **all**, not any: an entry is skipped only when every category it
-/// belongs to is marked to skip. A series filed in both "Finished" and "Reading"
-/// is still being read, and letting one archived shelf mute it wherever else it
-/// appears would make the flag act at a distance — the failure would show up as
-/// chapters silently never arriving, which is the hardest kind to notice.
-///
-/// An entry in no category is never muted; there is nothing to have said so.
 async fn muted_by_category(
     pool: &SqlitePool,
     applies: &bool,

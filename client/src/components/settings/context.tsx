@@ -18,7 +18,6 @@ interface SettingsUI {
 	active: SettingsItem;
 	setActive: (item: SettingsItem) => void;
 	openSettings: (route?: SettingsRoute) => void;
-	/** Source whose detail page the Sources section should show, if any. */
 	sourceTarget: string | null;
 	setSourceTarget: (sourceId: string | null) => void;
 	openSourceSettings: (sourceId: string) => void;

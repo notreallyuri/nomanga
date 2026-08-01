@@ -1,12 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { CategoryLockSession } from "@/types/bindings";
 
-/**
- * Which locked categories are open right now. Module state rather than context
- * so an unlock survives navigating away from the library and back — under the
- * "until the app closes" policy that is the whole point, and a reload clears it
- * either way.
- */
 const unlocked = new Set<string>();
 const listeners = new Set<() => void>();
 
@@ -40,7 +34,6 @@ export const libraryLock = {
 		emit();
 	},
 
-	/** Pushes back the idle deadline; called while a locked category is on screen. */
 	touch() {
 		lastActivity = Date.now();
 	},

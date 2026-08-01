@@ -45,8 +45,6 @@ fn read_config(app: &AppHandle) -> (Option<Duration>, bool) {
     config
 }
 
-/// Periodically checks the whole library for new chapters on the interval from
-/// system settings, notifying (when enabled) about anything new.
 pub async fn run_loop(app: AppHandle) {
     loop {
         let (interval, _) = read_config(&app);

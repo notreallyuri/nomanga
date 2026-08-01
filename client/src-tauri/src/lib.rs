@@ -26,10 +26,6 @@ pub struct AppState {
     pub sync: Arc<RwLock<nomanga_services::sync::SyncState>>,
     pub sync_path: PathBuf,
     pub transport: nomanga_host::transport::TransportShared,
-    /// Raised by `cancel_library_refresh`, cleared by every run as it starts.
-    /// Clearing on entry rather than on exit is what keeps a cancel pressed
-    /// after a run already finished from stopping the next one before it
-    /// checks anything.
     pub refresh_cancel: Arc<std::sync::atomic::AtomicBool>,
 }
 
@@ -151,12 +147,6 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         ])
 }
 
-/// Strips the quotes `register_all` puts around the binary path in the dev
-/// handler's `Exec`. The quoting is legal, but xdg-open's `first_word` does not
-/// remove it, so its `command -v` check fails and it falls through to opening a
-/// browser instead — and Chrome dispatches unknown schemes through xdg-open, so
-/// the link silently does nothing. `gio` and the portal are unaffected, as are
-/// packaged builds, which ship their own .desktop with an unquoted Exec.
 #[cfg(all(debug_assertions, target_os = "linux"))]
 fn unquote_dev_handler_exec() {
     let Ok(exe) = std::env::current_exe() else {

@@ -3,9 +3,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-/// Device identity and sync bookkeeping. Deliberately not part of `Settings`:
-/// settings travel inside a backup, and a device that adopted another's id
-/// could no longer tell its own snapshots apart from a peer's.
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SyncState {
@@ -14,13 +11,6 @@ pub struct SyncState {
     pub folder: Option<PathBuf>,
     pub last_push_at: Option<DateTime<Utc>>,
     pub last_pull_at: Option<DateTime<Utc>>,
-    /// Shell command run after a push writes the folder, and before a pull
-    /// reads it — the hook that carries the folder to and from a remote the
-    /// filesystem cannot reach (Proton Drive, rclone, rsync).
-    ///
-    /// These live here rather than in `Settings` on purpose: settings travel
-    /// inside a backup, so a command string there would let any imported
-    /// backup file run arbitrary commands on the importing machine.
     pub post_push_command: Option<String>,
     pub pre_pull_command: Option<String>,
 }

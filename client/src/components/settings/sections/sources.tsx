@@ -136,12 +136,6 @@ interface SourceGroup {
 	rows: SourceWithPreference[];
 }
 
-/**
- * One group per installed extension, since a single extension can ship several
- * sources and the flat list gives no hint of which one to uninstall. Sources no
- * installed extension claims are kept rather than dropped — they are still
- * loaded and still configurable, so hiding them would strand their settings.
- */
 function groupByExtension(
 	rows: SourceWithPreference[],
 	extensions: InstalledExtension[],

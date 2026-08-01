@@ -3,14 +3,6 @@ import { useState } from "react";
 import { sourceImageUrl } from "@/lib/source-image";
 import { cn } from "@/lib/utils";
 
-/**
- * A source cover, routed through the image proxy and degrading to a placeholder
- * rather than a broken-image glyph.
- *
- * Covers fail for reasons outside the app's control — a CDN rotating a shard, a
- * hotlink check, a series whose cover was never uploaded — so every surface
- * showing one needs the same fallback.
- */
 export function CoverImage({
 	sourceId,
 	url,
@@ -21,7 +13,6 @@ export function CoverImage({
 	sourceId: string;
 	url: string | null | undefined;
 	alt?: string;
-	/** Applied to both the image and the placeholder, so layout holds either way. */
 	className?: string;
 	iconSize?: number;
 }) {

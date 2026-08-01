@@ -34,11 +34,6 @@ const DEFAULT_PREFERENCE: Omit<SourcePreference, "source_id"> = {
 	default_category_id: null,
 };
 
-/**
- * Preferences for one source, off the same cached list the settings screen
- * uses. Returns defaults while the query is in flight or for a source that
- * has no stored row, so callers never have to branch on loading.
- */
 export function useSourcePreference(sourceId: string): SourcePreference {
 	const { data } = useSourcesWithPreferences();
 	const stored = data?.find((row) => row.info.id === sourceId)?.preference;

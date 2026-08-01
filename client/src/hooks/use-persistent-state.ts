@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 
-/**
- * `useState` mirrored to `localStorage` under `key`. Used for lightweight UI
- * preferences (last-opened tab, sort choice) that shouldn't round-trip through
- * the settings backend. Reads are lazy so the first render already has the
- * stored value; a `validate` guard lets callers reject stale/invalid data.
- */
 export function usePersistentState<T>(
 	key: string,
 	fallback: T,

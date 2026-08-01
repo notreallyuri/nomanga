@@ -30,9 +30,6 @@ pub async fn list(pool: &SqlitePool) -> ServiceResult<Vec<Repository>> {
     Ok(rows)
 }
 
-/// Re-adding a URL keeps its original `added_at` so the list does not reorder,
-/// but takes the new name — a repository that renamed itself should show up
-/// renamed rather than needing a remove and re-add.
 pub async fn add(pool: &SqlitePool, url: &str, name: &str) -> ServiceResult<()> {
     let added_at = now();
 

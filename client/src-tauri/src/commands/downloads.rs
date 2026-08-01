@@ -40,11 +40,6 @@ pub async fn queue_downloads(
     Ok(())
 }
 
-/// Everything queued or downloading right now.
-///
-/// Progress events are sent once and never replayed, so a frontend that has just
-/// started — or reloaded mid-queue — reads this to see the work already under
-/// way instead of learning about a chapter only when its turn comes.
 #[tauri::command]
 #[specta::specta]
 pub async fn download_queue(state: State<'_, AppState>) -> CommandResult<Vec<DownloadProgress>> {

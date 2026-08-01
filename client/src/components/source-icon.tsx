@@ -2,11 +2,6 @@ import { GlobeIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * An extension's icon, degrading to a globe when the extension ships none or
- * the file is missing. Shown wherever a source is listed — Browse, the sidebar
- * pins, the settings source list — so the fallback has to be the same one.
- */
 export function SourceIcon({
 	url,
 	name,
@@ -15,7 +10,6 @@ export function SourceIcon({
 }: {
 	url: string | null | undefined;
 	name: string;
-	/** Applied to both the image and the placeholder, so layout holds either way. */
 	className?: string;
 	iconSize?: number;
 }) {

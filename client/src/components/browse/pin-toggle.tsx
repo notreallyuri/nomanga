@@ -3,10 +3,6 @@ import { usePinSource } from "@/hooks/use-pin-source";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
-/**
- * Pins a source under Browse in the sidebar. Sits inside the source card's
- * `<Link>`, so the click has to be stopped before the router acts on it.
- */
 export function PinToggle({
 	sourceId,
 	className,

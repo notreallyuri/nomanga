@@ -8,11 +8,6 @@ function isEditable(target: EventTarget | null) {
 	);
 }
 
-/**
- * Suppresses the webview's own context menu, and its inspector shortcuts in a
- * built app. Only the native menu goes away — base-ui's ContextMenu runs its
- * own `contextmenu` handler and does not care that the default was prevented.
- */
 export function installWebviewGuards() {
 	// Not gated on the build: WKWebView blanks the window when it opens its own
 	// menu over a <button>, which took out every right-click menu on macOS in

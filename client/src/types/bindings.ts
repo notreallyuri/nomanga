@@ -12,10 +12,6 @@ export const commands = {
 	addToLibrary: (sourceId: string, mangaId: string, totalChapters: number | null) => typedError<null, CommandError>(__TAURI_INVOKE("add_to_library", { sourceId, mangaId, totalChapters })),
 	addListingToLibrary: (sourceId: string, item: MangaSimple) => typedError<null, CommandError>(__TAURI_INVOKE("add_listing_to_library", { sourceId, item })),
 	addMangaToLibrary: (sourceId: string, manga: Manga, totalChapters: number | null) => typedError<null, CommandError>(__TAURI_INVOKE("add_manga_to_library", { sourceId, manga, totalChapters })),
-	/**
-	 *  Fills the chapter cache for one entry without the progress events a full
-	 *  refresh emits — used right after an add whose caller had no chapter count.
-	 */
 	cacheEntryChapters: (sourceId: string, mangaId: string) => typedError<number, CommandError>(__TAURI_INVOKE("cache_entry_chapters", { sourceId, mangaId })),
 	removeFromLibrary: (sourceId: string, mangaId: string) => typedError<null, CommandError>(__TAURI_INVOKE("remove_from_library", { sourceId, mangaId })),
 	isInLibrary: (sourceId: string, mangaId: string) => typedError<boolean, CommandError>(__TAURI_INVOKE("is_in_library", { sourceId, mangaId })),
@@ -34,15 +30,6 @@ export const commands = {
 	bulkCategoryCounts: (entries: EntryRef[]) => typedError<CategoryCount[], CommandError>(__TAURI_INVOKE("bulk_category_counts", { entries })),
 	bulkUpdateCategories: (entries: EntryRef[], add: string[], remove: string[]) => typedError<null, CommandError>(__TAURI_INVOKE("bulk_update_categories", { entries, add, remove })),
 	refreshLibrary: (scope: RefreshScope, force: boolean) => typedError<RefreshSummary, CommandError>(__TAURI_INVOKE("refresh_library", { scope, force })),
-	/**
-	 *  Stops the running refresh after the series in flight. Nothing is undone: a
-	 *  series is committed by `sync_chapters` only once its whole chapter list is
-	 *  back, so the boundary between series is already a safe place to stop and
-	 *  there is no partial state to clean up — unlike a download, which owns files.
-	 * 
-	 *  Setting the flag with no run in progress is harmless; the next run clears it
-	 *  before checking anything.
-	 */
 	cancelLibraryRefresh: () => typedError<null, CommandError>(__TAURI_INVOKE("cancel_library_refresh")),
 	libraryUpdates: (limit: number) => typedError<LibraryUpdate[], CommandError>(__TAURI_INVOKE("library_updates", { limit })),
 	clearLibraryUpdates: () => typedError<null, CommandError>(__TAURI_INVOKE("clear_library_updates")),
@@ -75,23 +62,7 @@ export const commands = {
 	sourceChapters: (sourceId: string, mangaId: string) => typedError<Chapter[], CommandError>(__TAURI_INVOKE("source_chapters", { sourceId, mangaId })),
 	sourcePages: (sourceId: string, mangaId: string, chapterId: string) => typedError<Page[], CommandError>(__TAURI_INVOKE("source_pages", { sourceId, mangaId, chapterId })),
 	installExtension: (wasmPath: string) => typedError<string, CommandError>(__TAURI_INVOKE("install_extension", { wasmPath })),
-	/**
-	 *  Opens the source's challenge page in a browser window and waits for the user
-	 *  to clear it.
-	 * 
-	 *  Returns true once every cookie the source named has appeared and been copied
-	 *  into the shared jar, false on timeout or if the window was closed first.
-	 * 
-	 *  A separate window rather than one embedded in the app: on Linux wry packs a
-	 *  child webview into the window's GtkBox, which ignores the bounds it is given
-	 *  and lays the view out as a sibling of the app — so the embedded shape cannot
-	 *  be built there at all.
-	 */
 	solveChallenge: (sourceId: string) => typedError<ChallengeOutcome, CommandError>(__TAURI_INVOKE("solve_challenge", { sourceId })),
-	/**
-	 *  Closes the challenge window without waiting for it to be solved. The pending
-	 *  `solve_challenge` call notices on its next poll and resolves false.
-	 */
 	cancelChallenge: () => typedError<null, CommandError>(__TAURI_INVOKE("cancel_challenge")),
 	getSettings: () => typedError<Settings, CommandError>(__TAURI_INVOKE("get_settings")),
 	saveSettings: (newSettings: Settings) => typedError<null, CommandError>(__TAURI_INVOKE("save_settings", { newSettings })),
@@ -109,25 +80,9 @@ export const commands = {
 	listRepositories: () => typedError<Repository[], CommandError>(__TAURI_INVOKE("list_repositories")),
 	addRepository: (url: string) => typedError<RepositoryIndex, CommandError>(__TAURI_INVOKE("add_repository", { url })),
 	removeRepository: (url: string) => typedError<null, CommandError>(__TAURI_INVOKE("remove_repository", { url })),
-	/**
-	 *  Fetches every repository, reporting per-repository failures in the row
-	 *  rather than as an error, so one unreachable link does not blank the list.
-	 */
 	browseRepositories: () => typedError<RepositoryCatalog[], CommandError>(__TAURI_INVOKE("browse_repositories")),
-	/**
-	 *  Takes the extension's id rather than a download URL so the app only ever
-	 *  fetches a binary a registered repository's own index points at — the
-	 *  frontend cannot name an arbitrary URL to install from.
-	 */
 	installFromRepository: (url: string, extensionId: string) => typedError<string, CommandError>(__TAURI_INVOKE("install_from_repository", { url, extensionId })),
 	queueDownloads: (sourceId: string, mangaId: string, mangaTitle: string, targets: DownloadTarget[]) => typedError<null, CommandError>(__TAURI_INVOKE("queue_downloads", { sourceId, mangaId, mangaTitle, targets })),
-	/**
-	 *  Everything queued or downloading right now.
-	 * 
-	 *  Progress events are sent once and never replayed, so a frontend that has just
-	 *  started — or reloaded mid-queue — reads this to see the work already under
-	 *  way instead of learning about a chapter only when its turn comes.
-	 */
 	downloadQueue: () => typedError<DownloadProgress[], CommandError>(__TAURI_INVOKE("download_queue")),
 	setDownloadsPaused: (paused: boolean) => typedError<null, CommandError>(__TAURI_INVOKE("set_downloads_paused", { paused })),
 	downloadsPaused: () => typedError<boolean, CommandError>(__TAURI_INVOKE("downloads_paused")),
@@ -176,12 +131,6 @@ export type AppearanceSettings = {
 };
 
 export type BrowseSettings = {
-	/**
-	 *  Source ids in the order the user arranged them. Empty means untouched,
-	 *  which the client reads as "alphabetical" -- it is not a snapshot of the
-	 *  installed set, so an id that no longer resolves is simply skipped and a
-	 *  source missing from it sorts in by name.
-	 */
 	source_order?: string[],
 };
 
@@ -227,7 +176,6 @@ export type CategoryCount = {
 
 export type CategoryFilter = { type: "All" } | { type: "Uncategorized" } | { type: "Category"; id: string };
 
-/**  How long unlocking a locked category keeps it open. */
 export type CategoryLockSession = "UntilAppCloses" | "UntilLeave" | "IdleTimeout";
 
 export type CategoryOptions = {
@@ -259,20 +207,11 @@ export type Challenge = {
 	cookies: string[],
 };
 
-/**
- *  What the attempt actually saw. `solved` alone cannot distinguish "the user
- *  walked away" from "the cookie store never answered" from "the site never
- *  issued a clearance", and those want different fixes.
- */
 export type ChallengeOutcome = {
 	solved: boolean,
-	/**  Cookie names present on the last successful read, whatever they were. */
 	seen: string[],
-	/**  How many times the store answered at all. */
 	reads: number,
-	/**  Last read failure, if any. */
 	error: string | null,
-	/**  Where the page ended up, in case it is not where it was sent. */
 	landed: string,
 };
 
@@ -312,10 +251,6 @@ export type ContinueReadingItem = {
 	title: string,
 	cover_url: string,
 	last_chapter_id: string,
-	/**
-	 *  Only known for chapters the library sync has cached, so callers still
-	 *  need the id as a fallback.
-	 */
 	last_chapter_title: string | null,
 	last_page: number,
 	last_chapter_done: boolean,
@@ -485,10 +420,6 @@ export type LibraryItem = {
 
 export type LibraryLayout = "Grid" | "List";
 
-/**
- *  Emitted once per series while a library refresh runs, so the UI can show a
- *  determinate progress bar. A final event with `done == total` marks the end.
- */
 export type LibraryRefreshProgress = {
 	done: number,
 	total: number,
@@ -577,11 +508,6 @@ export type RefreshScope = { type: "All" } | { type: "Category"; id: string } | 
 export type RefreshSummary = {
 	checked: number,
 	new_chapters: number,
-	/**
-	 *  True when the run stopped early. `checked` still reports the series that
-	 *  did complete, so a cancelled run is reported as partial rather than as
-	 *  nothing having happened.
-	 */
 	cancelled: boolean,
 };
 
@@ -596,10 +522,6 @@ export type RepositoryCatalog = {
 	repository: Repository,
 	index: RepositoryIndex | null,
 	error: string | null,
-	/**
-	 *  Ids from this index whose ABI this app cannot load, resolved here so the
-	 *  frontend never has to carry a copy of the supported range.
-	 */
 	unsupported: string[],
 };
 
@@ -711,10 +633,6 @@ export type SyncStatus = {
 	local_activity_at: string | null,
 	last_push_at: string | null,
 	last_pull_at: string | null,
-	/**
-	 *  True when this device has read or added something after the snapshot in
-	 *  the folder was taken — pulling would discard it.
-	 */
 	local_changes_since_remote: boolean,
 	post_push_command: string | null,
 	pre_pull_command: string | null,

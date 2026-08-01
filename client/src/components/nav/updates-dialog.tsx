@@ -141,10 +141,6 @@ export function UpdatesDialog({
 	);
 }
 
-/**
- * Series already checked, newest first. Only the head is live, so everything
- * behind it recedes rather than competing with the bar above.
- */
 function RefreshLog({ log }: { log: RefreshLogEntry[] }) {
 	if (log.length === 0) return null;
 
@@ -185,11 +181,6 @@ function RefreshLog({ log }: { log: RefreshLogEntry[] }) {
 	);
 }
 
-/**
- * Grouped by the day the chapters were found, with the same headings the
- * history page uses — a backlog from last week reads differently from what
- * tonight's check turned up.
- */
 function UpdateList({
 	updates,
 	onNavigate,

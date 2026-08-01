@@ -67,8 +67,6 @@ pub struct LibrarySearch {
     pub query: String,
 }
 
-/// The query is matched literally — a title with a `%` in it is searched for,
-/// not treated as a wildcard.
 fn escape_like(query: &str) -> String {
     query
         .replace('\\', "\\\\")
@@ -76,9 +74,6 @@ fn escape_like(query: &str) -> String {
         .replace('_', "\\_")
 }
 
-/// `total_chapters` is what the caller already knows about the series, so an
-/// entry added from a screen that just listed its chapters shows an unread
-/// count immediately instead of waiting for the next refresh run.
 async fn insert_entry<'e, E>(
     executor: E,
     source_id: &str,

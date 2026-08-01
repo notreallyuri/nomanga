@@ -23,8 +23,6 @@ pub struct ContinueReadingItem {
     pub title: String,
     pub cover_url: String,
     pub last_chapter_id: String,
-    /// Only known for chapters the library sync has cached, so callers still
-    /// need the id as a fallback.
     pub last_chapter_title: Option<String>,
     pub last_page: i32,
     pub last_chapter_done: bool,

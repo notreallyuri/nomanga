@@ -27,15 +27,11 @@ pub struct SyncStatus {
     pub local_activity_at: Option<String>,
     pub last_push_at: Option<String>,
     pub last_pull_at: Option<String>,
-    /// True when this device has read or added something after the snapshot in
-    /// the folder was taken — pulling would discard it.
     pub local_changes_since_remote: bool,
     pub post_push_command: Option<String>,
     pub pre_pull_command: Option<String>,
 }
 
-/// The most recent thing the user did on this device, across the tables a
-/// backup carries. Used to warn before a pull throws local work away.
 pub async fn local_activity_at(pool: &SqlitePool) -> ServiceResult<Option<DateTime<Utc>>> {
     let row = sqlx::query_scalar!(
         r#"SELECT MAX(ts) AS "ts: DateTime<Utc>" FROM (

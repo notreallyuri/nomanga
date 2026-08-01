@@ -13,22 +13,12 @@ import { toast } from "sonner";
 import { useSettingsUI } from "@/components/settings/context";
 
 interface DeepLinkUI {
-	/**
-	 * A repository URL a `nomanga://add-repo` link asked to add, held until the
-	 * user confirms or dismisses it. Never added on arrival — a link can come
-	 * from any page on the internet.
-	 */
 	pendingRepository: string | null;
 	clearPendingRepository: () => void;
 }
 
 const DeepLinkContext = createContext<DeepLinkUI | null>(null);
 
-/**
- * Parses `nomanga://add-repo?url=…`, rejecting anything that is not an http(s)
- * URL so a link cannot point the app at a local file. The backend enforces this
- * again in `normalize_url`; this only keeps a bad link from reaching a dialog.
- */
 function parseAddRepo(raw: string): string | null {
 	let link: URL;
 	try {

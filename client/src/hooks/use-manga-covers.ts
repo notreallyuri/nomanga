@@ -2,18 +2,6 @@ import { useMemo } from "react";
 import { useDownloads } from "./services/use-downloads";
 import { ALL_CATEGORIES, useLibrary } from "./services/use-library";
 
-/**
- * Cover art for arbitrary (source, manga) pairs, assembled from lists the app
- * already loads.
- *
- * The download queue reports no cover of its own, and covers are only stored for
- * series that reached the `manga` table — library entries and backup imports —
- * so a series that was never added has none to find. Callers pair this with
- * `CoverImage`, whose placeholder covers the miss.
- *
- * `enabled` exists because the dialogs using this stay mounted while closed;
- * without it both queries would run at app start for a panel nobody opened.
- */
 export function useMangaCovers(enabled: boolean) {
 	const library = useLibrary(ALL_CATEGORIES, enabled);
 	const downloads = useDownloads(enabled);

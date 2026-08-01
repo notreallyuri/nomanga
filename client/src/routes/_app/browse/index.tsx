@@ -109,13 +109,6 @@ function Page({ children }: { children: React.ReactNode }) {
 	);
 }
 
-/**
- * Submits on Enter rather than debouncing the way the per-source search does.
- * One source can afford a request per typing pause; fanning the same keystrokes
- * out to every installed source is a burst against a different site each, and
- * the per-source rate limiter would serialise them into results arriving for a
- * term the user has already typed past.
- */
 function SearchAllBar({
 	term,
 	onSearch,
