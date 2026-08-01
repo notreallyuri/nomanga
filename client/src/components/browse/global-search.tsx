@@ -109,7 +109,10 @@ function SourceResults({ info, term }: { info: SourceInfo; term: string }) {
 				<p className="px-1 text-muted-foreground text-sm">No results</p>
 			) : (
 				<ScrollRow
-					contentClassName={cn("grid-rows-1", compact ? "gap-x-3" : "gap-x-4")}
+					contentClassName={cn(
+						"grid-rows-1 justify-start",
+						compact ? "gap-x-3" : "gap-x-4",
+					)}
 				>
 					{items.map((item) => (
 						<div
