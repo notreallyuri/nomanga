@@ -1,24 +1,18 @@
 import {
-	CaretRightIcon,
 	MagnifyingGlassIcon,
 	PlugsIcon,
-	PlusIcon,
 	WarningIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { GlobalSearch } from "@/components/browse/global-search";
-import { PinToggle } from "@/components/browse/pin-toggle";
-import { SourceMenuContent } from "@/components/browse/source-menu";
-import { useSettingsUI } from "@/components/settings/context";
-import { SourceIcon } from "@/components/source-icon";
-import { Badge } from "@/components/ui/badge";
-import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { SourceGrid } from "@/components/browse/source-grid";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSourcesWithPreferences } from "@/hooks/services/use-extensions";
-import type { SourceInfo } from "@/types/bindings";
+import { useSourceOrder } from "@/hooks/services/use-settings";
+import { applySourceOrder } from "@/lib/source-order";
 
 interface BrowseIndexSearch {
 	q?: string;
@@ -36,6 +30,7 @@ function BrowseIndex() {
 	const navigate = Route.useNavigate();
 
 	const { data: rows, isPending, error } = useSourcesWithPreferences();
+	const { order } = useSourceOrder();
 
 	// Replace rather than push: the term is already in the URL, so a back press
 	// should leave Browse the way it does from any other page here, not walk
@@ -74,15 +69,19 @@ function BrowseIndex() {
 		return <EmptyState kind="all-disabled" />;
 	}
 
-	const hiddenCount = rows.length - enabled.length;
-
 	if (q) {
 		// `hide_from_search` is the opt-out for a source the user wants to keep
 		// browsable without it answering every cross-source query — the adult
 		// sources it was added for.
-		const searchable = enabled
-			.filter((row) => !row.preference.hide_from_search)
-			.map((row) => row.info);
+		//
+		// Ordered the same way the grid is, so the rows arrive in the arrangement
+		// the user set rather than in a second, unrelated order.
+		const searchable = applySourceOrder(
+			enabled.filter((row) => !row.preference.hide_from_search),
+			order,
+			(row) => row.info.id,
+			(row) => row.info.name,
+		).map((row) => row.info);
 
 		return (
 			<Page>
@@ -96,46 +95,8 @@ function BrowseIndex() {
 		<Page>
 			<SearchAllBar onSearch={search} term={q} />
 
-			<div className="mb-3 flex items-baseline justify-between">
-				<h2 className="font-heading font-semibold text-muted-foreground text-sm uppercase tracking-wide">
-					Sources
-				</h2>
-				{hiddenCount > 0 && (
-					<p className="text-muted-foreground text-xs">{hiddenCount} hidden</p>
-				)}
-			</div>
-
-			<div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
-				{enabled.map(({ info }) => (
-					<SourceCard info={info} key={info.id} />
-				))}
-				<AddMoreCard />
-			</div>
+			<SourceGrid rows={rows} />
 		</Page>
-	);
-}
-
-/**
- * Sends the user to the Extensions tab of the settings dialog, where sources
- * are installed — so the grid always offers a way to add to it.
- */
-function AddMoreCard() {
-	const { openSettings } = useSettingsUI();
-
-	return (
-		<button
-			className="group flex items-center gap-3 rounded-lg border border-border border-dashed p-3 text-left text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted hover:text-foreground"
-			onClick={() => openSettings("Extensions")}
-			type="button"
-		>
-			<div className="flex size-10 shrink-0 items-center justify-center rounded bg-muted transition-colors group-hover:bg-background">
-				<PlusIcon size={20} />
-			</div>
-			<div className="min-w-0 flex-1">
-				<p className="truncate font-medium">Add more</p>
-				<p className="text-xs">Install extensions</p>
-			</div>
-		</button>
 	);
 }
 
@@ -202,51 +163,6 @@ function SearchAllBar({
 				</button>
 			)}
 		</form>
-	);
-}
-
-function SourceCard({ info }: { info: SourceInfo }) {
-	return (
-		<ContextMenu>
-			<ContextMenuTrigger
-				render={
-					<Link
-						className="group relative flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20 hover:bg-muted"
-						params={{ sourceId: info.id }}
-						to="/browse/$sourceId"
-					>
-						<SourceIcon
-							className="size-10"
-							name={info.name}
-							url={info.icon_url}
-						/>
-
-						<div className="min-w-0 flex-1">
-							<div className="flex items-center gap-1.5">
-								<p className="truncate font-medium">{info.name}</p>
-								{info.nsfw && (
-									<Badge className="shrink-0" variant="destructive">
-										18+
-									</Badge>
-								)}
-							</div>
-							<p className="text-muted-foreground text-xs uppercase tracking-wide">
-								{info.language}
-							</p>
-						</div>
-
-						<PinToggle sourceId={info.id} />
-
-						<CaretRightIcon
-							className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-							size={16}
-						/>
-					</Link>
-				}
-			/>
-
-			<SourceMenuContent info={info} />
-		</ContextMenu>
 	);
 }
 

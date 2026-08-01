@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 pub mod appearance;
+pub mod browse;
 pub mod reader;
 pub mod sidebar;
 pub mod system;
@@ -12,6 +13,7 @@ pub mod system;
 #[serde(default)]
 pub struct Settings {
     pub appearance: appearance::AppearanceSettings,
+    pub browse: browse::BrowseSettings,
     pub reader: reader::ReaderSettings,
     pub sidebar: sidebar::SidebarSettings,
     pub system: system::SystemSettings,
@@ -22,6 +24,7 @@ pub fn load(path: &Path) -> ServiceResult<Settings> {
         Ok(text) => {
             let mut settings: Settings = serde_json::from_str(&text)?;
             settings.sidebar.pinned_sources = settings.sidebar.pinned();
+            settings.browse.source_order = settings.browse.order();
             Ok(settings)
         }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Settings::default()),
