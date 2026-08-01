@@ -16,6 +16,11 @@ import { useSettingsUI } from "@/components/settings/context";
 import { ExtensionSettings } from "@/components/settings/sections/source-settings-form";
 import { SourceIcon } from "@/components/source-icon";
 import { Button } from "@/components/ui/button";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -34,6 +39,7 @@ import {
 } from "@/hooks/services/use-extensions";
 import { useCategories } from "@/hooks/services/use-library";
 import { useRefreshSourceFilters } from "@/hooks/services/use-sources";
+import { cn } from "@/lib/utils";
 import type {
 	InstalledExtension,
 	SourceInfo,
@@ -101,18 +107,66 @@ export function SourceSection() {
 				</p>
 			) : (
 				groups.map((group) => (
-					<SettingGroup key={group.key} title={group.title}>
-						{group.rows.map((row) => (
-							<SourceListRow
-								info={row.info}
-								key={row.info.id}
-								onConfigure={() => setSourceTarget(row.info.id)}
-							/>
-						))}
-					</SettingGroup>
+					<ExtensionGroup
+						forceOpen={needle.length > 0}
+						group={group}
+						key={group.key}
+						onConfigure={setSourceTarget}
+					/>
 				))
 			)}
 		</>
+	);
+}
+
+function ExtensionGroup({
+	group,
+	forceOpen,
+	onConfigure,
+}: {
+	group: SourceGroup;
+	forceOpen: boolean;
+	onConfigure: (sourceId: string) => void;
+}) {
+	const [open, setOpen] = useState(true);
+	const shown = forceOpen || open;
+
+	const enabled = group.rows.filter((row) => row.preference.enabled).length;
+
+	return (
+		<Collapsible className="mb-8" onOpenChange={setOpen} open={shown}>
+			<CollapsibleTrigger
+				className="mb-1 flex w-full items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				disabled={forceOpen}
+				render={<button type="button" />}
+			>
+				<CaretRightIcon
+					className={cn(
+						"shrink-0 text-muted-foreground transition-transform",
+						shown && "rotate-90",
+					)}
+					size={14}
+				/>
+				<h2 className="font-heading font-semibold text-muted-foreground text-sm uppercase tracking-wide">
+					{group.title}
+				</h2>
+				<span className="text-muted-foreground text-xs normal-case">
+					{enabled} of {group.rows.length} on
+				</span>
+			</CollapsibleTrigger>
+
+			<CollapsibleContent>
+				<div className="divide-y divide-border">
+					{group.rows.map((row) => (
+						<SourceListRow
+							info={row.info}
+							key={row.info.id}
+							onConfigure={() => onConfigure(row.info.id)}
+						/>
+					))}
+				</div>
+			</CollapsibleContent>
+		</Collapsible>
 	);
 }
 
